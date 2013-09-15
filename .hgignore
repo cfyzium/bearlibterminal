@@ -1,0 +1,3 @@
+syntax: regex
+/Build/.*
+/Output/[a-zA-Z0-9_.]+
