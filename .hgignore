@@ -1,6 +1,6 @@
 syntax: regex
-/Build/.*
-/Output/[a-zA-Z0-9_.]+
-/\.cproject
-/\.project
-/\.settings
+Build/.*
+Output/[a-zA-Z0-9_.]+
+.settings/.*
+.cproject
+.project

@@ -151,9 +151,9 @@
  */
 #define VK_MOUSE_X			0xD0 /* Mouse cursor position in characters/cells */
 #define VK_MOUSE_Y			0xD1
-#define VK_MOUSE_WHEEL		0xD2 /* Mouse wheel counter (absolute value) */
 #define VK_MOUSE_PIXEL_X	0xD5 /* Mouse cursor position in pixels */
 #define VK_MOUSE_PIXEL_Y	0xD6
+#define VK_MOUSE_WHEEL		0xD2 /* Mouse wheel counter (absolute value) */
 #define VK_CELL_WIDTH		0xD7 /* Character cell size in pixels */
 #define VK_CELL_HEIGHT		0xD8
 #define VK_WINDOW_WIDTH		0xD9 /* Terminal window size in characters/cells */
@@ -204,14 +204,12 @@ TERMINAL_API int terminal_set32(const int32_t* value);
 TERMINAL_API void terminal_refresh();
 TERMINAL_API void terminal_clear();
 TERMINAL_API void terminal_clear_area(int x, int y, int w, int h);
-TERMINAL_API void terminal_clear_layer(int index);
 TERMINAL_API void terminal_layer(int index);
-TERMINAL_API void terminal_font(int index);
 TERMINAL_API void terminal_color(color_t color);
-TERMINAL_API void terminal_color4(color_t c1, color_t c2, color_t c3, color_t c4);
 TERMINAL_API void terminal_bkcolor(color_t color);
-TERMINAL_API int terminal_composition(int mode);
-TERMINAL_API void terminal_put(int code);
+TERMINAL_API void terminal_composition(int mode);
+TERMINAL_API void terminal_put(int x, int y, int code);
+TERMINAL_API void terminal_put_ext(int x, int y, int dx, int dy, int code, color_t* corners);
 TERMINAL_API int terminal_print8(int x, int y, const int8_t* s);
 TERMINAL_API int terminal_print16(int x, int y, const int16_t* s);
 TERMINAL_API int terminal_print32(int x, int y, const int32_t* s);
@@ -233,8 +231,8 @@ TERMINAL_API color_t color_from_name32(const int32_t* name);
 /*
  * Utility macro trick which allows macro-in-macro expansion
  */
-#define TERMINAL_PRIMITIVE_CAT(a, b) a##b
 #define TERMINAL_CAT(a, b) TERMINAL_PRIMITIVE_CAT(a, b)
+#define TERMINAL_PRIMITIVE_CAT(a, b) a ## b
 
 /*
  * wchar_t has different sized depending on platform. Furthermore, it's size
@@ -331,26 +329,9 @@ static inline color_t color_from_wname(const wchar_t* name)
 #define TERMINAL_DEFINE_FORMATTED_ANSI(proto, impl) TERMINAL_DEFINE_FORMATTED(char, vsnprintf, proto, impl)
 #define TERMINAL_DEFINE_FORMATTED_WIDE(proto, impl) TERMINAL_DEFINE_FORMATTED(wchar_t, vswprintf, proto, impl)
 TERMINAL_DEFINE_FORMATTED_ANSI(terminal_setf(const char* s, ...), terminal_set(buffer))
-TERMINAL_DEFINE_FORMATTED_ANSI(terminal_print(int x, int y, const char* s, ...), terminal_print(x, y, buffer))
+TERMINAL_DEFINE_FORMATTED_ANSI(terminal_printf(int x, int y, const char* s, ...), terminal_print(x, y, buffer))
 TERMINAL_DEFINE_FORMATTED_WIDE(terminal_wsetf(const wchar_t* s, ...), terminal_wset(buffer))
 TERMINAL_DEFINE_FORMATTED_WIDE(terminal_wprintf(int x, int y, const wchar_t* s, ...), terminal_wprint(x, y, buffer))
-
-/*
- * C++ allows function overrides
- */
-#if defined(__cplusplus)
-
-static inline void terminal_color(const char* color_name)
-{
-	terminal_color(color_from_name(color_name));
-}
-
-static inline void terminal_color(const wchar_t* color_name)
-{
-	terminal_color(color_from_wname(color_name));
-}
-
-#endif /* __cplusplus */
 
 /*
  * WinMain entry point handling macro. This allows easier entry point definition.
@@ -361,7 +342,8 @@ static inline void terminal_color(const wchar_t* color_name)
  * WinMain probe macro. It will expand to either X or X_WINDOWS_ depending on
  * Windows.h header inclusion.
  */
-#define TERMINAL_TAKE_CARE_OF_WINMAIN TERMINAL_PRIMITIVE_CAT(TERMINAL_WINMAIN_IMPL, _WINDOWS_)
+#define TERMINAL_TAKE_CARE_OF_WINMAIN TERMINAL_WINMAIN_PROBE_IMPL(_WINDOWS_)
+#define TERMINAL_WINMAIN_PROBE_IMPL(DEF) TERMINAL_PRIMITIVE_CAT(TERMINAL_WINMAIN_IMPL, DEF)
 
 /*
  * Trivial no-arguments WinMain implementation. It just calls main.
@@ -388,7 +370,7 @@ static inline void terminal_color(const wchar_t* color_name)
 #else
 
 /*
- * Only Windows has WinMain but macro must be defined for cross-platform
+ * Only Windows has WinMain but macro still must be defined for cross-platform
  * applications.
  */
 #define TERMINAL_TAKE_CARE_OF_WINMAIN
