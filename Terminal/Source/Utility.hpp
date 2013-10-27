@@ -21,6 +21,25 @@ namespace BearLibTerminal
 		return !(stream.fail() || stream.bad());
 	}
 
+	// wstring -> bool specialization
+	template<> inline bool try_parse<bool, wchar_t>(const std::wstring& s, bool& out)
+	{
+		if (s == L"true" || s == L"1")
+		{
+			out = true;
+			return true;
+		}
+		else if (s == L"false" || s == L"0")
+		{
+			out = false;
+			return true;
+		}
+		else
+		{
+			return false;
+		}
+	}
+
 	template<typename char_t, typename T> std::basic_string<char_t> to_string(const T& value)
 	{
 		std::basic_ostringstream<char_t> stream;

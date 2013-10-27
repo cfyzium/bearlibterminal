@@ -52,7 +52,7 @@ namespace BearLibTerminal
 			KeyRelease 	= 0x02,
 			MouseMove 	= 0x04,
 			MouseScroll	= 0x08,
-			All			= 0xFF;
+			All			= 0x0F;
 	};
 }
 

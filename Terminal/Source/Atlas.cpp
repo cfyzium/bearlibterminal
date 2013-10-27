@@ -14,6 +14,13 @@
 
 namespace BearLibTerminal
 {
+	Leaf::Leaf():
+		dx(0),
+		dy(0),
+		code(0),
+		flags(0)
+	{ }
+
 	TexCoords::TexCoords():
 		tu1(0),
 		tv1(0),
@@ -279,31 +286,8 @@ namespace BearLibTerminal
 		int right = x + texture_region.width;
 		int bottom = y + texture_region.height;
 
-		if (leaf.flags == 0) // TODO: coloring flags constants
+		if (leaf.flags & Leaf::CornerColored)
 		{
-			// Single-colored version
-			glColor4ub(leaf.color[0].r, leaf.color[0].g, leaf.color[0].b, leaf.color[0].a);
-
-			// Top-left
-			glTexCoord2f(texture_coords.tu1, texture_coords.tv1);
-			glVertex2i(x, y);
-
-			// Bottom-left
-			glTexCoord2f(texture_coords.tu1, texture_coords.tv2);
-			glVertex2i(x, bottom);
-
-			// Bottom-right
-			glTexCoord2f(texture_coords.tu2, texture_coords.tv2);
-			glVertex2i(right, bottom);
-
-			// Top-right
-			glTexCoord2f(texture_coords.tu2, texture_coords.tv1);
-			glVertex2i(right, y);
-		}
-		else
-		{
-			// Corner-colored version
-
 			// Top-left
 			glColor4ub(leaf.color[0].r, leaf.color[0].g, leaf.color[0].b, leaf.color[0].a);
 			glTexCoord2f(texture_coords.tu1, texture_coords.tv1);
@@ -321,6 +305,27 @@ namespace BearLibTerminal
 
 			// Top-right
 			glColor4ub(leaf.color[3].r, leaf.color[3].g, leaf.color[3].b, leaf.color[3].a);
+			glTexCoord2f(texture_coords.tu2, texture_coords.tv1);
+			glVertex2i(right, y);
+		}
+		else
+		{
+			// Single-colored version
+			glColor4ub(leaf.color[0].r, leaf.color[0].g, leaf.color[0].b, leaf.color[0].a);
+
+			// Top-left
+			glTexCoord2f(texture_coords.tu1, texture_coords.tv1);
+			glVertex2i(x, y);
+
+			// Bottom-left
+			glTexCoord2f(texture_coords.tu1, texture_coords.tv2);
+			glVertex2i(x, bottom);
+
+			// Bottom-right
+			glTexCoord2f(texture_coords.tu2, texture_coords.tv2);
+			glVertex2i(right, bottom);
+
+			// Top-right
 			glTexCoord2f(texture_coords.tu2, texture_coords.tv1);
 			glVertex2i(right, y);
 		}

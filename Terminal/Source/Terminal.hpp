@@ -63,6 +63,7 @@ namespace BearLibTerminal
 		void ApplyTilesets(std::map<uint16_t, std::unique_ptr<Tileset>>& tilesets);
 		void UpdateDynamicTileset(Size size);
 		void ValidateWindowOptions(OptionGroup& group, Options& options);
+		void ValidateInputOptions(OptionGroup& group, Options& options);
 		void ValidateTerminalOptions(OptionGroup& group, Options& options);
 		void ConfigureViewport();
 		void PutUnlocked(int x, int y, int dx, int dy, wchar_t code, Color* colors);

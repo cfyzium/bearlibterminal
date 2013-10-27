@@ -10,6 +10,7 @@
 #include "Utility.hpp"
 #include "Geometry.hpp"
 #include "Log.hpp"
+#include "Palette.hpp"
 #include "BearLibTerminal.h"
 #include <cmath>
 
@@ -164,7 +165,7 @@ namespace BearLibTerminal
 			}
 			else if (group.name == L"input")
 			{
-				// ...
+				ValidateInputOptions(group, updated);
 			}
 			else if (group.name == L"terminal")
 			{
@@ -224,11 +225,12 @@ namespace BearLibTerminal
 				m_world.state.cellsize = m_world.tilesets[0]->GetBoundingBoxSize();
 			}
 
+			// Update state
 			m_vars[VK_CELL_WIDTH] = m_world.state.cellsize.width; // TODO: move vars to world.state
 			m_vars[VK_CELL_HEIGHT] = m_world.state.cellsize.height;
 
 			// Must readd dynamic tileset.
-			// NOTE: Should not fail.
+			// NOTE: SHOULD NOT fail.
 			InvokeOnRenderingThread([=](){UpdateDynamicTileset(m_world.state.cellsize);});
 
 			viewport_size_changed = true;
@@ -252,6 +254,16 @@ namespace BearLibTerminal
 		}
 
 		m_options = updated;
+	}
+
+	void Terminal::ValidateTerminalOptions(OptionGroup& group, Options& options)
+	{
+		// Possible options: encoding
+
+		if (group.attributes.count(L"encoding"))
+		{
+			options.terminal_encoding = group.attributes[L"encoding"];
+		}
 	}
 
 	void Terminal::ValidateWindowOptions(OptionGroup& group, Options& options)
@@ -308,34 +320,69 @@ namespace BearLibTerminal
 		}
 	}
 
-	void Terminal::ValidateTerminalOptions(OptionGroup& group, Options& options)
+	void Terminal::ValidateInputOptions(OptionGroup& group, Options& options)
 	{
-		if (group.attributes.count(L"encoding"))
+		// Possible options: nonblocking, events, precise_mouse, sticky_close, cursor_symbol, cursor_blink_rate
+
+		if (group.attributes.count(L"nonblocking") && !try_parse(group.attributes[L"nonblocking"], options.input_nonblocking))
 		{
-			options.terminal_encoding = group.attributes[L"encoding"];
+			throw std::runtime_error("input.nonblocking cannot be parsed");
 		}
+
+		if (group.attributes.count(L"precise_mouse") && !try_parse(group.attributes[L"precise_mouse"], options.input_precise_mouse))
+		{
+			throw std::runtime_error("input.precise_mouse cannot be parsed");
+		}
+
+		if (group.attributes.count(L"sticky_close") && !try_parse(group.attributes[L"sticky_close"], options.input_sticky_close))
+		{
+			throw std::runtime_error("input.sticky_close cannot be parsed");
+		}
+
+		if (group.attributes.count(L"events"))
+		{
+			const std::wstring& s = group.attributes[L"events"];
+			std::map<std::wstring, uint32_t> flags
+			{
+				{L"all", (uint32_t)InputEvents::All},
+				{L"keypress", (uint32_t)InputEvents::KeyPress},
+				{L"keyrelease", (uint32_t)InputEvents::KeyRelease},
+				{L"mousemove", (uint32_t)InputEvents::MouseMove},
+				{L"mousescroll", (uint32_t)InputEvents::MouseScroll},
+				{L"none", (uint32_t)InputEvents::None}
+			};
+
+			uint32_t result = 0;
+			for (auto i: flags)
+			{
+				size_t n = s.find(i.first);
+				if (n != std::wstring::npos)
+				{
+					uint32_t value = i.second;
+					if (n > 0 && s[n-1] == L'-') result &= ~value; else result |= value;
+				}
+			}
+
+			options.input_events = result;
+		}
+
+		if (group.attributes.count(L"cursor_symbol") && !try_parse(group.attributes[L"cursor_symbol"], options.input_cursor_symbol))
+		{
+			throw std::runtime_error("input.cursor_symbol cannot be parsed");
+		}
+
+		if (group.attributes.count(L"cursor_blink_rate") && !try_parse(group.attributes[L"cursor_blink_rate"], options.input_cursor_blink_rate))
+		{
+			throw std::runtime_error("input.cursor_blink_rate cannot be parsed");
+		}
+
+		if (options.input_cursor_blink_rate <= 0) options.input_cursor_blink_rate = 1;
 	}
 
 	void Terminal::Refresh()
 	{
-		/*
-		// Atomically
-		{
-			std::lock_guard<std::mutex> guard(m_lock);
+		// XXX: m_state here is not protected by lock (Window.Show will try to refresh syncronously which causes deadlock)
 
-			// If window is not visible, show it
-			if (m_state == kHidden)
-			{
-				m_window->Show();
-				m_state = kVisible;
-			}
-
-			// Ignore irrelevant redraw calls (in case something has failed and state is kClosed)
-			if (m_state != kVisible) return;
-
-			m_world.stage.frontbuffer = m_world.stage.backbuffer;
-		}
-		/*/
 		// If window is not visible, show it
 		if (m_state == kHidden)
 		{
@@ -350,7 +397,6 @@ namespace BearLibTerminal
 			std::lock_guard<std::mutex> guard(m_lock);
 			m_world.stage.frontbuffer = m_world.stage.backbuffer;
 		}
-		//*/
 
 		// NOTE: this call will syncronously wait OnWindowRedraw completion
 		m_window->Redraw();
@@ -364,11 +410,33 @@ namespace BearLibTerminal
 
 	void Terminal::Clear(int x, int y, int w, int h)
 	{
-		// FIXME: NYI
+		std::lock_guard<std::mutex> guard(m_lock);
+
+		Size stage_size = m_world.stage.size;
+		if (x < 0) x = 0;
+		if (y < 0) y = 0;
+		if (x+w >= stage_size.width) w = stage_size.width-x;
+		if (y+h >= stage_size.height) h = stage_size.height-y;
+
+		Layer& layer = m_world.stage.backbuffer.layers[m_world.state.layer];
+		for (int i=x; i<x+w; i++)
+		{
+			for (int j=y; j<y+h; j++)
+			{
+				int i = stage_size.width*j+i;
+				layer.cells[i].leafs.clear();
+				if (m_world.state.layer == 0)
+				{
+					m_world.stage.backbuffer.background[i] = m_world.state.bkcolor;
+				}
+			}
+		}
 	}
 
 	void Terminal::SetLayer(int layer_index)
 	{
+		if (layer_index < 0) layer_index = 0;
+		if (layer_index > 255) layer_index = 255;
 		m_world.state.layer = layer_index;
 
 		std::lock_guard<std::mutex> guard(m_lock);
@@ -393,11 +461,6 @@ namespace BearLibTerminal
 		m_world.state.composition = mode;
 	}
 
-	/**
-	 * NOTE:
-	 * Lightened 'put character' version, does not lock or check bounds.
-	 * Used from Put, PutExtended and Print.
-	 */
 	void Terminal::PutUnlocked(int x, int y, int dx, int dy, wchar_t code, Color* colors)
 	{
 		uint16_t u16code = (uint16_t)code; // TODO: use either wchar_t or uintxx_t
@@ -431,16 +494,15 @@ namespace BearLibTerminal
 			if (colors != nullptr)
 			{
 				for (int i=0; i<4; i++) leaf.color[i] = colors[i];
-				leaf.flags = 1; // TODO: multicolor flag constant
+				leaf.flags |= Leaf::CornerColored;
 			}
 			else
 			{
 				leaf.color[0] = m_world.state.color;
-				leaf.flags = 0;
 			}
 
 			// Background color
-			if (m_world.state.bkcolor.a > 0)
+			if (m_world.state.layer == 0)
 			{
 				m_world.stage.backbuffer.background[index] = m_world.state.bkcolor;
 			}
@@ -449,7 +511,10 @@ namespace BearLibTerminal
 		{
 			// Character code '0' means 'erase cell'
 			cell.leafs.clear();
-			m_world.stage.backbuffer.background[index] = Color();
+			if (m_world.state.layer == 0)
+			{
+				m_world.stage.backbuffer.background[index] = Color();
+			}
 		}
 	}
 
@@ -467,17 +532,147 @@ namespace BearLibTerminal
 		PutUnlocked(x, y, dx, dy, code, corners);
 	}
 
-	int Terminal::Print(int x, int y, const std::wstring& str)
+	int Terminal::Print(int x0, int y0, const std::wstring& s)
 	{
 		std::lock_guard<std::mutex> guard(m_lock);
 
-		LOG(Trace, "Printing \"" << str << "\"");
-		for (auto c: str)
+		int x = x0, y = y0;
+		int printed = 0;
+		int base = 0;
+		Size bbox;
+
+		Color original_color = m_world.state.color;
+		Color original_bkcolor = m_world.state.bkcolor;
+
+		Size size = m_world.stage.size;
+
+		const auto put_and_increment = [&](wchar_t code)
 		{
-			if (x >= m_world.stage.size.width) break;
-			PutUnlocked(x, y, 0, 0, c, nullptr);
+			if (x >=0 && y >= 0 && x < size.width && y < size.height)
+			{
+				PutUnlocked(x, y, 0, 0, base+code, nullptr);
+				printed += 1;
+			}
+
 			x += 1;
+		};
+
+		const auto apply_tag = [&](const std::wstring& s, size_t begin, size_t end)
+		{
+			if (s[begin+1] == L'/')
+			{
+				// Cancel tag: [/name]
+
+				std::wstring name = s.substr(begin+2, end-(begin+2));
+
+				if (name == L"color")
+				{
+					m_world.state.color = original_color;
+				}
+				else if (name == L"bkcolor")
+				{
+					m_world.state.bkcolor = original_bkcolor;
+				}
+				else if (name == L"base")
+				{
+					base = 0;
+				}
+			}
+			else
+			{
+				// Set tag: [name] or [name=value]
+
+				std::wstring name, value;
+
+				size_t n_equals = s.find(L'=', begin);
+				if (n_equals == std::wstring::npos || n_equals > end-1)
+				{
+					name = s.substr(begin+1, end-(begin+1));
+				}
+				else
+				{
+					name = s.substr(begin+1, n_equals-(begin+1));
+					value = s.substr(n_equals+1, end-(n_equals+1));
+				}
+
+				if (name.length() == 0) return;
+
+				if (name == L"color")
+				{
+					m_world.state.color = Palette::Instance[value];
+				}
+				else if (name == L"bkcolor")
+				{
+					m_world.state.bkcolor = Palette::Instance[value];
+				}
+				else if (name == L"base")
+				{
+					try_parse(value, base);
+				}
+				else if (name[0] == 'u' || name[0] == 'U')
+				{
+					if (name.length() > 2)
+					{
+						std::wstringstream stream;
+						stream << std::hex;
+						stream << name.substr(2);
+						uint16_t value = 0;
+						stream >> value;
+						put_and_increment(value);
+					}
+				}
+			}
+		};
+
+		for (size_t i = 0; i < s.length(); i++)
+		{
+			wchar_t c = s[i];
+
+			if (c == L'[' && m_options.output_postformatting)
+			{
+				if (i == s.length()-1) break; // Malformed postformatting tag
+
+				if (s[i+1] == L'[')
+				{
+					// Escaped '['
+					i += 1;
+					put_and_increment(s[i]);
+				}
+				else
+				{
+					// Start of a postformatting tag
+					size_t closing = s.find(L']', i);
+					if (closing == std::wstring::npos) break; // Malformed, no closing ']'
+					apply_tag(s, i, closing);
+					i = closing;
+				}
+			}
+			else if (c == L']' && m_options.output_postformatting)
+			{
+				// This MUST be an escaped ']' because regular closing postformatting ']' will be
+				// consumed while parsing that tag
+
+				if (i == s.length()-1) break; // Malformed
+
+				i += 1;
+				put_and_increment(s[i]);
+			}
+			else if (c == '\n')
+			{
+				x = x0;
+				y += 1;
+			}
+			else
+			{
+				put_and_increment(c);
+			}
 		}
+
+		// Revert state
+		m_world.state.color = original_color;
+		m_world.state.bkcolor = original_bkcolor;
+
+		return printed;
 	}
 
 	int Terminal::HasInput()
@@ -552,7 +747,7 @@ namespace BearLibTerminal
 			Keystroke stroke = ReadKeystroke(timeout);
 			if (stroke.scancode == VK_CLOSE)
 			{
-				// Break on VK_CLOSE but push it back so subsequent Read call will return it
+				// Break on VK_CLOSE but push it back so subsequent Read could return it
 				std::unique_lock<std::mutex> lock(m_lock);
 				m_input_queue.push_front(Keystroke(VK_CLOSE));
 				ConsumeIrrelevantInput();
@@ -875,7 +1070,7 @@ namespace BearLibTerminal
 	void Terminal::OnWindowActivate()
 	{
 		// Cancel all pressed keys
-		for ( int i = 0; i < VK_F12; i++ ) // TODO: VK_F12 --> some meaningful name
+		for ( int i = 0; i <= VK_F12; i++ ) // NOTE: VK_F12 is the last physical key index
 		{
 			if (i == VK_CLOSE) continue;
 			if (m_vars[i]) OnWindowInput(Keystroke(i, true));
