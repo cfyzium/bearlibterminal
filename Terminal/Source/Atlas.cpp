@@ -155,6 +155,7 @@ namespace BearLibTerminal
 		result->texture_id = (uint64_t)this;
 		result->texture_region = Rectangle(tile_location, region.Size());
 		result->texture_coords = CalcTexCoords(result->texture_region);
+		m_slots.push_back(result);
 		return result;
 	}
 
@@ -213,6 +214,7 @@ namespace BearLibTerminal
 	{
 		// Expand to nearest greater POTD
 		// FIXME: properly calculate texture size, current is not necessary a POTD
+		// FIXME: unnecessary, if GPU doesn't support NPOTD, texture constructor will enlarge it to POTD
 		Size old_size = m_canvas.GetSize(), new_size = old_size;
 		(new_size.height <= new_size.width? new_size.height: new_size.width) *= 2;
 
@@ -272,31 +274,56 @@ namespace BearLibTerminal
 		texture->Bind();
 	}
 
-	void TileSlot::Draw(const Leaf& leaf, Point location) // FIXME: pass left, top instead of point
+	void TileSlot::Draw(const Leaf& leaf, int x, int y)
 	{
-		Size size = texture_region.Size(); // FIXME: keep location/size instead of rectangle
-		int right = location.x + size.width;
-		int bottom = location.y + size.height;
+		int right = x + texture_region.width;
+		int bottom = y + texture_region.height;
 
-		LOG(Trace, "Drawing slot: location = " << location << ", size = " << size << ", texcoords: " <<
-				texture_coords.tu1 << "-" << texture_coords.tv1 << "-" << texture_coords.tu2 << "-" << texture_coords.tv2);
+		if (leaf.flags == 0) // TODO: coloring flags constants
+		{
+			// Single-colored version
+			glColor4ub(leaf.color[0].r, leaf.color[0].g, leaf.color[0].b, leaf.color[0].a);
 
-		glTexCoord2f(texture_coords.tu1, texture_coords.tv1);
-		glVertex2i(location.x, location.y);
+			// Top-left
+			glTexCoord2f(texture_coords.tu1, texture_coords.tv1);
+			glVertex2i(x, y);
 
-		glTexCoord2f(texture_coords.tu1, texture_coords.tv2);
-		glVertex2i(location.x, bottom);
+			// Bottom-left
+			glTexCoord2f(texture_coords.tu1, texture_coords.tv2);
+			glVertex2i(x, bottom);
 
-		glTexCoord2f(texture_coords.tu2, texture_coords.tv2);
-		glVertex2i(right, bottom);
+			// Bottom-right
+			glTexCoord2f(texture_coords.tu2, texture_coords.tv2);
+			glVertex2i(right, bottom);
 
-		glTexCoord2f(texture_coords.tu2, texture_coords.tv1);
-		glVertex2i(right, location.y);
-	}
+			// Top-right
+			glTexCoord2f(texture_coords.tu2, texture_coords.tv1);
+			glVertex2i(right, y);
+		}
+		else
+		{
+			// Corner-colored version
 
-	void TileSlot::Precalculate(State& state)
-	{
-		// FIXME: NYI
+			// Top-left
+			glColor4ub(leaf.color[0].r, leaf.color[0].g, leaf.color[0].b, leaf.color[0].a);
+			glTexCoord2f(texture_coords.tu1, texture_coords.tv1);
+			glVertex2i(x, y);
+
+			// Bottom-left
+			glColor4ub(leaf.color[1].r, leaf.color[1].g, leaf.color[1].b, leaf.color[1].a);
+			glTexCoord2f(texture_coords.tu1, texture_coords.tv2);
+			glVertex2i(x, bottom);
+
+			// Bottom-right
+			glColor4ub(leaf.color[2].r, leaf.color[2].g, leaf.color[2].b, leaf.color[2].a);
+			glTexCoord2f(texture_coords.tu2, texture_coords.tv2);
+			glVertex2i(right, bottom);
+
+			// Top-right
+			glColor4ub(leaf.color[3].r, leaf.color[3].g, leaf.color[3].b, leaf.color[3].a);
+			glTexCoord2f(texture_coords.tu2, texture_coords.tv1);
+			glVertex2i(right, y);
+		}
 	}
 
 	void TileSlot::Update(const Bitmap& bitmap)
@@ -341,7 +368,7 @@ namespace BearLibTerminal
 
 			if (!result)
 			{
-				m_textures.emplace_back(type, Size(256, 256)); // TODO: option
+				m_textures.emplace_back(type, Size(256, 256));
 				result = m_textures.back().Add(bitmap, region);
 			}
 
@@ -374,287 +401,4 @@ namespace BearLibTerminal
 		for (auto& i: m_textures) i.Dispose();
 		m_textures.clear();
 	}
-
-	// ------------------------------------------------------------------------
-
-	/*
-	AtlasTexture::AtlasTexture(Size initial_size):
-		m_is_dirty(false),
-		m_tile_count(0)
-	{
-		// FIXME: check if GPU supports NPOTD, round up if necessary
-
-		m_canvas = Bitmap(initial_size, Color());
-		m_space.push_back(Rectangle(m_canvas.GetSize()));
-	}
-
-	static int RoundUpTo(int value, int to)
-	{
-		int remainder = value % to;
-		return remainder? value + (to-remainder): value;
-	}
-
-	bool AtlasTexture::Place(const Bitmap& bitmap, Rectangle bitmap_region, Rectangle& out_region)
-	{
-		// Round requested rectangle dimensions to multiple of 4 for more discrete space partitioning
-		Size tile_size = bitmap_region.Size();
-		tile_size.width = RoundUpTo(tile_size.width, 4);
-		tile_size.height = RoundUpTo(tile_size.height, 4);
-
-		// Find suitable free space
-		auto find_acceptable_space = [=](Size size) -> decltype(m_space.begin())
-		{
-			for (auto i = m_space.begin(); i != m_space.end(); i++)
-			{
-				if (i->width >= size.width && i->height >= size.height)
-				{
-					return i;
-				}
-			}
-
-			return m_space.end();
-		};
-
-		auto acceptable_space = m_space.end();
-		while ((acceptable_space = find_acceptable_space(tile_size)) == m_space.end())
-		{
-			// Expand to nearest greater POTD
-			Size old_size = m_canvas.GetSize(), new_size = old_size;
-			(new_size.height <= new_size.width? new_size.height: new_size.width) *= 2;
-
-			// FIXME: check if GPU supports textures of this size, return false if not
-
-			Bitmap new_canvas(new_size, Color());
-			new_canvas.Blit(m_canvas, Point());
-			m_canvas = std::move(new_canvas);
-
-			// Add space
-			if (new_size.width > old_size.width)
-			{
-				m_space.push_back(Rectangle(old_size.width, 0, new_size.width-old_size.width, new_size.height));
-			}
-			else
-			{
-				m_space.push_back(Rectangle(0, old_size.height, new_size.width, new_size.height-old_size.height));
-			}
-		}
-
-		// Place
-		Point tile_location = acceptable_space->Location();
-		m_canvas.Blit(bitmap, bitmap_region, tile_location);
-
-		// Split used space
-		int p3width = (acceptable_space->width - tile_size.width);
-		int p3height = (acceptable_space->height - tile_size.height);
-		int p1 = tile_size.width * p3height;
-		int p2 = tile_size.height * p3width;
-		int p3 = p3width * p3height;
-		Rectangle cut_space;
-
-		if (p2 + p3 > p1 + p3)
-		{
-			// Split vertically
-			cut_space = Rectangle
-			(
-				acceptable_space->left + tile_size.width,
-				acceptable_space->top,
-				p3width,
-				acceptable_space->height
-			);
-
-			acceptable_space->width = tile_size.width;
-			acceptable_space->height -= tile_size.height;
-			acceptable_space->top += tile_size.height;
-		}
-		else
-		{
-			// Split horisontally
-			cut_space = Rectangle
-			(
-				acceptable_space->left,
-				acceptable_space->top + tile_size.height,
-				acceptable_space->width,
-				p3height
-			);
-
-			acceptable_space->height = tile_size.height;
-			acceptable_space->width -= tile_size.width;
-			acceptable_space->left += tile_size.width;
-		}
-
-		if (cut_space.Area() > 0)
-		{
-			m_space.push_back(cut_space);
-		}
-
-		if (acceptable_space->Area() == 0)
-		{
-			m_space.erase(acceptable_space);
-		}
-
-		m_is_dirty = true;
-		m_tile_count += 1;
-		out_region = Rectangle(tile_location, tile_size);
-		return true;
-	}
-
-	void AtlasTexture::Update(Rectangle region, const Bitmap& bitmap)
-	{
-		m_texture.Update(region, bitmap);
-		m_canvas.BlitUnchecked(bitmap, region.Location());
-	}
-
-	void AtlasTexture::Release(Rectangle region)
-	{
-		m_space.push_back(region);
-		m_tile_count -= 1;
-	}
-
-	bool AtlasTexture::IsEmpty() const
-	{
-		return m_tile_count == 0;
-	}
-
-	void AtlasTexture::Refresh()
-	{
-		if (m_is_dirty)
-		{
-			m_texture.Update(m_canvas);
-			m_is_dirty = false;
-		}
-	}
-
-	void AtlasTexture::Bind()
-	{
-		m_texture.Bind();
-	}
-
-	Size AtlasTexture::GetSize() const
-	{
-		return m_canvas.GetSize();
-	}
-
-	// ------------------------------------------------------------------------
-
-	TexCoords::TexCoords():
-		tu1(0),
-		tv1(0),
-		tu2(1),
-		tv2(1)
-	{ }
-
-	TexCoords::TexCoords(float tu1, float tv1, float tu2, float tv2):
-		tu1(tu1),
-		tv1(tv1),
-		tu2(tu2),
-		tv2(tv2)
-	{ }
-
-	// ------------------------------------------------------------------------
-
-	std::shared_ptr<AtlasSlot> Atlas::Add(const Bitmap& bitmap, Rectangle region)
-	{
-		auto result = std::make_shared<AtlasSlot>();
-		result->size = region.Size();
-
-		if (region.Size().width < 128 || region.Size().height < 128)
-		{
-			// Consider it a tile
-			auto i = m_tiles.begin();
-			bool expanded = false;
-
-			for (; i != m_tiles.end(); i++)
-			{
-				Size before = i->GetSize();
-				if (i->Place(bitmap, region, result->area))
-				{
-					expanded = i->GetSize() != before;
-					break;
-				}
-			}
-
-			if (i != m_tiles.end())
-			{
-				result->texture = &*i;
-			}
-			else
-			{
-				m_tiles.emplace_back(Size(256, 256));
-				m_tiles.back().Place(bitmap, region, result->area);
-				result->texture = &m_tiles.back();
-			}
-
-			if (expanded)
-			{
-				// Recalculate texture coords for relevant slots
-				Size size = result->texture->GetSize();
-				for (auto& slot: m_slots)
-				{
-					if (slot->texture != result->texture) continue;
-
-					slot->coords = TexCoords
-					(
-						slot->area.left / (float)size.width,
-						slot->area.top / (float)size.height,
-						(slot->area.left+slot->size.width) / (float)size.width,
-						(slot->area.top+slot->size.height) / (float)size.height
-					);
-				}
-			}
-		}
-		else
-		{
-			// Consider it a sprite
-			m_sprites.emplace_back(region.Size());
-			m_sprites.back().Place(bitmap, region, result->area);
-			result->texture = &m_sprites.back();
-		}
-
-		// Calc texture coords for newly added slot
-		Size size = result->texture->GetSize();
-		result->coords = TexCoords
-		(
-			result->area.left / (float)size.width,
-			result->area.top / (float)size.height,
-			(result->area.left+result->size.width) / (float)size.width,
-			(result->area.top+result->size.height) / (float)size.height
-		);
-
-		m_slots.insert(result);
-		return result;
-	}
-
-	void Atlas::Update(std::shared_ptr<AtlasSlot> slot, const Bitmap& bitmap)
-	{
-		slot->texture->Update(Rectangle(slot->area.Location(), bitmap.GetSize()), bitmap);
-	}
-
-	void Atlas::Remove(std::shared_ptr<AtlasSlot> slot)
-	{
-		m_slots.erase(slot);
-
-		slot->texture->Release(slot->area);
-		if (slot->texture->IsEmpty())
-		{
-			for (auto i = m_sprites.begin(); i != m_sprites.end(); i++)
-			{
-				if (&*i == slot->texture)
-				{
-					m_sprites.erase(i);
-					return;
-				}
-			}
-
-			// FIXME: I think it's possible to get away with one list
-			for (auto i = m_tiles.begin(); i != m_tiles.end(); i++)
-			{
-				if (&*i == slot->texture)
-				{
-					m_tiles.erase(i);
-					return;
-				}
-			}
-		}
-	}
-	*/
 }

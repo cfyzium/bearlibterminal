@@ -61,17 +61,21 @@ namespace BearLibTerminal
 	private:
 		void SetOptionsInternal(const std::wstring& params);
 		void ApplyTilesets(std::map<uint16_t, std::unique_ptr<Tileset>>& tilesets);
+		void UpdateDynamicTileset(Size size);
 		void ValidateWindowOptions(OptionGroup& group, Options& options);
+		void ValidateTerminalOptions(OptionGroup& group, Options& options);
 		void ConfigureViewport();
-		void PutUnlocked(int x, int y, wchar_t code);
+		void PutUnlocked(int x, int y, int dx, int dy, wchar_t code, Color* colors);
 		void PrepareFreshCharacters();
 		void ConsumeIrrelevantInput();
 		void ConsumeStroke(const Keystroke& stroke);
-		Keystroke ReadKeystroke();
+		Keystroke ReadKeystroke(int timeout);
+		int ReadCharInternal(int timeout);
 		void OnWindowClose();
 		void OnWindowRedraw();
 		void OnWindowInput(Keystroke keystroke);
 		void OnWindowActivate();
+		void InvokeOnRenderingThread(std::function<void()> func);
 	private:
 		enum state_t {kHidden, kVisible, kClosed} m_state;
 		mutable std::mutex m_lock;

@@ -39,6 +39,7 @@ namespace BearLibTerminal
 
 	struct Layer
 	{
+		Layer(Size size);
 		std::vector<Cell> cells;
 	};
 

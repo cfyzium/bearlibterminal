@@ -15,6 +15,7 @@ namespace BearLibTerminal
 		window_title(L"BearLibTerminal"),
 		window_icon(L":default_icon"),
 		output_postformatting(true),
+		output_synchronous(false),
 		input_nonblocking(false),
 		input_events(0x01), // FIXME
 		input_precise_mouse(false),

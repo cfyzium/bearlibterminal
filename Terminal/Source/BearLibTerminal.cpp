@@ -54,30 +54,21 @@ void terminal_close()
 
 int terminal_set8(const int8_t* value)
 {
-	// FIXME: NYI
-	/*
 	if (!g_instance) return -1;
 	auto& encoding = g_instance->GetEncoding();
 	return g_instance->SetOptions(encoding.Convert((const char*)value));
-	//*/
 }
 
 int terminal_set16(const int16_t* value)
 {
-	// FIXME: NYI
-	/*
 	if (!g_instance) return -1;
 	return g_instance->SetOptions(BearLibTerminal::UTF16->Convert((const char16_t*)value));
-	//*/
 }
 
 int terminal_set32(const int32_t* value)
 {
-	// FIXME: NYI
-	/*
 	if (!g_instance) return -1;
 	return g_instance->SetOptions(BearLibTerminal::UTF32->Convert((const char32_t*)value));
-	//*/
 }
 
 void terminal_refresh()
@@ -138,12 +129,9 @@ void terminal_put_ext(int x, int y, int dx, int dy, int code, color_t* corners)
 
 int terminal_print8(int x, int y, const int8_t* s)
 {
-	// FIXME: NYI
-	/*
 	if (!g_instance) return -1;
 	auto& encoding = g_instance->GetEncoding();
 	return g_instance->Print(x, y, encoding.Convert((const char*)s));
-	//*/
 }
 
 int terminal_print16(int x, int y, const int16_t* s)
@@ -154,11 +142,8 @@ int terminal_print16(int x, int y, const int16_t* s)
 
 int terminal_print32(int x, int y, const int32_t* s)
 {
-	// FIXME: NYI
-	/*
 	if (!g_instance) return -1;
 	return g_instance->Print(x, y, BearLibTerminal::UTF32->Convert((const char32_t*)s));
-	//*/
 }
 
 int terminal_has_input()

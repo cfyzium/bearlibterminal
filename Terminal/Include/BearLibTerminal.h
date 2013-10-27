@@ -210,6 +210,7 @@ TERMINAL_API void terminal_bkcolor(color_t color);
 TERMINAL_API void terminal_composition(int mode);
 TERMINAL_API void terminal_put(int x, int y, int code);
 TERMINAL_API void terminal_put_ext(int x, int y, int dx, int dy, int code, color_t* corners);
+TERMINAL_API void terminal_custom(int mode);
 TERMINAL_API int terminal_print8(int x, int y, const int8_t* s);
 TERMINAL_API int terminal_print16(int x, int y, const int16_t* s);
 TERMINAL_API int terminal_print32(int x, int y, const int32_t* s);

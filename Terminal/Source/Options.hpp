@@ -10,11 +10,15 @@
 
 #include "Size.hpp"
 #include <string>
+#include <atomic>
 
 namespace BearLibTerminal
 {
 	struct Options
 	{
+		// Terminal
+		std::wstring terminal_encoding;
+
 		// Window
 		Size window_size;
 		Size window_cellsize;
@@ -23,6 +27,7 @@ namespace BearLibTerminal
 
 		// Output
 		bool output_postformatting;
+		bool output_synchronous;
 
 		// Input
 		bool input_nonblocking;

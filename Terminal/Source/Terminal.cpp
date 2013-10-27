@@ -27,18 +27,27 @@ namespace BearLibTerminal
 		m_window->SetOnRedraw(std::bind(&Terminal::OnWindowRedraw, this));
 		m_window->SetOnActivate(std::bind(&Terminal::OnWindowActivate, this));
 
-		// Layer 0 must always be present
-		m_world.stage.backbuffer.layers.push_back(Layer());
-
 		// Default parameters
-		SetOptionsInternal(L"window: size=40x25; font: default");
-
-		// FIXME: Setup default encoding
+		SetOptionsInternal(L"window: size=40x25; font: default; terminal.encoding=utf8");
 	}
 
 	Terminal::~Terminal()
 	{
 		m_window.reset();
+	}
+
+	void Terminal::InvokeOnRenderingThread(std::function<void()> func)
+	{
+		if (m_synchronous)
+		{
+			// Terminal (current thread) owns rendering context
+			func();
+		}
+		else
+		{
+			// Window thread owns rendering context
+			m_window->Invoke(func);
+		}
 	}
 
 	int Terminal::SetOptions(const std::wstring& value)
@@ -114,6 +123,20 @@ namespace BearLibTerminal
 		}
 	}
 
+	void Terminal::UpdateDynamicTileset(Size size)
+	{
+		auto& tileset = m_world.tilesets[0xFFFD];
+		if (tileset) tileset->Remove();
+
+		OptionGroup options;
+		options.name = L"0xFFFF";
+		options.attributes[L"name"] = L"dynamic";
+		options.attributes[L"size"] = to_string<wchar_t>(size);
+
+		tileset = Tileset::Create(m_world.tiles, options);
+		tileset->Save();
+	}
+
 	void Terminal::SetOptionsInternal(const std::wstring& value)
 	{
 		std::lock_guard<std::mutex> guard(m_lock);
@@ -143,6 +166,10 @@ namespace BearLibTerminal
 			{
 				// ...
 			}
+			else if (group.name == L"terminal")
+			{
+				ValidateTerminalOptions(group, updated);
+			}
 			else
 			{
 				uint16_t base_code = 0; // Basic font base_code is 0
@@ -157,13 +184,18 @@ namespace BearLibTerminal
 		// All options and parameters must be validated, may try to apply them
 		if (!new_tilesets.empty())
 		{
-			m_window->Invoke([&](){ApplyTilesets(new_tilesets);}); // XXX: from rendering thread
+			InvokeOnRenderingThread([&](){ApplyTilesets(new_tilesets);});
 		}
 
 		// Primary sanity check: if there is no base font, lots of things are gonna fail
 		if (!m_world.tilesets.count(0))
 		{
 			throw std::runtime_error("No base font has been configured");
+		}
+
+		if (updated.terminal_encoding != m_options.terminal_encoding)
+		{
+			m_encoding = GetUnibyteEncoding(updated.terminal_encoding); // TODO: move encoding to options
 		}
 
 		// Apply on per-option basis
@@ -179,6 +211,7 @@ namespace BearLibTerminal
 			m_window->SetIcon(updated.window_icon);
 		}
 
+		// If the size of cell has changed -OR- new basic tileset has been specified
 		if (updated.window_cellsize != m_options.window_cellsize || new_tilesets.count(0))
 		{
 			// Refresh stage.state.cellsize
@@ -193,6 +226,10 @@ namespace BearLibTerminal
 
 			m_vars[VK_CELL_WIDTH] = m_world.state.cellsize.width; // TODO: move vars to world.state
 			m_vars[VK_CELL_HEIGHT] = m_world.state.cellsize.height;
+
+			// Must readd dynamic tileset.
+			// NOTE: Should not fail.
+			InvokeOnRenderingThread([=](){UpdateDynamicTileset(m_world.state.cellsize);});
 
 			viewport_size_changed = true;
 			LOG(Debug, L"SetOptions: new cell size is " << m_world.state.cellsize);
@@ -211,7 +248,7 @@ namespace BearLibTerminal
 			// Resize window object
 			Size viewport_size = m_world.stage.size * m_world.state.cellsize;
 			m_window->SetClientSize(viewport_size);
-			m_window->Invoke([=](){ConfigureViewport();}); // XXX: from rendering thread
+			InvokeOnRenderingThread([=](){ConfigureViewport();});
 		}
 
 		m_options = updated;
@@ -264,17 +301,41 @@ namespace BearLibTerminal
 		{
 			if (!m_window->ValidateIcon(group.attributes[L"icon"]))
 			{
-				throw std::runtime_error(L"window.icon cannot be loaded");
+				throw std::runtime_error("window.icon cannot be loaded");
 			}
 
 			options.window_icon = group.attributes[L"icon"];
 		}
 	}
 
+	void Terminal::ValidateTerminalOptions(OptionGroup& group, Options& options)
+	{
+		if (group.attributes.count(L"encoding"))
+		{
+			options.terminal_encoding = group.attributes[L"encoding"];
+		}
+	}
+
 	void Terminal::Refresh()
 	{
-		// XXX: m_state in not under lock
+		/*
+		// Atomically
+		{
+			std::lock_guard<std::mutex> guard(m_lock);
 
+			// If window is not visible, show it
+			if (m_state == kHidden)
+			{
+				m_window->Show();
+				m_state = kVisible;
+			}
+
+			// Ignore irrelevant redraw calls (in case something has failed and state is kClosed)
+			if (m_state != kVisible) return;
+
+			m_world.stage.frontbuffer = m_world.stage.backbuffer;
+		}
+		/*/
 		// If window is not visible, show it
 		if (m_state == kHidden)
 		{
@@ -285,11 +346,11 @@ namespace BearLibTerminal
 		// Ignore irrelevant redraw calls (in case something has failed and state is kClosed)
 		if (m_state != kVisible) return;
 
-		// Atomically replace frontbuffer
 		{
 			std::lock_guard<std::mutex> guard(m_lock);
 			m_world.stage.frontbuffer = m_world.stage.backbuffer;
 		}
+		//*/
 
 		// NOTE: this call will syncronously wait OnWindowRedraw completion
 		m_window->Redraw();
@@ -313,8 +374,7 @@ namespace BearLibTerminal
 		std::lock_guard<std::mutex> guard(m_lock);
 		while (m_world.stage.backbuffer.layers.size() <= m_world.state.layer)
 		{
-			m_world.stage.backbuffer.layers.push_back(Layer());
-			m_world.stage.backbuffer.layers.back().cells.resize(m_world.stage.size.Area()); // TODO: Layer constructor
+			m_world.stage.backbuffer.layers.emplace_back(m_world.stage.size);
 		}
 	}
 
@@ -334,9 +394,11 @@ namespace BearLibTerminal
 	}
 
 	/**
-	 * NOTE: this function does not check bounds
+	 * NOTE:
+	 * Lightened 'put character' version, does not lock or check bounds.
+	 * Used from Put, PutExtended and Print.
 	 */
-	void Terminal::PutUnlocked(int x, int y, wchar_t code)
+	void Terminal::PutUnlocked(int x, int y, int dx, int dy, wchar_t code, Color* colors)
 	{
 		uint16_t u16code = (uint16_t)code; // TODO: use either wchar_t or uintxx_t
 		if (m_world.tiles.slots.find(u16code) == m_world.tiles.slots.end())
@@ -344,18 +406,50 @@ namespace BearLibTerminal
 			m_fresh_codes.push_back(u16code);
 		}
 
+		// NOTE: layer must be already allocated by SetLayer
 		int index = y*m_world.stage.size.width+x;
 		Cell& cell = m_world.stage.backbuffer.layers[m_world.state.layer].cells[index];
 
-		// Character FIXME: composition mode
-		cell.leafs.push_back(Leaf());
-		cell.leafs.back().code = u16code;
-
-		// Colors
-		cell.leafs.back().color[0] = m_world.state.color;
-		if (m_world.state.bkcolor.a > 0)
+		if (code != 0)
 		{
-			m_world.stage.backbuffer.background[index] = m_world.state.bkcolor;
+			if (m_world.state.composition == 0) // TODO: constants
+			{
+				cell.leafs.clear();
+			}
+
+			cell.leafs.emplace_back();
+			Leaf& leaf = cell.leafs.back();
+
+			// Character
+			leaf.code = u16code;
+
+			// Offset
+			leaf.dx = dx;
+			leaf.dy = dy;
+
+			// Foreground colors
+			if (colors != nullptr)
+			{
+				for (int i=0; i<4; i++) leaf.color[i] = colors[i];
+				leaf.flags = 1; // TODO: multicolor flag constant
+			}
+			else
+			{
+				leaf.color[0] = m_world.state.color;
+				leaf.flags = 0;
+			}
+
+			// Background color
+			if (m_world.state.bkcolor.a > 0)
+			{
+				m_world.stage.backbuffer.background[index] = m_world.state.bkcolor;
+			}
+		}
+		else
+		{
+			// Character code '0' means 'erase cell'
+			cell.leafs.clear();
+			m_world.stage.backbuffer.background[index] = Color();
 		}
 	}
 
@@ -363,12 +457,14 @@ namespace BearLibTerminal
 	{
 		std::lock_guard<std::mutex> guard(m_lock);
 		if (x < 0 || y < 0 || x >= m_world.stage.size.width || y >= m_world.stage.size.height) return;
-		PutUnlocked(x, y, code);
+		PutUnlocked(x, y, 0, 0, code, nullptr);
 	}
 
 	void Terminal::PutExtended(int x, int y, int dx, int dy, wchar_t code, Color* corners)
 	{
-		// FIXME: NYI
+		std::lock_guard<std::mutex> guard(m_lock);
+		if (x < 0 || y < 0 || x >= m_world.stage.size.width || y >= m_world.stage.size.height) return;
+		PutUnlocked(x, y, dx, dy, code, corners);
 	}
 
 	int Terminal::Print(int x, int y, const std::wstring& str)
@@ -379,7 +475,7 @@ namespace BearLibTerminal
 		for (auto c: str)
 		{
 			if (x >= m_world.stage.size.width) break;
-			PutUnlocked(x, y, c);
+			PutUnlocked(x, y, 0, 0, c, nullptr);
 			x += 1;
 		}
 	}
@@ -398,7 +494,7 @@ namespace BearLibTerminal
 		return (code >= 0 && code < (int)m_vars.size())? m_vars[code]: 0;
 	}
 
-	Keystroke Terminal::ReadKeystroke()
+	Keystroke Terminal::ReadKeystroke(int timeout)
 	{
 		std::unique_lock<std::mutex> lock(m_lock);
 
@@ -414,16 +510,17 @@ namespace BearLibTerminal
 			return Keystroke(0);
 		}
 
-		if (!m_options.input_nonblocking)
+		if (timeout > 0)
 		{
 			auto predicate = [&]() -> bool {return !m_input_queue.empty() || (m_state == kClosed);};
-			m_input_condvar.wait(lock, predicate);
+			m_input_condvar.wait_for(lock, std::chrono::milliseconds(timeout), predicate);
 		}
 
 		if (!m_input_queue.empty())
 		{
 			Keystroke stroke = m_input_queue.front();
 			m_input_queue.pop_front();
+			ConsumeStroke(stroke);
 			return stroke;
 		}
 		else if (m_state == kClosed)
@@ -441,10 +538,43 @@ namespace BearLibTerminal
 	 */
 	int Terminal::Read()
 	{
-		Keystroke stroke = ReadKeystroke();
+		bool nonblocking = get_locked(m_options.input_nonblocking, m_lock);
+		Keystroke stroke = ReadKeystroke(nonblocking? 0: std::numeric_limits<int>::max());
 		int result = stroke.scancode;
 		if (stroke.released) result |= VK_FLAG_RELEASED;
 		return result;
+	}
+
+	int Terminal::ReadCharInternal(int timeout)
+	{
+		do
+		{
+			Keystroke stroke = ReadKeystroke(timeout);
+			if (stroke.scancode == VK_CLOSE)
+			{
+				// Break on VK_CLOSE but push it back so subsequent Read call will return it
+				std::unique_lock<std::mutex> lock(m_lock);
+				m_input_queue.push_front(Keystroke(VK_CLOSE));
+				ConsumeIrrelevantInput();
+				return -1;
+			}
+			if (stroke.scancode == VK_CANCEL)
+			{
+				// Just break
+				return -1;
+			}
+			else if (stroke.scancode == 0)
+			{
+				// No input available
+				return 0;
+			}
+			else if (stroke.character > 0 && !stroke.released)
+			{
+				// Textual key-down event with
+				return stroke.character;
+			}
+		}
+		while (true);
 	}
 
 	/**
@@ -452,7 +582,8 @@ namespace BearLibTerminal
 	 */
 	int Terminal::ReadChar()
 	{
-		// FIXME: NYI
+		bool nonblocking = get_locked(m_options.input_nonblocking, m_lock);
+		return ReadCharInternal(nonblocking? 0: std::numeric_limits<int>::max());
 	}
 
 	/**
@@ -461,6 +592,7 @@ namespace BearLibTerminal
 	int Terminal::ReadString(int x, int y, wchar_t* buffer, int max)
 	{
 		// FIXME: NYI
+		// ReadCharInternal should help alot
 	}
 
 	const Encoding<char>& Terminal::GetEncoding() const
@@ -488,7 +620,7 @@ namespace BearLibTerminal
 
 	void Terminal::PrepareFreshCharacters()
 	{
-		for (auto code: m_fresh_codes)
+		for (auto code: m_fresh_codes) // FIXME: Box Drawing (2500–257F) and Block Elements (2580–259F) are searched in different order
 		{
 			bool provided = false;
 			for (auto i=m_world.tilesets.rbegin(); i != m_world.tilesets.rend(); i++)
@@ -503,8 +635,8 @@ namespace BearLibTerminal
 
 			if (!provided)
 			{
-				// Use no-character code (MUST be already provided by dynamic tileset)
-				// FIXME: NYI
+				// Use Unicode replacement character code (MUST be already provided by dynamic tileset)
+				m_world.tiles.slots[code] = m_world.tiles.slots[0xFFFD];
 			}
 		}
 
@@ -599,7 +731,8 @@ namespace BearLibTerminal
 								current_texture_id = slot.texture_id;
 								glBegin(GL_QUADS);
 							}
-							slot.Draw(leaf, Point(left, top));
+
+							slot.Draw(leaf, left, top);
 						}
 						else
 						{
@@ -724,7 +857,7 @@ namespace BearLibTerminal
 		else if (stroke.scancode == VK_MOUSE_SCROLL)
 		{
 			// Mouse scroll event, update wheel position
-			m_vars[VK_MOUSE_WHEEL] = stroke.z; // TODO: relative
+			m_vars[VK_MOUSE_WHEEL] = stroke.z;
 		}
 		else if (stroke.scancode == VK_CLOSE)
 		{

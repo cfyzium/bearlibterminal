@@ -10,6 +10,7 @@
 
 #include <string>
 #include <sstream>
+#include <mutex>
 
 namespace BearLibTerminal
 {
@@ -20,10 +21,23 @@ namespace BearLibTerminal
 		return !(stream.fail() || stream.bad());
 	}
 
+	template<typename char_t, typename T> std::basic_string<char_t> to_string(const T& value)
+	{
+		std::basic_ostringstream<char_t> stream;
+		stream << value;
+		return stream.str();
+	}
+
 	template<typename char_t> bool ends_with(const std::basic_string<char_t>& what, const std::basic_string<char_t>& with)
 	{
 		// FIXME: does not handle multiple occurences properly
 		return what.find(with) == what.length() - with.length();
+	}
+
+	template<typename T> T get_locked(const T& reference, std::mutex& lock)
+	{
+		std::lock_guard<std::mutex> guard(lock);
+		return reference;
 	}
 }
 

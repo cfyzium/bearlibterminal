@@ -7,7 +7,9 @@
 
 #include "Tileset.hpp"
 #include "BitmapTileset.hpp"
+#include "DynamicTileset.hpp"
 #include "Utility.hpp"
+#include "Log.hpp"
 #include <stdexcept>
 
 namespace BearLibTerminal
@@ -46,6 +48,10 @@ namespace BearLibTerminal
 		if (ends_with<wchar_t>(options.attributes[L"name"], L".png")) // bmp, jpg
 		{
 			return std::unique_ptr<Tileset>(new BitmapTileset(container, options));
+		}
+		else if (options.attributes[L"name"] == L"dynamic")
+		{
+			return std::unique_ptr<Tileset>(new DynamicTileset(container, options));
 		}
 
 		throw std::runtime_error("Tileset::Create: failed to recognize requested tileset type");

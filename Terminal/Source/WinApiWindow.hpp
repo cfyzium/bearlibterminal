@@ -49,6 +49,8 @@ namespace BearLibTerminal
 		void Show() override;
 		void Hide() override;
 		void Invoke(std::function<void()> func) override;
+		bool AcquireRC() override;
+		bool ReleaseRC() override;
 	protected:
 		void ThreadFunction() override;
 		bool Construct() override;

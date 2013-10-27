@@ -9,6 +9,10 @@
 
 namespace BearLibTerminal
 {
+	Layer::Layer(Size size):
+		cells(size.Area())
+	{ }
+
 	void Stage::Resize(Size new_size)
 	{
 		size = new_size;
@@ -16,11 +20,15 @@ namespace BearLibTerminal
 		// Background: reset to transparent
 		backbuffer.background = std::vector<Color>(size.Area());
 
-		// TODO: just remove all layers?
-		for (auto& i: backbuffer.layers)
+		if (backbuffer.layers.empty())
 		{
-			// Layer: reset to empty cells
-			i.cells = std::vector<Cell>(size.Area());
+			// Scene must have at least one layer
+			backbuffer.layers.emplace_back(size);
+		}
+		else
+		{
+			// Must preserve number of layers since who knows what layer is currently selected
+			for (auto& i: backbuffer.layers) i = Layer(size);
 		}
 
 		// TODO: unnecessary?

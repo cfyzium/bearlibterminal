@@ -4,11 +4,11 @@ project(BearLibTerminal)
 
 file(GLOB TERMINAL_SOURCES ./Source/*.cpp) # FIXME: manual selection
 
-set(CF "-std=c++11 -O3 -g0 -flto")
-set(LF "-s -flto -fvisibility=hidden")
+#set(CF "-std=c++11 -O3 -g0 -flto")
+#set(LF "-s -flto -fvisibility=hidden")
 
-#set(CF "-std=c++11 -O0 -g3")
-#set(LF "-fvisibility=hidden")
+set(CF "-std=c++11 -O0 -g3")
+set(LF "-fvisibility=hidden")
 
 if (WIN32)
 	set(CF "${CF} -DUNICODE")

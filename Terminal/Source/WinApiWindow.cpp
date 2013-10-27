@@ -327,9 +327,17 @@ namespace BearLibTerminal
 			return false;
 		}
 
+		/*
 		if ( wglMakeCurrent(m_device_context, m_rendering_context) == 0 )
 		{
 			LOG(Fatal, L"Failed to bind OpenGL context (" << GetLastErrorStr() << ")");
+			DestroyOpenGLContext();
+			return false;
+		}
+		*/
+		if (!AcquireRC())
+		{
+			LOG(Fatal, L"Failed to acquire rendering context");
 			DestroyOpenGLContext();
 			return false;
 		}
@@ -339,6 +347,28 @@ namespace BearLibTerminal
 		PFNWGLSWAPINTERVALEXT f = (PFNWGLSWAPINTERVALEXT)wglGetProcAddress("wglSwapIntervalEXT");
 		if ( f ) f(0);
 		else LOG(Trace, "No wglSwapIntervalEXT?");
+
+		return true;
+	}
+
+	bool WinApiWindow::AcquireRC()
+	{
+		if (wglMakeCurrent(m_device_context, m_rendering_context) == 0)
+		{
+			LOG(Error, L"Failed to bind OpenGL context (" << GetLastErrorStr() << ")");
+			return false;
+		}
+
+		return true;
+	}
+
+	bool WinApiWindow::ReleaseRC()
+	{
+		if (wglMakeCurrent(NULL, NULL) == 0)
+		{
+			LOG(Error, L"Failed to unbind OpenGL context (" << GetLastErrorStr() << ")");
+			return false;
+		}
 
 		return true;
 	}
@@ -359,7 +389,8 @@ namespace BearLibTerminal
 	{
 		if ( m_rendering_context != nullptr )
 		{
-			wglMakeCurrent(NULL, NULL);
+			//wglMakeCurrent(NULL, NULL);
+			ReleaseRC();
 			m_rendering_context = nullptr;
 		}
 
