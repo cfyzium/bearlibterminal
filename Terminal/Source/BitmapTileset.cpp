@@ -52,6 +52,9 @@ namespace BearLibTerminal
 			int columns = (int)std::floor(image_size.width / (float)m_tile_size.width);
 			int rows = (int)std::floor(image_size.height / (float)m_tile_size.height);
 
+			int w2 = m_tile_size.width / 2; // TODO: round in a way to compensate state.half_cellsize rounding error
+			int h2 = m_tile_size.height / 2;
+
 			for (int y=0; y<rows; y++)
 			{
 				for (int x=0; x<columns; x++)
@@ -60,6 +63,8 @@ namespace BearLibTerminal
 					uint16_t code = m_base_code + i;
 					Rectangle region(Point(x*m_tile_size.width, y*m_tile_size.height), m_tile_size);
 					auto tile_slot = m_container.atlas.Add(m_cache, region);
+					tile_slot->offset = Point(-w2, -h2);
+					tile_slot->placement = TileSlot::Placement::Centered;
 					m_tiles[code] = tile_slot;
 					m_container.slots[code] = tile_slot;
 				}

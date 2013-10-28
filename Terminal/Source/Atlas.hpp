@@ -36,7 +36,7 @@ namespace BearLibTerminal
 		virtual ~Slot() { }
 		Slot();
 		virtual void BindTexture() = 0;
-		virtual void Draw(const Leaf& leaf, int x, int y) = 0;
+		virtual void Draw(const Leaf& leaf, int x, int y, int w2, int h2) = 0;
 		uint64_t texture_id;
 	};
 
@@ -66,11 +66,10 @@ namespace BearLibTerminal
 		Size space_size;
 		Rectangle texture_region;
 		TexCoords texture_coords;
-		Point shift;
 
 		TileSlot();
 		void BindTexture() override;
-		void Draw(const Leaf& leaf, int x, int y) override;
+		void Draw(const Leaf& leaf, int x, int y, int w2, int h2) override;
 		void Update(const Bitmap& bitmap) override;
 	};
 

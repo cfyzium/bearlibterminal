@@ -281,22 +281,35 @@ namespace BearLibTerminal
 		texture->Bind();
 	}
 
-	void TileSlot::Draw(const Leaf& leaf, int x, int y)
+	void TileSlot::Draw(const Leaf& leaf, int x, int y, int w2, int h2)
 	{
-		int right = x + texture_region.width;
-		int bottom = y + texture_region.height;
+		int left, top;
+
+		if (placement == Placement::Centered)
+		{
+			left = x + w2 + offset.x + leaf.dx;
+			top = y + h2 + offset.y + leaf.dy;
+		}
+		else
+		{
+			left = x + leaf.dx;
+			top = y + leaf.dy;
+		}
+
+		int right = left + texture_region.width;
+		int bottom = top + texture_region.height;
 
 		if (leaf.flags & Leaf::CornerColored)
 		{
 			// Top-left
 			glColor4ub(leaf.color[0].r, leaf.color[0].g, leaf.color[0].b, leaf.color[0].a);
 			glTexCoord2f(texture_coords.tu1, texture_coords.tv1);
-			glVertex2i(x, y);
+			glVertex2i(left, top);
 
 			// Bottom-left
 			glColor4ub(leaf.color[1].r, leaf.color[1].g, leaf.color[1].b, leaf.color[1].a);
 			glTexCoord2f(texture_coords.tu1, texture_coords.tv2);
-			glVertex2i(x, bottom);
+			glVertex2i(left, bottom);
 
 			// Bottom-right
 			glColor4ub(leaf.color[2].r, leaf.color[2].g, leaf.color[2].b, leaf.color[2].a);
@@ -306,7 +319,7 @@ namespace BearLibTerminal
 			// Top-right
 			glColor4ub(leaf.color[3].r, leaf.color[3].g, leaf.color[3].b, leaf.color[3].a);
 			glTexCoord2f(texture_coords.tu2, texture_coords.tv1);
-			glVertex2i(right, y);
+			glVertex2i(right, top);
 		}
 		else
 		{
@@ -315,11 +328,11 @@ namespace BearLibTerminal
 
 			// Top-left
 			glTexCoord2f(texture_coords.tu1, texture_coords.tv1);
-			glVertex2i(x, y);
+			glVertex2i(left, top);
 
 			// Bottom-left
 			glTexCoord2f(texture_coords.tu1, texture_coords.tv2);
-			glVertex2i(x, bottom);
+			glVertex2i(left, bottom);
 
 			// Bottom-right
 			glTexCoord2f(texture_coords.tu2, texture_coords.tv2);
@@ -327,7 +340,7 @@ namespace BearLibTerminal
 
 			// Top-right
 			glTexCoord2f(texture_coords.tu2, texture_coords.tv1);
-			glVertex2i(right, y);
+			glVertex2i(right, top);
 		}
 	}
 

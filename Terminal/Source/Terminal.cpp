@@ -225,6 +225,13 @@ namespace BearLibTerminal
 				m_world.state.cellsize = m_world.tilesets[0]->GetBoundingBoxSize();
 			}
 
+			// Cache half cellsize
+			m_world.state.half_cellsize = Size
+			(
+				m_world.state.cellsize.width / 2,
+				m_world.state.cellsize.height / 2
+			);
+
 			// Update state
 			m_vars[VK_CELL_WIDTH] = m_world.state.cellsize.width; // TODO: move vars to world.state
 			m_vars[VK_CELL_HEIGHT] = m_world.state.cellsize.height;
@@ -902,6 +909,9 @@ namespace BearLibTerminal
 		m_world.tiles.atlas.Refresh();
 		Texture::Enable();
 
+		int w2 = m_world.state.half_cellsize.width;
+		int h2 = m_world.state.half_cellsize.height;
+
 		uint64_t current_texture_id = 0;
 		glBegin(GL_QUADS);
 		glColor4f(1, 1, 1, 1);
@@ -927,7 +937,7 @@ namespace BearLibTerminal
 								glBegin(GL_QUADS);
 							}
 
-							slot.Draw(leaf, left, top);
+							slot.Draw(leaf, left, top, w2, h2);
 						}
 						else
 						{

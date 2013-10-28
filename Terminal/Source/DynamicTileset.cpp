@@ -40,6 +40,9 @@ namespace BearLibTerminal
 
 	bool DynamicTileset::Save()
 	{
+		int w2 = m_tile_size.width / 2;
+		int h2 = m_tile_size.height / 2;
+
 		// Add Unicode replacement character glyph
 		uint16_t code = 0xFFFD;
 		Bitmap canvas(m_tile_size, Color());
@@ -54,6 +57,8 @@ namespace BearLibTerminal
 			canvas(m_tile_size.width-2, y) = Color(255, 255, 255, 255);
 		}
 		auto tile_slot = m_container.atlas.Add(canvas, Rectangle(m_tile_size));
+		tile_slot->offset = Point(-w2, -h2);
+		tile_slot->placement = TileSlot::Placement::Centered;
 		m_tiles[code] = tile_slot;
 		m_container.slots[code] = tile_slot;
 		LOG(Info, L"Added Unicode replacement character tile (" << m_tile_size << L")");
