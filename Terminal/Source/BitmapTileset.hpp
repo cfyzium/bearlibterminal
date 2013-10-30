@@ -9,6 +9,7 @@
 #define BITMAPTILESET_HPP_
 
 #include "Tileset.hpp"
+#include "Encoding.hpp"
 #include "Bitmap.hpp"
 
 namespace BearLibTerminal
@@ -27,6 +28,7 @@ namespace BearLibTerminal
 		Bitmap m_cache;
 		uint16_t m_base_code;
 		Size m_tile_size;
+		std::unique_ptr<Encoding<char>> m_codepage;
 	};
 }
 

@@ -23,7 +23,7 @@
 #ifdef USE_LIBPNG
 #include <png.h>
 #else
-#include "Picopng.hpp"
+#include "PicoPNG.hpp"
 #endif
 
 #include <vector>

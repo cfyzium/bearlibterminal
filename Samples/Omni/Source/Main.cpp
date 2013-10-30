@@ -16,13 +16,25 @@ int main()
 	terminal_set("window.cellsize=24x24");
 	terminal_color(0xFF000000);
 	terminal_bkcolor(0xFFEE9000);
-	terminal_wprint(2, 2, L"Hello, [color=white]world[/color].[U+2250] \x1234 [base=1]abc");
+	terminal_wprint(2, 2, L"Hello, [color=white]world[/color].[U+2250] \x1234 {абв} [base=1]abc");
 
 	terminal_bkcolor(0);
 	color_t corners[] = {0xFFFF0000, 0xFF00FF00, 0xFF6060FF, 0xFFFF00FF};
 	terminal_put_ext(2, 4, 0, 0, L'я', corners);
-	terminal_put_ext(3, 4, 0, 0, 15, corners);
+	terminal_bkcolor(0xFFFFFFFF);
+	terminal_put_ext(3, 5, 0, 0, 0x2593, corners);
 	terminal_put_ext(4, 4, 0, 0, 11*16+2, corners);
+	terminal_bkcolor(0);
+
+	terminal_color(0xFFFFFFFF);
+	terminal_bkcolor(0xFFEE9000);
+	for (int y=0; y<16; y++)
+	{
+		for (int x=0; x<16; x++)
+		{
+			terminal_put(6+x, 6+y, y*16+x);
+		}
+	}
 
 	terminal_refresh();
 	terminal_read();

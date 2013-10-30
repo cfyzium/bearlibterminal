@@ -7,8 +7,8 @@
 
 #include "BitmapTileset.hpp"
 #include "LoadBitmap.hpp"
-#include "Encoding.hpp"
 #include "Geometry.hpp"
+#include "Resource.hpp"
 #include "Utility.hpp"
 #include <stdexcept>
 #include <fstream>
@@ -25,6 +25,11 @@ namespace BearLibTerminal
 			throw std::runtime_error("BitmapTileset: failed to parse base code");
 		}
 
+		if (!group.attributes.count(L"name") || group.attributes[L"name"].empty())
+		{
+			throw std::runtime_error("BitmapTileset: missing or empty 'name' attribute");
+		}
+
 		if (!group.attributes.count(L"size"))
 		{
 			throw std::runtime_error("BitmapTileset: 'size' attribute is missing");
@@ -35,11 +40,12 @@ namespace BearLibTerminal
 			throw std::runtime_error("BitmapTileset: failed to parse 'size' attribute");
 		}
 
-		// TODO: codepage attribute
+		if (group.attributes.count(L"codepage"))
+		{
+			m_codepage = GetUnibyteEncoding(group.attributes[L"codepage"]);
+		}
 
-		std::string filename = UTF8->Convert(group.attributes[L"name"]);
-		std::ifstream file(filename.c_str(), std::ios_base::binary); // FIXME: Resources manager
-		m_cache = LoadBitmap(file);
+		m_cache = LoadBitmap(*Resource::Open(group.attributes[L"name"]));
 
 		// TODO: check dimensions
 	}
@@ -60,13 +66,17 @@ namespace BearLibTerminal
 				for (int x=0; x<columns; x++)
 				{
 					int i = y*columns + x;
-					uint16_t code = m_base_code + i;
-					Rectangle region(Point(x*m_tile_size.width, y*m_tile_size.height), m_tile_size);
-					auto tile_slot = m_container.atlas.Add(m_cache, region);
-					tile_slot->offset = Point(-w2, -h2);
-					tile_slot->placement = TileSlot::Placement::Centered;
-					m_tiles[code] = tile_slot;
-					m_container.slots[code] = tile_slot;
+					wchar_t j = m_codepage->Convert(i);
+					if (j != 0xFFFD) // FIXME: Unicode replacement char
+					{
+						uint16_t code = m_base_code + j;
+						Rectangle region(Point(x*m_tile_size.width, y*m_tile_size.height), m_tile_size);
+						auto tile_slot = m_container.atlas.Add(m_cache, region);
+						tile_slot->offset = Point(-w2, -h2);
+						tile_slot->placement = TileSlot::Placement::Centered;
+						m_tiles[code] = tile_slot;
+						m_container.slots[code] = tile_slot;
+					}
 				}
 			}
 

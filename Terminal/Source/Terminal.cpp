@@ -760,7 +760,7 @@ namespace BearLibTerminal
 				ConsumeIrrelevantInput();
 				return -1;
 			}
-			if (stroke.scancode == VK_CANCEL)
+			if (stroke.scancode == VK_ESCAPE)
 			{
 				// Just break
 				return -1;
@@ -875,6 +875,8 @@ namespace BearLibTerminal
 		{
 			PrepareFreshCharacters();
 		}
+
+		glClear(GL_COLOR_BUFFER_BIT);
 
 		Texture::Disable();
 		glBegin(GL_QUADS);

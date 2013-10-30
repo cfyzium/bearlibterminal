@@ -28,7 +28,7 @@
 * Apologies for the compact code style, it's to make this tiny.
 */
 
-#include "Picopng.hpp"
+#include "PicoPNG.hpp"
 
 /*
 * decodePNG: The picoPNG function, decodes a PNG file buffer in memory, into a raw pixel buffer.

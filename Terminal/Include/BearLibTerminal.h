@@ -27,6 +27,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdarg.h>
+#include <wchar.h>
 
 /*
  * Keyboard scancodes
