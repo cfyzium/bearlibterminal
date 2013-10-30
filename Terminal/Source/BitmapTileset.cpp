@@ -44,6 +44,10 @@ namespace BearLibTerminal
 		{
 			m_codepage = GetUnibyteEncoding(group.attributes[L"codepage"]);
 		}
+		else
+		{
+			m_codepage = GetUnibyteEncoding(L"utf8");
+		}
 
 		m_cache = LoadBitmap(*Resource::Open(group.attributes[L"name"]));
 
@@ -85,7 +89,10 @@ namespace BearLibTerminal
 		}
 		else
 		{
-			// FIXME: readd tiles
+			for (auto i: m_tiles) // TODO: strict tileset priority
+			{
+				m_container.slots[i.first] = i.second;
+			}
 		}
 	}
 
@@ -93,18 +100,32 @@ namespace BearLibTerminal
 	{
 		for (auto i: m_tiles)
 		{
-			if (m_container.slots.count(i.first) && (void*)m_container.slots[i.first].get() == (void*)i.second.get())
+			if (m_container.slots.count(i.first) && (void*)m_container.slots[i.first].get() == (void*)i.second.get()) // TODO: proper equality test
 			{
 				m_container.slots.erase(i.first);
 			}
+
+			m_container.atlas.Remove(i.second);
 		}
 	}
 
 	void BitmapTileset::Reload(BitmapTileset&& tileset)
 	{
-		// FIXME: NYI
-		// 1. Remove current tiles from both container and atlas,
-		// 2. Add new tiles from other tileset cache
+		if (m_tiles.size() == 1 && m_tiles.begin()->second->texture_region.Size() == tileset.m_cache.GetSize())
+		{
+			// Tileset contains one tile with the same dimensions
+			m_tiles.begin()->second->Update(tileset.m_cache);
+		}
+		else
+		{
+			// Another tileset should contain already validated cache/size/codepage,
+			// it should be safe to use them to reinitialize tileset.
+			Remove();
+			m_cache = std::move(tileset.m_cache);
+			m_tile_size = tileset.m_tile_size;
+			m_codepage = std::move(tileset.m_codepage);
+			Save();
+		}
 	}
 
 	Size BitmapTileset::GetBoundingBoxSize()

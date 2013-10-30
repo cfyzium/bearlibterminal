@@ -32,145 +32,149 @@
 /*
  * Keyboard scancodes
  */
-#define VK_LBUTTON			0x01
-#define VK_RBUTTON			0x02
-#define VK_CLOSE			0x03 /* Same code as VK_CANCEL from winuser.h */
-#define VK_BACK				0x08 /* Backspace */
-#define VK_BACKSPACE		0x08 /* Backspace (alias) */
-#define VK_TAB				0x09
-#define VK_RETURN			0x0D /* Enter */
-#define VK_SHIFT			0x10
-#define VK_CONTROL			0x11
-#define VK_PAUSE			0x13 /* Pause/Break */
-#define VK_ESCAPE			0x1B
-#define VK_SPACE			0x20
-#define VK_PRIOR			0x21 /* Page Up */
-#define VK_NEXT				0x22 /* Page Down */
-#define VK_END				0x23
-#define VK_HOME				0x24
-#define VK_LEFT				0x25 /* Left arrow */
-#define VK_UP				0x26 /* Up arrow */
-#define VK_RIGHT			0x27 /* Right arrow */
-#define VK_DOWN				0x28 /* Down arrow */
-#define VK_INSERT			0x2D
-#define VK_DELETE			0x2E
-#define VK_0				0x30
-#define VK_1				0x31
-#define VK_2				0x32
-#define VK_3				0x33
-#define VK_4				0x34
-#define VK_5				0x35
-#define VK_6				0x36
-#define VK_7				0x37
-#define VK_8				0x38
-#define VK_9				0x39
-#define VK_A				0x41
-#define VK_B				0x42
-#define VK_C				0x43
-#define VK_D				0x44
-#define VK_E				0x45
-#define VK_F				0x46
-#define VK_G				0x47
-#define VK_H				0x48
-#define VK_I				0x49
-#define VK_J				0x4A
-#define VK_K				0x4B
-#define VK_L				0x4C
-#define VK_M				0x4D
-#define VK_N				0x4E
-#define VK_O				0x4F
-#define VK_P				0x50
-#define VK_Q				0x51
-#define VK_R				0x52
-#define VK_S				0x53
-#define VK_T				0x54
-#define VK_U				0x55
-#define VK_V				0x56
-#define VK_W				0x57
-#define VK_X				0x58
-#define VK_Y				0x59
-#define VK_Z				0x5A
-#define VK_GRAVE			0xC0 /*  `  */
-#define VK_MINUS			0xBD /*  -  */
-#define VK_EQUALS			0xBB /*  =  */
-#define VK_BACKSLASH		0xDC /*  \  */
-#define VK_LBRACKET			0xDB /*  [  */
-#define VK_RBRACKET			0xDD /*  ]  */
-#define VK_SEMICOLON		0xBA /*  ;  */
-#define VK_APOSTROPHE		0xDE /*  '  */
-#define VK_COMMA			0xBC /*  ,  */
-#define VK_PERIOD			0xBE /*  .  */
-#define VK_SLASH			0xBF /*  /  */
-#define VK_NUMPAD0			0x60
-#define VK_NUMPAD1			0x61
-#define VK_NUMPAD2			0x62
-#define VK_NUMPAD3			0x63
-#define VK_NUMPAD4			0x64
-#define VK_NUMPAD5			0x65
-#define VK_NUMPAD6			0x66
-#define VK_NUMPAD7			0x67
-#define VK_NUMPAD8			0x68
-#define VK_NUMPAD9			0x69
-#define VK_MULTIPLY			0x6A /* '*' on numpad */
-#define VK_ADD				0x6B /* '+' on numpad */
-#define VK_SUBTRACT			0x6D /* '-' on numpad */
-#define VK_DECIMAL			0x6E /* '.' on numpad */
-#define VK_DIVIDE			0x6F /* '/' on numpad */
-#define VK_F1				0x70
-#define VK_F2				0x71
-#define VK_F3				0x72
-#define VK_F4				0x73
-#define VK_F5				0x74
-#define VK_F6				0x75
-#define VK_F7				0x76
-#define VK_F8				0x77
-#define VK_F9				0x78
-#define VK_F10				0x79
-#define VK_F11				0x7A
-#define VK_F12				0x7B
+#define TK_LBUTTON			0x01
+#define TK_RBUTTON			0x02
+#define TK_MBUTTON			0x07
+#define TK_CLOSE			0x03 /* Same code as VK_CANCEL from winuser.h */
+#define TK_BACK				0x08 /* Backspace */
+#define TK_BACKSPACE		0x08 /* Backspace (alias) */
+#define TK_TAB				0x09
+#define TK_RETURN			0x0D /* Enter */
+#define TK_SHIFT			0x10
+#define TK_CONTROL			0x11
+#define TK_PAUSE			0x13 /* Pause/Break */
+#define TK_ESCAPE			0x1B
+#define TK_SPACE			0x20
+#define TK_PRIOR			0x21 /* Page Up */
+#define TK_NEXT				0x22 /* Page Down */
+#define TK_END				0x23
+#define TK_HOME				0x24
+#define TK_LEFT				0x25 /* Left arrow */
+#define TK_UP				0x26 /* Up arrow */
+#define TK_RIGHT			0x27 /* Right arrow */
+#define TK_DOWN				0x28 /* Down arrow */
+#define TK_INSERT			0x2D
+#define TK_DELETE			0x2E
+#define TK_0				0x30
+#define TK_1				0x31
+#define TK_2				0x32
+#define TK_3				0x33
+#define TK_4				0x34
+#define TK_5				0x35
+#define TK_6				0x36
+#define TK_7				0x37
+#define TK_8				0x38
+#define TK_9				0x39
+#define TK_A				0x41
+#define TK_B				0x42
+#define TK_C				0x43
+#define TK_D				0x44
+#define TK_E				0x45
+#define TK_F				0x46
+#define TK_G				0x47
+#define TK_H				0x48
+#define TK_I				0x49
+#define TK_J				0x4A
+#define TK_K				0x4B
+#define TK_L				0x4C
+#define TK_M				0x4D
+#define TK_N				0x4E
+#define TK_O				0x4F
+#define TK_P				0x50
+#define TK_Q				0x51
+#define TK_R				0x52
+#define TK_S				0x53
+#define TK_T				0x54
+#define TK_U				0x55
+#define TK_V				0x56
+#define TK_W				0x57
+#define TK_X				0x58
+#define TK_Y				0x59
+#define TK_Z				0x5A
+#define TK_GRAVE			0xC0 /*  `  */
+#define TK_MINUS			0xBD /*  -  */
+#define TK_EQUALS			0xBB /*  =  */
+#define TK_BACKSLASH		0xDC /*  \  */
+#define TK_LBRACKET			0xDB /*  [  */
+#define TK_RBRACKET			0xDD /*  ]  */
+#define TK_SEMICOLON		0xBA /*  ;  */
+#define TK_APOSTROPHE		0xDE /*  '  */
+#define TK_COMMA			0xBC /*  ,  */
+#define TK_PERIOD			0xBE /*  .  */
+#define TK_SLASH			0xBF /*  /  */
+#define TK_NUMPAD0			0x60
+#define TK_NUMPAD1			0x61
+#define TK_NUMPAD2			0x62
+#define TK_NUMPAD3			0x63
+#define TK_NUMPAD4			0x64
+#define TK_NUMPAD5			0x65
+#define TK_NUMPAD6			0x66
+#define TK_NUMPAD7			0x67
+#define TK_NUMPAD8			0x68
+#define TK_NUMPAD9			0x69
+#define TK_MULTIPLY			0x6A /* '*' on numpad */
+#define TK_ADD				0x6B /* '+' on numpad */
+#define TK_SUBTRACT			0x6D /* '-' on numpad */
+#define TK_DECIMAL			0x6E /* '.' on numpad */
+#define TK_DIVIDE			0x6F /* '/' on numpad */
+#define TK_F1				0x70
+#define TK_F2				0x71
+#define TK_F3				0x72
+#define TK_F4				0x73
+#define TK_F5				0x74
+#define TK_F6				0x75
+#define TK_F7				0x76
+#define TK_F8				0x77
+#define TK_F9				0x78
+#define TK_F10				0x79
+#define TK_F11				0x7A
+#define TK_F12				0x7B
 
 /*
  * If key was released instead of pressed, it's code will be OR'ed with
  * VK_FLAG_RELEASED constant, i. e. terminal_read() will return:
  * a) 0x41 for pressed 'A'
- * b) 0x41|VK_FLAG_RELEASED for released 'A' (0x141)
+ * b) 0x41|VK_FLAG_RELEASED (0x141) for released 'A'
  *
  * NOTE: you have to set keyrelease flag in "input.events" option for
  * terminal to generate these input events. It is not set by default.
  */
-#define VK_FLAG_RELEASED	0x100
+#define TK_FLAG_RELEASED	0x100
 
 /*
- * Terminal-specific input events
+ * Specific input events
  */
-#define VK_MOUSE_MOVE		0xD3 /* Mouse movement event */
-#define VK_MOUSE_SCROLL		0xD4 /* Mouse wheel scroll event */
+#define TK_MOUSE_MOVE		0xD3 /* Mouse movement event */
+#define TK_MOUSE_SCROLL		0xD4 /* Mouse wheel scroll event */
 
 /*
  * Virtual key-codes for internal terminal states/variables. These can be
  * accessed via terminal_state() function.
  */
-#define VK_MOUSE_X			0xD0 /* Mouse cursor position in characters/cells */
-#define VK_MOUSE_Y			0xD1
-#define VK_MOUSE_PIXEL_X	0xD5 /* Mouse cursor position in pixels */
-#define VK_MOUSE_PIXEL_Y	0xD6
-#define VK_MOUSE_WHEEL		0xD2 /* Mouse wheel counter (absolute value) */
-#define VK_CELL_WIDTH		0xD7 /* Character cell size in pixels */
-#define VK_CELL_HEIGHT		0xD8
-#define VK_WINDOW_WIDTH		0xD9 /* Terminal window size in characters/cells */
-#define VK_WINDOW_HEIGHT	0xDA
+#define TK_MOUSE_X          0xD0 /* Mouse cursor position in cells */
+#define TK_MOUSE_Y          0xD1
+#define TK_MOUSE_PIXEL_X    0xD5 /* Mouse cursor position in pixels */
+#define TK_MOUSE_PIXEL_Y    0xD6
+#define TK_MOUSE_WHEEL      0xD2 /* Mouse wheel counter (absolute value) */
+#define TK_CELL_WIDTH       0xD7 /* Character cell size in pixels */
+#define TK_CELL_HEIGHT      0xD8
+#define TK_WINDOW_WIDTH     0xD9 /* Terminal window size in cells */
+#define TK_WINDOW_HEIGHT    0xDA
+#define TK_COMPOSITION      0xC1 /* Current composition state */
+#define TK_COLOR			0xC2 /* Current foregroung color */
+#define TK_BKCOLOR			0xC3 /* Current background color */
 
 /*
  * Composition option. If turned on it allows for placing several tiles in one cell.
  */
-#define TERMINAL_COMPOSITION_OFF    0
-#define TERMINAL_COMPOSITION_ON     1
+#define TK_COMPOSITION_OFF    0
+#define TK_COMPOSITION_ON     1
 
 /*
  * Input result codes for terminal_read, terminal_read_char and terminal_read_str.
  */
-#define TERMINAL_INPUT_CALL_AGAIN  -1
-#define TERMINAL_INPUT_CANCELLED   -2
+#define TK_INPUT_CALL_AGAIN   0
+#define TK_INPUT_CANCELLED   -1
 
 /*
  * Terminal use unsigned 32-bit value for color representation in ARGB order (0xAARRGGBB), e. g.
@@ -258,7 +262,7 @@ TERMINAL_API color_t color_from_name32(const int32_t* name);
 
 /*
  * This set of inline functions define basic name substitution + type cast:
- * terminal_[w]xxx -> terminal_xxx{8|16|32}
+ * terminal_[w]xxxx -> terminal_xxxx{8|16|32}
  */
 
 static inline int terminal_set(const char* value)

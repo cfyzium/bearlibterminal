@@ -53,7 +53,7 @@ namespace BearLibTerminal
 
 	protected:
 		TileContainer& m_container;
-		std::unordered_map<uint16_t, std::shared_ptr<Tile>> m_tiles;
+		std::unordered_map<uint16_t, std::shared_ptr<TileSlot>> m_tiles;
 	};
 
 	template<typename T> class StronglyTypedReloadableTileset: public Tileset

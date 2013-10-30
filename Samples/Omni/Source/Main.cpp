@@ -21,13 +21,13 @@ int main()
 	terminal_bkcolor(0);
 	color_t corners[] = {0xFFFF0000, 0xFF00FF00, 0xFF6060FF, 0xFFFF00FF};
 	terminal_put_ext(2, 4, 0, 0, L'я', corners);
-	terminal_bkcolor(0xFFFFFFFF);
+	//terminal_bkcolor(0xFFFFFFFF);
 	terminal_put_ext(3, 5, 0, 0, 0x2593, corners);
 	terminal_put_ext(4, 4, 0, 0, 11*16+2, corners);
 	terminal_bkcolor(0);
 
 	terminal_color(0xFFFFFFFF);
-	terminal_bkcolor(0xFFEE9000);
+	//terminal_bkcolor(0xFFEE9000);
 	for (int y=0; y<16; y++)
 	{
 		for (int x=0; x<16; x++)

@@ -466,17 +466,17 @@ namespace BearLibTerminal
 		static mapping_t mapping = []() -> mapping_t
 		{
 			mapping_t result;
-			result[VK_INSERT]	= VK_NUMPAD0;
-			result[VK_DELETE]	= VK_DECIMAL;
-			result[VK_END]		= VK_NUMPAD1;
-			result[VK_DOWN]		= VK_NUMPAD2;
-			result[VK_NEXT]		= VK_NUMPAD3;
-			result[VK_LEFT]		= VK_NUMPAD4;
-			result[VK_CLEAR]	= VK_NUMPAD5;
-			result[VK_RIGHT]	= VK_NUMPAD6;
-			result[VK_HOME]		= VK_NUMPAD7;
-			result[VK_UP]		= VK_NUMPAD8;
-			result[VK_PRIOR]	= VK_NUMPAD9;
+			result[VK_INSERT]	= TK_NUMPAD0;
+			result[VK_DELETE]	= TK_DECIMAL;
+			result[VK_END]		= TK_NUMPAD1;
+			result[VK_DOWN]		= TK_NUMPAD2;
+			result[VK_NEXT]		= TK_NUMPAD3;
+			result[VK_LEFT]		= TK_NUMPAD4;
+			result[VK_CLEAR]	= TK_NUMPAD5;
+			result[VK_RIGHT]	= TK_NUMPAD6;
+			result[VK_HOME]		= TK_NUMPAD7;
+			result[VK_UP]		= TK_NUMPAD8;
+			result[VK_PRIOR]	= TK_NUMPAD9;
 			return result;
 		}();
 
@@ -512,7 +512,7 @@ namespace BearLibTerminal
 		if ( uMsg == WM_CLOSE )
 		{
 			// Emulate pressing virtual VK_CLOSE button
-			ReportInput(Keystroke(VK_CLOSE, false));
+			ReportInput(Keystroke(TK_CLOSE, false));
 			return FALSE;
 		}
 		else if ( uMsg == WM_PAINT )
@@ -628,7 +628,7 @@ namespace BearLibTerminal
 			if ( precise_position.y < 0 ) precise_position.y = 0;
 
 			Keystroke stroke;
-			stroke.scancode = VK_MOUSE_MOVE;
+			stroke.scancode = TK_MOUSE_MOVE;
 			stroke.x = precise_position.x;
 			stroke.y = precise_position.y;
 			ReportInput(stroke);
@@ -641,7 +641,7 @@ namespace BearLibTerminal
 			m_mouse_wheel += delta;
 
 			Keystroke stroke;
-			stroke.scancode = VK_MOUSE_SCROLL;
+			stroke.scancode = TK_MOUSE_SCROLL;
 			stroke.z = m_mouse_wheel;
 			ReportInput(stroke);
 
@@ -650,7 +650,7 @@ namespace BearLibTerminal
 		else if ( uMsg == WM_LBUTTONDOWN || uMsg == WM_LBUTTONUP )
 		{
 			Keystroke stroke;
-			stroke.scancode = VK_LBUTTON;
+			stroke.scancode = TK_LBUTTON;
 			stroke.released = uMsg == WM_LBUTTONUP;
 			ReportInput(stroke);
 
@@ -659,7 +659,7 @@ namespace BearLibTerminal
 		else if ( uMsg == WM_RBUTTONDOWN || uMsg == WM_RBUTTONUP )
 		{
 			Keystroke stroke;
-			stroke.scancode = VK_RBUTTON;
+			stroke.scancode = TK_RBUTTON;
 			stroke.released = uMsg == WM_LBUTTONUP;
 			ReportInput(stroke);
 
@@ -668,7 +668,7 @@ namespace BearLibTerminal
 		else if ( uMsg == WM_MBUTTONDOWN || uMsg == WM_MBUTTONUP )
 		{
 			Keystroke stroke;
-			stroke.scancode = VK_MBUTTON;
+			stroke.scancode = TK_MBUTTON;
 			stroke.released = uMsg == WM_LBUTTONUP;
 			ReportInput(stroke);
 

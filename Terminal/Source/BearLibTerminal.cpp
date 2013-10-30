@@ -161,7 +161,7 @@ int terminal_state(int code)
 
 int terminal_read()
 {
-	if (!g_instance) return VK_CLOSE;
+	if (!g_instance) return TK_CLOSE;
 	return g_instance->Read();
 }
 

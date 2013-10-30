@@ -233,8 +233,8 @@ namespace BearLibTerminal
 			);
 
 			// Update state
-			m_vars[VK_CELL_WIDTH] = m_world.state.cellsize.width; // TODO: move vars to world.state
-			m_vars[VK_CELL_HEIGHT] = m_world.state.cellsize.height;
+			m_vars[TK_CELL_WIDTH] = m_world.state.cellsize.width; // TODO: move vars to world.state
+			m_vars[TK_CELL_HEIGHT] = m_world.state.cellsize.height;
 
 			// Must readd dynamic tileset.
 			// NOTE: SHOULD NOT fail.
@@ -456,16 +456,19 @@ namespace BearLibTerminal
 	void Terminal::SetForeColor(Color color)
 	{
 		m_world.state.color = color;
+		m_vars[TK_COLOR] = color;
 	}
 
 	void Terminal::SetBackColor(Color color)
 	{
 		m_world.state.bkcolor = color;
+		m_vars[TK_BKCOLOR] = color;
 	}
 
 	void Terminal::SetComposition(int mode)
 	{
 		m_world.state.composition = mode;
+		m_vars[TK_COMPOSITION] = mode;
 	}
 
 	void Terminal::PutUnlocked(int x, int y, int dx, int dy, wchar_t code, Color* colors)
@@ -686,7 +689,7 @@ namespace BearLibTerminal
 	{
 		std::lock_guard<std::mutex> guard(m_lock);
 		if (m_state == kClosed) return 1;
-		if (m_vars[VK_CLOSE] && m_options.input_sticky_close) return 1; // sticky VK_CLOSE, once set, can't be undone
+		if (m_vars[TK_CLOSE] && m_options.input_sticky_close) return 1; // sticky VK_CLOSE, once set, can't be undone
 		return !m_input_queue.empty();
 	}
 
@@ -701,9 +704,9 @@ namespace BearLibTerminal
 		std::unique_lock<std::mutex> lock(m_lock);
 
 		// Sticky close cannot be undone once set
-		if (m_vars[VK_CLOSE] && m_options.input_sticky_close)
+		if (m_vars[TK_CLOSE] && m_options.input_sticky_close)
 		{
-			return Keystroke(VK_CLOSE);
+			return Keystroke(TK_CLOSE);
 		}
 
 		// Keep terminal from blocking accidentally if input.events is None
@@ -727,7 +730,7 @@ namespace BearLibTerminal
 		}
 		else if (m_state == kClosed)
 		{
-			return Keystroke(VK_CLOSE);
+			return Keystroke(TK_CLOSE);
 		}
 		else
 		{
@@ -743,7 +746,7 @@ namespace BearLibTerminal
 		bool nonblocking = get_locked(m_options.input_nonblocking, m_lock);
 		Keystroke stroke = ReadKeystroke(nonblocking? 0: std::numeric_limits<int>::max());
 		int result = stroke.scancode;
-		if (stroke.released) result |= VK_FLAG_RELEASED;
+		if (stroke.released) result |= TK_FLAG_RELEASED;
 		return result;
 	}
 
@@ -752,11 +755,11 @@ namespace BearLibTerminal
 		do
 		{
 			Keystroke stroke = ReadKeystroke(timeout);
-			if (stroke.scancode == VK_CLOSE)
+			if (stroke.scancode == TK_CLOSE)
 			{
 				// Break on VK_CLOSE but push it back so subsequent Read could return it
 				std::unique_lock<std::mutex> lock(m_lock);
-				m_input_queue.push_front(Keystroke(VK_CLOSE));
+				m_input_queue.push_front(Keystroke(TK_CLOSE));
 				ConsumeIrrelevantInput();
 				return -1;
 			}
@@ -997,7 +1000,7 @@ namespace BearLibTerminal
 			{
 				must_be_consumed = true;
 			}
-			else if (stroke.scancode == VK_MOUSE_MOVE)
+			else if (stroke.scancode == TK_MOUSE_MOVE)
 			{
 				if (!(filter & InputEvents::MouseMove))
 				{
@@ -1006,17 +1009,17 @@ namespace BearLibTerminal
 				else if (!m_options.input_precise_mouse)
 				{
 					// Check if mouse cursor changed cell location
-					float cell_width = m_vars[VK_CELL_WIDTH];
-					float cell_height = m_vars[VK_CELL_HEIGHT];
+					float cell_width = m_vars[TK_CELL_WIDTH];
+					float cell_height = m_vars[TK_CELL_HEIGHT];
 					int mx = (int)std::floor(stroke.x/cell_width);
 					int my = (int)std::floor(stroke.y/cell_height);
-					if (mx == m_vars[VK_MOUSE_X] && my == m_vars[VK_MOUSE_Y])
+					if (mx == m_vars[TK_MOUSE_X] && my == m_vars[TK_MOUSE_Y])
 					{
 						must_be_consumed = true;
 					}
 				}
 			}
-			else if (stroke.scancode == VK_MOUSE_SCROLL)
+			else if (stroke.scancode == TK_MOUSE_SCROLL)
 			{
 				if (!(filter & InputEvents::MouseScroll))
 				{
@@ -1051,26 +1054,26 @@ namespace BearLibTerminal
 
 	void Terminal::ConsumeStroke(const Keystroke& stroke)
 	{
-		if (stroke.scancode == VK_MOUSE_MOVE)
+		if (stroke.scancode == TK_MOUSE_MOVE)
 		{
 			// Mouse movement event, update mouse position
-			float cell_width = m_vars[VK_CELL_WIDTH];
-			float cell_height = m_vars[VK_CELL_HEIGHT];
-			m_vars[VK_MOUSE_X] = (int)std::floor(stroke.x/cell_width);
-			m_vars[VK_MOUSE_Y] = (int)std::floor(stroke.y/cell_height);
-			m_vars[VK_MOUSE_PIXEL_X] = stroke.x;
-			m_vars[VK_MOUSE_PIXEL_Y] = stroke.y;
+			float cell_width = m_vars[TK_CELL_WIDTH];
+			float cell_height = m_vars[TK_CELL_HEIGHT];
+			m_vars[TK_MOUSE_X] = (int)std::floor(stroke.x/cell_width);
+			m_vars[TK_MOUSE_Y] = (int)std::floor(stroke.y/cell_height);
+			m_vars[TK_MOUSE_PIXEL_X] = stroke.x;
+			m_vars[TK_MOUSE_PIXEL_Y] = stroke.y;
 		}
-		else if (stroke.scancode == VK_MOUSE_SCROLL)
+		else if (stroke.scancode == TK_MOUSE_SCROLL)
 		{
 			// Mouse scroll event, update wheel position
-			m_vars[VK_MOUSE_WHEEL] = stroke.z;
+			m_vars[TK_MOUSE_WHEEL] = stroke.z;
 		}
-		else if (stroke.scancode == VK_CLOSE)
+		else if (stroke.scancode == TK_CLOSE)
 		{
 			if (m_options.input_sticky_close || !(m_options.input_events & InputEvents::KeyPress))
 			{
-				m_vars[VK_CLOSE] = 1;
+				m_vars[TK_CLOSE] = 1;
 			}
 		}
 		else
@@ -1082,9 +1085,9 @@ namespace BearLibTerminal
 	void Terminal::OnWindowActivate()
 	{
 		// Cancel all pressed keys
-		for ( int i = 0; i <= VK_F12; i++ ) // NOTE: VK_F12 is the last physical key index
+		for ( int i = 0; i <= TK_F12; i++ ) // NOTE: TK_F12 is the last physical key index
 		{
-			if (i == VK_CLOSE) continue;
+			if (i == TK_CLOSE) continue;
 			if (m_vars[i]) OnWindowInput(Keystroke(i, true));
 		}
 	}
