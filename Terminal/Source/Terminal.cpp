@@ -171,6 +171,10 @@ namespace BearLibTerminal
 			{
 				ValidateTerminalOptions(group, updated);
 			}
+			else if (group.name == L"log")
+			{
+				ValidateLoggingOptions(group, updated);
+			}
 			else
 			{
 				uint16_t base_code = 0; // Basic font base_code is 0
@@ -193,6 +197,11 @@ namespace BearLibTerminal
 		{
 			throw std::runtime_error("No base font has been configured");
 		}
+
+		// Such implementation is awful. Should use some global (external library?) instance.
+		if (updated.log_filename != m_options.log_filename) g_log.SetFile(updated.log_filename);
+		if (updated.log_level != m_options.log_level) g_log.SetLevel(updated.log_level);
+		if (updated.log_mode != m_options.log_mode) g_log.SetMode(updated.log_mode);
 
 		if (updated.terminal_encoding != m_options.terminal_encoding)
 		{
@@ -221,7 +230,8 @@ namespace BearLibTerminal
 			// If specified cellsize is nil, fall back on base font bounding box
 			if (!m_world.state.cellsize.Area())
 			{
-				//  NOTE: by now, tileset container MUST have 0th tileset
+				// NOTE: by now, tileset container MUST have 0th tileset since
+				// one is added in ctor and cannot be fully removed afterwards.
 				m_world.state.cellsize = m_world.tilesets[0]->GetBoundingBoxSize();
 			}
 
@@ -386,9 +396,30 @@ namespace BearLibTerminal
 		if (options.input_cursor_blink_rate <= 0) options.input_cursor_blink_rate = 1;
 	}
 
+	void Terminal::ValidateLoggingOptions(OptionGroup& group, Options& options)
+	{
+		// Possible options: file, level, mode
+
+		if (group.attributes.count(L"file"))
+		{
+			options.log_filename = group.attributes[L"file"]; // TODO: validate file access
+		}
+
+		if (group.attributes.count(L"level") && !try_parse(group.attributes[L"level"], options.log_level))
+		{
+			throw std::runtime_error("log.level cannot be parsed");
+		}
+
+		if (group.attributes.count(L"mode") && !try_parse(group.attributes[L"mode"], options.log_mode))
+		{
+			throw std::runtime_error("log.mode cannot be parsed");
+		}
+	}
+
 	void Terminal::Refresh()
 	{
-		// XXX: m_state here is not protected by lock (Window.Show will try to refresh syncronously which causes deadlock)
+		// XXX: m_state here is not protected by lock because
+		// Window::Show will try to refresh syncronously which causes deadlock.
 
 		// If window is not visible, show it
 		if (m_state == kHidden)
@@ -442,6 +473,7 @@ namespace BearLibTerminal
 
 	void Terminal::SetLayer(int layer_index)
 	{
+		// Layer index is limited to [0..255]
 		if (layer_index < 0) layer_index = 0;
 		if (layer_index > 255) layer_index = 255;
 		m_world.state.layer = layer_index;
@@ -485,7 +517,7 @@ namespace BearLibTerminal
 
 		if (code != 0)
 		{
-			if (m_world.state.composition == 0) // TODO: constants
+			if (m_world.state.composition == TK_COMPOSITION_OFF)
 			{
 				cell.leafs.clear();
 			}
@@ -523,7 +555,7 @@ namespace BearLibTerminal
 			cell.leafs.clear();
 			if (m_world.state.layer == 0)
 			{
-				m_world.stage.backbuffer.background[index] = Color();
+				m_world.stage.backbuffer.background[index] = Color(); // Transparent color, no background
 			}
 		}
 	}

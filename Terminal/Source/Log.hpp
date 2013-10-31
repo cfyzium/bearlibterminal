@@ -26,39 +26,49 @@
 #include <mutex>
 #include <string>
 #include <sstream>
+#include <atomic>
 
 namespace BearLibTerminal
 {
-	class Log
+	class Logger
 	{
 	public:
-		typedef enum class Level_ {None, Fatal, Error, Warning, Info, Debug, Trace} Level;
+		enum class Level {None, Fatal, Error, Warning, Info, Debug, Trace};
+		enum class Mode {Truncate, Append};
 	public:
-		Log();
+		Logger();
 		void Write(Level level, const std::wstring& what);
-		void SetLevel(Level level);
 		void SetFile(const std::wstring& filename);
-		Level GetLevel() const;
+		void SetLevel(Level level);
+		void SetMode(Mode mode);
+		std::wstring GetFile() const;
+		inline Level GetLevel() const {return m_level;}
+		Mode GetMode() const;
 	private:
 		mutable std::mutex m_lock;
-		Level m_level;
+		std::atomic<Level> m_level;
+		Mode m_mode;
 		std::wstring m_filename;
+		bool m_truncated;
 	};
 
-	std::wostream& operator<< (std::wostream& stream, const Log::Level& value);
-	std::wistream& operator>> (std::wistream& stream, Log::Level& value);
+	std::wostream& operator<< (std::wostream& stream, const Logger::Level& value);
+	std::wistream& operator>> (std::wistream& stream, Logger::Level& value);
 
-	extern Log Logger; // FIXME: g_logger
+	std::wostream& operator<< (std::wostream& stream, const Logger::Mode& value);
+	std::wistream& operator>> (std::wistream& stream, Logger::Mode& mode);
+
+	extern Logger g_log;
 }
 
 #define LOG(level, what)\
 	do\
 	{\
-		if (BearLibTerminal::Log::Level::level <= BearLibTerminal::Logger.GetLevel())\
+		if (BearLibTerminal::Logger::Level::level <= BearLibTerminal::g_log.GetLevel())\
 		{\
 			std::wostringstream wss_;\
-			wss_ << what;\
-			BearLibTerminal::Logger.Write(BearLibTerminal::Log::Level::level, wss_.str());\
+			wss_ << L"[" << BearLibTerminal::Logger::Level::level << "] " << what;\
+			BearLibTerminal::g_log.Write(BearLibTerminal::Logger::Level::level, wss_.str());\
 		}\
 	}\
 	while (0)

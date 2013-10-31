@@ -65,6 +65,7 @@ namespace BearLibTerminal
 		void ValidateWindowOptions(OptionGroup& group, Options& options);
 		void ValidateInputOptions(OptionGroup& group, Options& options);
 		void ValidateTerminalOptions(OptionGroup& group, Options& options);
+		void ValidateLoggingOptions(OptionGroup& group, Options& options);
 		void ConfigureViewport();
 		void PutUnlocked(int x, int y, int dx, int dy, wchar_t code, Color* colors);
 		void PrepareFreshCharacters();

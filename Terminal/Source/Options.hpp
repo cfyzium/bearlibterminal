@@ -9,6 +9,7 @@
 #define OPTIONS_HPP_
 
 #include "Size.hpp"
+#include "Log.hpp"
 #include <string>
 #include <atomic>
 
@@ -38,8 +39,9 @@ namespace BearLibTerminal
 		int input_cursor_blink_rate;
 
 		// Log
-		// std::wstring log_filename
-		// Log::Level log_level
+		std::wstring log_filename;
+		Logger::Level log_level;
+		Logger::Mode log_mode;
 
 		Options();
 	};

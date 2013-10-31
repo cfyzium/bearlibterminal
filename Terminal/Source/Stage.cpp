@@ -6,6 +6,7 @@
  */
 
 #include "Stage.hpp"
+#include "BearLibTerminal.h"
 
 namespace BearLibTerminal
 {
@@ -38,7 +39,7 @@ namespace BearLibTerminal
 	State::State():
 		color(255, 255, 255, 255),
 		bkcolor(),
-		composition(0),
+		composition(TK_COMPOSITION_OFF),
 		layer(0)
 	{ }
 }

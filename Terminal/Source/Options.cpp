@@ -17,9 +17,13 @@ namespace BearLibTerminal
 		output_postformatting(true),
 		output_synchronous(false),
 		input_nonblocking(false),
-		input_events(0x01), // FIXME
+		input_events(InputEvents::KeyPress),
 		input_precise_mouse(false),
+		input_sticky_close(true),
 		input_cursor_symbol((uint16_t)'_'),
-		input_cursor_blink_rate(500)
+		input_cursor_blink_rate(500),
+		log_filename(g_log.GetFile()),
+		log_level(g_log.GetLevel()),
+		log_mode(g_log.GetMode())
 	{ }
 }
