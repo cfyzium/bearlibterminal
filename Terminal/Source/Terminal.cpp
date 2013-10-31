@@ -763,7 +763,7 @@ namespace BearLibTerminal
 				ConsumeIrrelevantInput();
 				return -1;
 			}
-			if (stroke.scancode == VK_ESCAPE)
+			if (stroke.scancode == TK_ESCAPE)
 			{
 				// Just break
 				return -1;

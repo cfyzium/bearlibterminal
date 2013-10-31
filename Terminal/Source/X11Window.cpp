@@ -236,111 +236,111 @@ namespace BearLibTerminal
 		for (auto& i: MISC_keymap) i = 0;
 
 		// These X keysyms have 0xFF as the high byte
-		MISC_keymap[XK_BackSpace&0xFF] = VK_BACKSPACE;
-		MISC_keymap[XK_Tab&0xFF] = VK_TAB;
+		MISC_keymap[XK_BackSpace&0xFF] = TK_BACKSPACE;
+		MISC_keymap[XK_Tab&0xFF] = TK_TAB;
 		//MISC_keymap[XK_Clear&0xFF] = VK_CLEAR; // TODO
-		MISC_keymap[XK_Return&0xFF] = VK_RETURN;
-		MISC_keymap[XK_Pause&0xFF] = VK_PAUSE;
-		MISC_keymap[XK_Escape&0xFF] = VK_ESCAPE;
-		MISC_keymap[XK_Delete&0xFF] = VK_DELETE;
+		MISC_keymap[XK_Return&0xFF] = TK_RETURN;
+		MISC_keymap[XK_Pause&0xFF] = TK_PAUSE;
+		MISC_keymap[XK_Escape&0xFF] = TK_ESCAPE;
+		MISC_keymap[XK_Delete&0xFF] = TK_DELETE;
 
-		MISC_keymap[XK_KP_0&0xFF] = VK_NUMPAD0;		// Keypad 0-9
-		MISC_keymap[XK_KP_1&0xFF] = VK_NUMPAD1;
-		MISC_keymap[XK_KP_2&0xFF] = VK_NUMPAD2;
-		MISC_keymap[XK_KP_3&0xFF] = VK_NUMPAD3;
-		MISC_keymap[XK_KP_4&0xFF] = VK_NUMPAD4;
-		MISC_keymap[XK_KP_5&0xFF] = VK_NUMPAD5;
-		MISC_keymap[XK_KP_6&0xFF] = VK_NUMPAD6;
-		MISC_keymap[XK_KP_7&0xFF] = VK_NUMPAD7;
-		MISC_keymap[XK_KP_8&0xFF] = VK_NUMPAD8;
-		MISC_keymap[XK_KP_9&0xFF] = VK_NUMPAD9;
-		MISC_keymap[XK_KP_Insert&0xFF] = VK_NUMPAD0;
-		MISC_keymap[XK_KP_End&0xFF] = VK_NUMPAD1;
-		MISC_keymap[XK_KP_Down&0xFF] = VK_NUMPAD2;
-		MISC_keymap[XK_KP_Page_Down&0xFF] = VK_NUMPAD3;
-		MISC_keymap[XK_KP_Left&0xFF] = VK_NUMPAD4;
-		MISC_keymap[XK_KP_Begin&0xFF] = VK_NUMPAD5;
-		MISC_keymap[XK_KP_Right&0xFF] = VK_NUMPAD6;
-		MISC_keymap[XK_KP_Home&0xFF] = VK_NUMPAD7;
-		MISC_keymap[XK_KP_Up&0xFF] = VK_NUMPAD8;
-		MISC_keymap[XK_KP_Page_Up&0xFF] = VK_NUMPAD9;
-		MISC_keymap[XK_KP_Delete&0xFF] = VK_DECIMAL;//SDLK_KP_PERIOD;
-		MISC_keymap[XK_KP_Decimal&0xFF] = VK_DECIMAL;//SDLK_KP_PERIOD;
-		MISC_keymap[XK_KP_Divide&0xFF] = VK_DIVIDE;//SDLK_KP_DIVIDE;
-		MISC_keymap[XK_KP_Multiply&0xFF] = VK_MULTIPLY;//SDLK_KP_MULTIPLY;
-		MISC_keymap[XK_KP_Subtract&0xFF] = VK_SUBTRACT;//SDLK_KP_MINUS;
-		MISC_keymap[XK_KP_Add&0xFF] = VK_ADD;//SDLK_KP_PLUS;
-		MISC_keymap[XK_KP_Enter&0xFF] = VK_RETURN;//SDLK_KP_ENTER;
-		MISC_keymap[XK_KP_Equal&0xFF] = VK_EQUALS;//SDLK_KP_EQUALS;
+		MISC_keymap[XK_KP_0&0xFF] = TK_NUMPAD0;		// Keypad 0-9
+		MISC_keymap[XK_KP_1&0xFF] = TK_NUMPAD1;
+		MISC_keymap[XK_KP_2&0xFF] = TK_NUMPAD2;
+		MISC_keymap[XK_KP_3&0xFF] = TK_NUMPAD3;
+		MISC_keymap[XK_KP_4&0xFF] = TK_NUMPAD4;
+		MISC_keymap[XK_KP_5&0xFF] = TK_NUMPAD5;
+		MISC_keymap[XK_KP_6&0xFF] = TK_NUMPAD6;
+		MISC_keymap[XK_KP_7&0xFF] = TK_NUMPAD7;
+		MISC_keymap[XK_KP_8&0xFF] = TK_NUMPAD8;
+		MISC_keymap[XK_KP_9&0xFF] = TK_NUMPAD9;
+		MISC_keymap[XK_KP_Insert&0xFF] = TK_NUMPAD0;
+		MISC_keymap[XK_KP_End&0xFF] = TK_NUMPAD1;
+		MISC_keymap[XK_KP_Down&0xFF] = TK_NUMPAD2;
+		MISC_keymap[XK_KP_Page_Down&0xFF] = TK_NUMPAD3;
+		MISC_keymap[XK_KP_Left&0xFF] = TK_NUMPAD4;
+		MISC_keymap[XK_KP_Begin&0xFF] = TK_NUMPAD5;
+		MISC_keymap[XK_KP_Right&0xFF] = TK_NUMPAD6;
+		MISC_keymap[XK_KP_Home&0xFF] = TK_NUMPAD7;
+		MISC_keymap[XK_KP_Up&0xFF] = TK_NUMPAD8;
+		MISC_keymap[XK_KP_Page_Up&0xFF] = TK_NUMPAD9;
+		MISC_keymap[XK_KP_Delete&0xFF] = TK_DECIMAL;//SDLK_KP_PERIOD;
+		MISC_keymap[XK_KP_Decimal&0xFF] = TK_DECIMAL;//SDLK_KP_PERIOD;
+		MISC_keymap[XK_KP_Divide&0xFF] = TK_DIVIDE;//SDLK_KP_DIVIDE;
+		MISC_keymap[XK_KP_Multiply&0xFF] = TK_MULTIPLY;//SDLK_KP_MULTIPLY;
+		MISC_keymap[XK_KP_Subtract&0xFF] = TK_SUBTRACT;//SDLK_KP_MINUS;
+		MISC_keymap[XK_KP_Add&0xFF] = TK_ADD;//SDLK_KP_PLUS;
+		MISC_keymap[XK_KP_Enter&0xFF] = TK_RETURN;//SDLK_KP_ENTER;
+		MISC_keymap[XK_KP_Equal&0xFF] = TK_EQUALS;//SDLK_KP_EQUALS;
 
-		MISC_keymap[XK_Up&0xFF] = VK_UP;
-		MISC_keymap[XK_Down&0xFF] = VK_DOWN;
-		MISC_keymap[XK_Right&0xFF] = VK_RIGHT;
-		MISC_keymap[XK_Left&0xFF] = VK_LEFT;
-		MISC_keymap[XK_Insert&0xFF] = VK_INSERT;
-		MISC_keymap[XK_Home&0xFF] = VK_HOME;
-		MISC_keymap[XK_End&0xFF] = VK_END;
-		MISC_keymap[XK_Page_Up&0xFF] = VK_PRIOR;//SDLK_PAGEUP;
-		MISC_keymap[XK_Page_Down&0xFF] = VK_NEXT;//SDLK_PAGEDOWN;
+		MISC_keymap[XK_Up&0xFF] = TK_UP;
+		MISC_keymap[XK_Down&0xFF] = TK_DOWN;
+		MISC_keymap[XK_Right&0xFF] = TK_RIGHT;
+		MISC_keymap[XK_Left&0xFF] = TK_LEFT;
+		MISC_keymap[XK_Insert&0xFF] = TK_INSERT;
+		MISC_keymap[XK_Home&0xFF] = TK_HOME;
+		MISC_keymap[XK_End&0xFF] = TK_END;
+		MISC_keymap[XK_Page_Up&0xFF] = TK_PRIOR;//SDLK_PAGEUP;
+		MISC_keymap[XK_Page_Down&0xFF] = TK_NEXT;//SDLK_PAGEDOWN;
 
-		MISC_keymap[XK_F1&0xFF] = VK_F1;
-		MISC_keymap[XK_F2&0xFF] = VK_F2;
-		MISC_keymap[XK_F3&0xFF] = VK_F3;
-		MISC_keymap[XK_F4&0xFF] = VK_F4;
-		MISC_keymap[XK_F5&0xFF] = VK_F5;
-		MISC_keymap[XK_F6&0xFF] = VK_F6;
-		MISC_keymap[XK_F7&0xFF] = VK_F7;
-		MISC_keymap[XK_F8&0xFF] = VK_F8;
-		MISC_keymap[XK_F9&0xFF] = VK_F9;
-		MISC_keymap[XK_F10&0xFF] = VK_F10;
-		MISC_keymap[XK_F11&0xFF] = VK_F11;
-		MISC_keymap[XK_F12&0xFF] = VK_F12;
-		MISC_keymap[XK_Shift_R&0xFF] = VK_SHIFT;//SDLK_RSHIFT;
-		MISC_keymap[XK_Shift_L&0xFF] = VK_SHIFT;//SDLK_LSHIFT;
-		MISC_keymap[XK_Control_R&0xFF] = VK_CONTROL;//SDLK_RCTRL;
-		MISC_keymap[XK_Control_L&0xFF] = VK_CONTROL;//SDLK_LCTRL;
+		MISC_keymap[XK_F1&0xFF] = TK_F1;
+		MISC_keymap[XK_F2&0xFF] = TK_F2;
+		MISC_keymap[XK_F3&0xFF] = TK_F3;
+		MISC_keymap[XK_F4&0xFF] = TK_F4;
+		MISC_keymap[XK_F5&0xFF] = TK_F5;
+		MISC_keymap[XK_F6&0xFF] = TK_F6;
+		MISC_keymap[XK_F7&0xFF] = TK_F7;
+		MISC_keymap[XK_F8&0xFF] = TK_F8;
+		MISC_keymap[XK_F9&0xFF] = TK_F9;
+		MISC_keymap[XK_F10&0xFF] = TK_F10;
+		MISC_keymap[XK_F11&0xFF] = TK_F11;
+		MISC_keymap[XK_F12&0xFF] = TK_F12;
+		MISC_keymap[XK_Shift_R&0xFF] = TK_SHIFT;//SDLK_RSHIFT;
+		MISC_keymap[XK_Shift_L&0xFF] = TK_SHIFT;//SDLK_LSHIFT;
+		MISC_keymap[XK_Control_R&0xFF] = TK_CONTROL;//SDLK_RCTRL;
+		MISC_keymap[XK_Control_L&0xFF] = TK_CONTROL;//SDLK_LCTRL;
 
 		memset(DEF_keymap, 0, sizeof(DEF_keymap));
-		DEF_keymap[0x3C] = VK_PERIOD;
-		DEF_keymap[0x77] = VK_DELETE;
-		DEF_keymap[0x5B] = VK_DECIMAL;
-		DEF_keymap[0x3B] = VK_COMMA;
-		DEF_keymap[0x31] = VK_GRAVE;
-		DEF_keymap[0x14] = VK_MINUS;
-		DEF_keymap[0x15] = VK_EQUALS;
-		DEF_keymap[0x5E] = VK_BACKSLASH;
-		DEF_keymap[0x22] = VK_LBRACKET;
-		DEF_keymap[0x23] = VK_RBRACKET;
-		DEF_keymap[0x3D] = VK_SLASH;
-		DEF_keymap[0x33] = VK_BACKSLASH;
-		DEF_keymap[0x30] = VK_APOSTROPHE;
-		DEF_keymap[0x2F] = VK_SEMICOLON;
-		DEF_keymap[0x26] = VK_A;
-		DEF_keymap[0x38] = VK_B;
-		DEF_keymap[0x36] = VK_C;
-		DEF_keymap[0x28] = VK_D;
-		DEF_keymap[0x1A] = VK_E;
-		DEF_keymap[0x29] = VK_F;
-		DEF_keymap[0x2A] = VK_G;
-		DEF_keymap[0x2B] = VK_H;
-		DEF_keymap[0x1F] = VK_I;
-		DEF_keymap[0x2C] = VK_J;
-		DEF_keymap[0x2D] = VK_K;
-		DEF_keymap[0x2E] = VK_L;
-		DEF_keymap[0x3A] = VK_M;
-		DEF_keymap[0x39] = VK_N;
-		DEF_keymap[0x20] = VK_O;
-		DEF_keymap[0x21] = VK_P;
-		DEF_keymap[0x18] = VK_Q;
-		DEF_keymap[0x1B] = VK_R;
-		DEF_keymap[0x27] = VK_S;
-		DEF_keymap[0x1C] = VK_T;
-		DEF_keymap[0x1E] = VK_U;
-		DEF_keymap[0x37] = VK_V;
-		DEF_keymap[0x19] = VK_W;
-		DEF_keymap[0x35] = VK_X;
-		DEF_keymap[0x1D] = VK_Y;
-		DEF_keymap[0x34] = VK_Z;
+		DEF_keymap[0x3C] = TK_PERIOD;
+		DEF_keymap[0x77] = TK_DELETE;
+		DEF_keymap[0x5B] = TK_DECIMAL;
+		DEF_keymap[0x3B] = TK_COMMA;
+		DEF_keymap[0x31] = TK_GRAVE;
+		DEF_keymap[0x14] = TK_MINUS;
+		DEF_keymap[0x15] = TK_EQUALS;
+		DEF_keymap[0x5E] = TK_BACKSLASH;
+		DEF_keymap[0x22] = TK_LBRACKET;
+		DEF_keymap[0x23] = TK_RBRACKET;
+		DEF_keymap[0x3D] = TK_SLASH;
+		DEF_keymap[0x33] = TK_BACKSLASH;
+		DEF_keymap[0x30] = TK_APOSTROPHE;
+		DEF_keymap[0x2F] = TK_SEMICOLON;
+		DEF_keymap[0x26] = TK_A;
+		DEF_keymap[0x38] = TK_B;
+		DEF_keymap[0x36] = TK_C;
+		DEF_keymap[0x28] = TK_D;
+		DEF_keymap[0x1A] = TK_E;
+		DEF_keymap[0x29] = TK_F;
+		DEF_keymap[0x2A] = TK_G;
+		DEF_keymap[0x2B] = TK_H;
+		DEF_keymap[0x1F] = TK_I;
+		DEF_keymap[0x2C] = TK_J;
+		DEF_keymap[0x2D] = TK_K;
+		DEF_keymap[0x2E] = TK_L;
+		DEF_keymap[0x3A] = TK_M;
+		DEF_keymap[0x39] = TK_N;
+		DEF_keymap[0x20] = TK_O;
+		DEF_keymap[0x21] = TK_P;
+		DEF_keymap[0x18] = TK_Q;
+		DEF_keymap[0x1B] = TK_R;
+		DEF_keymap[0x27] = TK_S;
+		DEF_keymap[0x1C] = TK_T;
+		DEF_keymap[0x1E] = TK_U;
+		DEF_keymap[0x37] = TK_V;
+		DEF_keymap[0x19] = TK_W;
+		DEF_keymap[0x35] = TK_X;
+		DEF_keymap[0x1D] = TK_Y;
+		DEF_keymap[0x34] = TK_Z;
 	}
 
 	int X11_TranslateKeycode(Display *display, KeyCode kc)
@@ -460,7 +460,7 @@ namespace BearLibTerminal
 					stroke.scancode = code;
 					stroke.character = buffer[0];
 
-					if (code != VK_SPACE && ((code >= VK_LBUTTON && code <= VK_DELETE) || rc == 0))
+					if (code != TK_SPACE && ((code >= TK_LBUTTON && code <= TK_DELETE) || rc == 0))
 					{
 						stroke.character = 0;
 					}
@@ -490,7 +490,7 @@ namespace BearLibTerminal
 
 					Keystroke stroke;
 					stroke.released = true;
-					stroke.scancode = VK_MOUSE_MOVE;
+					stroke.scancode = TK_MOUSE_MOVE;
 					stroke.character = 0;
 					stroke.x = m_mouse_position.x;
 					stroke.y = m_mouse_position.y;
@@ -506,22 +506,22 @@ namespace BearLibTerminal
 					if (e.xbutton.button == 1)
 					{
 						// LMB
-						stroke.scancode = VK_LBUTTON;
+						stroke.scancode = TK_LBUTTON;
 					}
 					else if (e.xbutton.button == 3)
 					{
 						// RMB
-						stroke.scancode = VK_RBUTTON;
+						stroke.scancode = TK_RBUTTON;
 					}
 					else if (e.xbutton.button == 4 && !stroke.released)
 					{
 						m_mouse_wheel -= 1;
-						stroke.scancode = VK_MOUSE_SCROLL;
+						stroke.scancode = TK_MOUSE_SCROLL;
 					}
 					else if (e.xbutton.button == 5 && !stroke.released)
 					{
 						m_mouse_wheel += 1;
-						stroke.scancode = VK_MOUSE_SCROLL;
+						stroke.scancode = TK_MOUSE_SCROLL;
 					}
 					else
 					{
@@ -544,7 +544,7 @@ namespace BearLibTerminal
 				{
 					Keystroke stroke;
 					stroke.released = false;
-					stroke.scancode = VK_CLOSE;
+					stroke.scancode = TK_CLOSE;
 					stroke.character = 0;
 					ReportInput(stroke);
 				}
