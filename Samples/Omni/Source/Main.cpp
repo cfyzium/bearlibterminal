@@ -15,6 +15,8 @@ int main()
 	terminal_setf("window.title='%s'", "Test title");
 	terminal_set("window.cellsize=24x24");
 	terminal_set("0xE000: default.png, size=16x16");
+	terminal_set("0xE200: sample.jpeg");
+	terminal_set("0xE201: sample2.jpg");
 	terminal_color(0xFF000000);
 	terminal_bkcolor(0xFFEE9000);
 	terminal_wprint(2, 2, L"Hello, [color=white]world[/color].[U+2250] \x1234 {абв} [base=0xE000]abc");
@@ -36,6 +38,12 @@ int main()
 			terminal_put(6+x, 6+y, y*16+x);
 		}
 	}
+
+	terminal_color(0xFFFFFFFF);
+	terminal_put(28, 10, 0xE200);
+
+	terminal_layer(1);
+	terminal_put(27, 9, 0xE201);
 
 	terminal_refresh();
 	terminal_read();

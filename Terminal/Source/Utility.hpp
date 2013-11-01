@@ -40,6 +40,19 @@ namespace BearLibTerminal
 		return what.find(with) == what.length() - with.length();
 	}
 
+	template<typename char_t> std::basic_string<char_t> file_extension(const std::basic_string<char_t>& s)
+	{
+		size_t n = s.find_last_of(char_t('.'));
+		if (s.length() > 1 && n < s.length()-1)
+		{
+			return s.substr(n+1);
+		}
+		else
+		{
+			return std::basic_string<char_t>();
+		}
+	}
+
 	template<typename T> T get_locked(const T& reference, std::mutex& lock)
 	{
 		std::lock_guard<std::mutex> guard(lock);

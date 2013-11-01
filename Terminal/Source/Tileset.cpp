@@ -11,6 +11,7 @@
 #include "Utility.hpp"
 #include "Log.hpp"
 #include <stdexcept>
+#include <set>
 
 namespace BearLibTerminal
 {
@@ -46,7 +47,9 @@ namespace BearLibTerminal
 			options.attributes[L"codepage"] = L"tileset-default";
 		}
 
-		if (options.attributes[L"name"] == L"default" || ends_with<wchar_t>(options.attributes[L"name"], L".png")) // bmp, jpg
+		bool is_bitmap = std::set<std::wstring>{L"bmp", L"png", L"jpg", L"jpeg"}.count(file_extension(options.attributes[L"name"]));
+
+		if (is_bitmap || options.attributes[L"name"] == L"default")
 		{
 			return std::unique_ptr<Tileset>(new BitmapTileset(container, options));
 		}

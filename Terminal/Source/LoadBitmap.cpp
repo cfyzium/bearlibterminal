@@ -23,18 +23,16 @@
 #include <stdexcept>
 #include <cstring>
 #include "LoadBitmap.hpp"
-//#include "LoadPNG.hpp"
-//#include "LoadBMP.hpp"
-//#include "LoadJPEG.hpp"
 #include "Log.hpp"
 
 // Forward declarations. See LoadXXX.cpp files for definitions.
 namespace BearLibTerminal
 {
+	Bitmap LoadBMP(std::istream& stream);
 	Bitmap LoadPNG(std::istream& stream);
+	Bitmap LoadJPEG(std::istream& stream);
 }
 
-//*
 namespace BearLibTerminal
 {
 	Bitmap LoadBitmap(std::istream& stream)
@@ -57,7 +55,6 @@ namespace BearLibTerminal
 			// This must be PNG resource
 			return LoadPNG(stream);
 		}
-		/*
 		else if (!strncmp((const char*)magic_bytes, "BM", 2))
 		{
 			// This must be BMP DIB resource
@@ -68,7 +65,6 @@ namespace BearLibTerminal
 			// Must be a JPEG rsource
 			return LoadJPEG(stream);
 		}
-		*/
 		else
 		{
 			throw std::runtime_error("unsupported image format");

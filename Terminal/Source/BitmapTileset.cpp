@@ -31,12 +31,7 @@ namespace BearLibTerminal
 			throw std::runtime_error("BitmapTileset: missing or empty 'name' attribute");
 		}
 
-		if (!group.attributes.count(L"size"))
-		{
-			throw std::runtime_error("BitmapTileset: 'size' attribute is missing");
-		}
-
-		if (!try_parse(group.attributes[L"size"], m_tile_size))
+		if (group.attributes.count(L"size") && !try_parse(group.attributes[L"size"], m_tile_size))
 		{
 			throw std::runtime_error("BitmapTileset: failed to parse 'size' attribute");
 		}
@@ -52,7 +47,14 @@ namespace BearLibTerminal
 
 		m_cache = LoadBitmap(*Resource::Open(group.attributes[L"name"], L"tileset-"));
 
-		// TODO: check dimensions
+		if (m_tile_size.Area() == 0)
+		{
+			m_tile_size = m_cache.GetSize();
+		}
+		else if (!Rectangle(m_cache.GetSize()).Contains(Rectangle(m_tile_size)))
+		{
+			throw std::runtime_error("Bitmap tileset: bitmap is smaller than tile size");
+		}
 	}
 
 	bool BitmapTileset::Save()
@@ -64,8 +66,15 @@ namespace BearLibTerminal
 			int rows = (int)std::floor(image_size.height / (float)m_tile_size.height);
 			LOG(Debug, "Tileset has " << columns << "x" << rows << " tiles");
 
-			int w2 = m_tile_size.width / 2; // TODO: round in a way to compensate state.half_cellsize rounding error
-			int h2 = m_tile_size.height / 2;
+			TileSlot::Placement placement = TileSlot::Placement::Centered;
+			Point offset(-m_tile_size.width/2, -m_tile_size.height/2);
+			//int w2 = m_tile_size.width / 2; // TODO: round in a way to compensate state.half_cellsize rounding error
+			//int h2 = m_tile_size.height / 2;
+			if (columns*rows == 1)
+			{
+				placement = TileSlot::Placement::Normal;
+				offset = Point();
+			}
 
 			for (int y=0; y<rows; y++)
 			{
@@ -78,8 +87,8 @@ namespace BearLibTerminal
 						uint16_t code = m_base_code + j;
 						Rectangle region(Point(x*m_tile_size.width, y*m_tile_size.height), m_tile_size);
 						auto tile_slot = m_container.atlas.Add(m_cache, region);
-						tile_slot->offset = Point(-w2, -h2);
-						tile_slot->placement = TileSlot::Placement::Centered;
+						tile_slot->offset = offset;//Point(-w2, -h2);
+						tile_slot->placement = placement;//TileSlot::Placement::Centered;
 						m_tiles[code] = tile_slot;
 						m_container.slots[code] = tile_slot;
 					}
