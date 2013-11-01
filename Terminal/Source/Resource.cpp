@@ -7,6 +7,8 @@
 
 #include "Resource.hpp"
 #include "Encoding.hpp"
+#include "Base64.hpp"
+#include "Log.hpp"
 #include <sstream>
 #include <fstream>
 #include <map>
@@ -92,6 +94,8 @@ namespace BearLibTerminal
 	"U+0440, U+0441, U+0442, U+0443, U+0444, U+0445, U+0446, U+0447,"
 	"U+0448, U+0449, U+044A, U+044B, U+044C, U+044D, U+044E, U+044F";
 
+	#include "Resource.DefaultFont.hpp"
+
 	struct BuiltinResource
 	{
 		BuiltinResource(const std::string& data, bool base64encoded):
@@ -109,7 +113,9 @@ namespace BearLibTerminal
 		{L"437", BuiltinResource(kCodepage437, false)},
 		{L"866", BuiltinResource(kCodepage866, false)},
 		{L"1250", BuiltinResource(kCodepage1251, false)},
-		{L"1251", BuiltinResource(kCodepage1251, false)}
+		{L"1251", BuiltinResource(kCodepage1251, false)},
+		{L"default", BuiltinResource(kDefaultFont, true)},
+		{L"default-codepage", BuiltinResource(kDefaultFontCodepage, false)}
 	};
 
 	std::unique_ptr<std::istream> Resource::Open(std::wstring name)
@@ -124,7 +130,8 @@ namespace BearLibTerminal
 			}
 			else
 			{
-				throw std::runtime_error("base64-encoded built-in resources NYI"); // FIXME: NYI
+				auto decoded = Base64::Decode(i->second.data);
+				return std::unique_ptr<std::istream>(new std::istringstream(std::string((char*)decoded.data(), decoded.size())));
 			}
 		}
 		else

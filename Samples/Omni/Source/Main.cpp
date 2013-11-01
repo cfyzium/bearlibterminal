@@ -14,9 +14,10 @@ int main()
 	terminal_open();
 	terminal_setf("window.title='%s'", "Test title");
 	terminal_set("window.cellsize=24x24");
+	terminal_set("50000: default.png, size=16x16");
 	terminal_color(0xFF000000);
 	terminal_bkcolor(0xFFEE9000);
-	terminal_wprint(2, 2, L"Hello, [color=white]world[/color].[U+2250] \x1234 {абв} [base=1]abc");
+	terminal_wprint(2, 2, L"Hello, [color=white]world[/color].[U+2250] \x1234 {абв} [base=50000]abc");
 
 	terminal_bkcolor(0);
 	color_t corners[] = {0xFFFF0000, 0xFF00FF00, 0xFF6060FF, 0xFFFF00FF};

@@ -10,6 +10,7 @@
 #include "Geometry.hpp"
 #include "Resource.hpp"
 #include "Utility.hpp"
+#include "Log.hpp"
 #include <stdexcept>
 #include <fstream>
 #include <cmath>
@@ -61,6 +62,7 @@ namespace BearLibTerminal
 			Size image_size = m_cache.GetSize();
 			int columns = (int)std::floor(image_size.width / (float)m_tile_size.width);
 			int rows = (int)std::floor(image_size.height / (float)m_tile_size.height);
+			LOG(Debug, "Tileset has " << columns << "x" << rows << " tiles");
 
 			int w2 = m_tile_size.width / 2; // TODO: round in a way to compensate state.half_cellsize rounding error
 			int h2 = m_tile_size.height / 2;

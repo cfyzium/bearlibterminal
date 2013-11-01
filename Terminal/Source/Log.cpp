@@ -58,7 +58,7 @@ namespace BearLibTerminal
 		m_filename = filename;
 #if defined(_WIN32)
 		// Windows version: change slashes to backslashes
-		for (auto& c: name) if (c == L'/') c = L'\\';
+		for (auto& c: m_filename) if (c == L'/') c = L'\\';
 #endif
 		m_truncated = false;
 	}

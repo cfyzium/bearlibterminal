@@ -41,11 +41,12 @@ namespace BearLibTerminal
 
 		if (options.attributes[L"name"] == L"default")
 		{
-			options.attributes[L"name"] = L"default.png";
-			options.attributes[L"size"] = L"16x16";
+			options.attributes[L"name"] = L"default";
+			options.attributes[L"size"] = L"8x16";
+			options.attributes[L"codepage"] = L"default-codepage";
 		}
 
-		if (ends_with<wchar_t>(options.attributes[L"name"], L".png")) // bmp, jpg
+		if (options.attributes[L"name"] == L"default" || ends_with<wchar_t>(options.attributes[L"name"], L".png")) // bmp, jpg
 		{
 			return std::unique_ptr<Tileset>(new BitmapTileset(container, options));
 		}

@@ -54,7 +54,7 @@ namespace BearLibTerminal
 			s = s.substr(left, right-left+1);
 			uint16_t result = 0;
 
-			if (s.length() == 6 && (s[0] == 'U' || s[0] == 'u') && s[1] == '+')
+			if (s.length() == 6 && (((s[0] == 'U' || s[0] == 'u') && s[1] == '+') || (s[0] == '0' && s[1] == 'x')))
 			{
 				// Unicode codepoint: U+XXXX
 				std::istringstream ss(s.substr(2));
