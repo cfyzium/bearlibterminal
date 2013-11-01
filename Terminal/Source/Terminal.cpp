@@ -178,7 +178,7 @@ namespace BearLibTerminal
 			else
 			{
 				uint16_t base_code = 0; // Basic font base_code is 0
-				if (group.name == L"font" || try_parse<uint16_t>(group.name, base_code))
+				if (group.name == L"font" || try_parse(group.name, base_code))
 				{
 					new_tilesets[base_code] = Tileset::Create(m_world.tiles, group);
 					LOG(Debug, "Successfully loaded a tileset for base code " << base_code);
@@ -580,7 +580,7 @@ namespace BearLibTerminal
 
 		int x = x0, y = y0;
 		int printed = 0;
-		int base = 0;
+		uint16_t base = 0;
 		Size bbox;
 
 		Color original_color = m_world.state.color;

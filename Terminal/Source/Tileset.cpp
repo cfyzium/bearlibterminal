@@ -24,7 +24,7 @@ namespace BearLibTerminal
 	std::unique_ptr<Tileset> Tileset::Create(TileContainer& container, OptionGroup& options)
 	{
 		uint16_t base_code = 0;
-		if (options.name != L"font" && !try_parse<uint16_t>(options.name, base_code))
+		if (options.name != L"font" && !try_parse(options.name, base_code))
 		{
 			throw std::runtime_error("Tileset::Create: failed to parse font base code");
 		}

@@ -21,7 +21,7 @@ namespace BearLibTerminal
 			throw std::runtime_error("DynamicTileset: 'size' attribute is missing");
 		}
 
-		if (!try_parse<Size>(group.attributes[L"size"], m_tile_size))
+		if (!try_parse(group.attributes[L"size"], m_tile_size))
 		{
 			throw std::runtime_error("DynamicTileset: failed to parse 'size' attribute");
 		}

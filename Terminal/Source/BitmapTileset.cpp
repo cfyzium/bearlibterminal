@@ -21,7 +21,7 @@ namespace BearLibTerminal
 		StronglyTypedReloadableTileset(container),
 		m_base_code(0)
 	{
-		if (group.name != L"font" && !try_parse<uint16_t>(group.name, m_base_code))
+		if (group.name != L"font" && !try_parse(group.name, m_base_code))
 		{
 			throw std::runtime_error("BitmapTileset: failed to parse base code");
 		}
@@ -36,7 +36,7 @@ namespace BearLibTerminal
 			throw std::runtime_error("BitmapTileset: 'size' attribute is missing");
 		}
 
-		if (!try_parse<Size>(group.attributes[L"size"], m_tile_size))
+		if (!try_parse(group.attributes[L"size"], m_tile_size))
 		{
 			throw std::runtime_error("BitmapTileset: failed to parse 'size' attribute");
 		}

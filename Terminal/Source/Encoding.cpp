@@ -62,7 +62,7 @@ namespace BearLibTerminal
 				ss >> result;
 				return result; // TODO: wchar_t try_parse specialization
 			}
-			else if (s.length() > 0 && try_parse<uint16_t>(s, result))
+			else if (s.length() > 0 && try_parse(s, result))
 			{
 				// Decimal codepaoint
 				return result;
