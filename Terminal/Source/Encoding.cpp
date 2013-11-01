@@ -263,13 +263,13 @@ namespace BearLibTerminal
 
 	std::unique_ptr<Encoding<char>> GetUnibyteEncoding(const std::wstring& name)
 	{
-		if (name == L"utf8")
+		if (name == L"utf8" || name == L"utf-8")
 		{
 			return std::unique_ptr<Encoding<char>>(new UTF8Encoding());
 		}
 		else
 		{
-			auto stream = Resource::Open(name);
+			auto stream = Resource::Open(name, L"codepage-");
 			if (!stream)
 			{
 				throw std::runtime_error("Failed to locate codepage resource for %name"); // FIXME: formatting

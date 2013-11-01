@@ -50,7 +50,7 @@ namespace BearLibTerminal
 			m_codepage = GetUnibyteEncoding(L"utf8");
 		}
 
-		m_cache = LoadBitmap(*Resource::Open(group.attributes[L"name"]));
+		m_cache = LoadBitmap(*Resource::Open(group.attributes[L"name"], L"tileset-"));
 
 		// TODO: check dimensions
 	}

@@ -17,7 +17,7 @@ namespace BearLibTerminal
 	class Resource
 	{
 	public:
-		static std::unique_ptr<std::istream> Open(std::wstring name);
+		static std::unique_ptr<std::istream> Open(std::wstring name, std::wstring prefix=L"");
 	};
 }
 

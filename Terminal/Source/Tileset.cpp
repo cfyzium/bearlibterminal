@@ -43,7 +43,7 @@ namespace BearLibTerminal
 		{
 			options.attributes[L"name"] = L"default";
 			options.attributes[L"size"] = L"8x16";
-			options.attributes[L"codepage"] = L"default-codepage";
+			options.attributes[L"codepage"] = L"tileset-default";
 		}
 
 		if (options.attributes[L"name"] == L"default" || ends_with<wchar_t>(options.attributes[L"name"], L".png")) // bmp, jpg
