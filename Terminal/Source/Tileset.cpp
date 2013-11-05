@@ -42,7 +42,6 @@ namespace BearLibTerminal
 
 		if (options.attributes[L"name"] == L"default")
 		{
-			options.attributes[L"name"] = L"default";
 			options.attributes[L"size"] = L"8x16";
 			options.attributes[L"codepage"] = L"tileset-default";
 		}
