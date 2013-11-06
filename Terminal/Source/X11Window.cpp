@@ -656,6 +656,7 @@ namespace BearLibTerminal
 		m_private->glx = glXCreateContext(m_private->display, m_private->visual, 0, GL_TRUE);
 		//glXMakeCurrent(m_private->display, m_private->window, m_private->glx);
 		AcquireRC();
+		ProbeOpenGL();
 
 		// Continue with input
 		if ( (m_private->im = XOpenIM(m_private->display, NULL, NULL, NULL)) == NULL )

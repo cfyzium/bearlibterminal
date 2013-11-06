@@ -36,4 +36,14 @@
 #include <GL/gl.h>
 #endif
 
+namespace BearLibTerminal
+{
+	// OpenGL states/caps
+	// This breaks strict opengl context ownership
+	extern int g_max_texture_size;
+	extern bool g_has_texture_npot;
+
+	void ProbeOpenGL();
+}
+
 #endif // BEARLIBTERMINAL_OPENGL_HPP

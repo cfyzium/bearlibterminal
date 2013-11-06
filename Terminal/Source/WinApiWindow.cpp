@@ -341,6 +341,7 @@ namespace BearLibTerminal
 			DestroyOpenGLContext();
 			return false;
 		}
+		ProbeOpenGL();
 
 		// FIXME: check availability, clean up the code
 		typedef BOOL (*PFNWGLSWAPINTERVALEXT)(int);

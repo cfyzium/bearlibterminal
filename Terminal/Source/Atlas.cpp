@@ -14,11 +14,36 @@
 
 namespace BearLibTerminal
 {
+	static int RoundUpTo(int value, int to) // TODO: move to utils
+	{
+		int remainder = value % to;
+		return remainder? value + (to-remainder): value;
+	}
+
+	bool IsPowerOfTwo(unsigned int x)
+	{
+		//return (x != 0) && ((x & (~x + 1)) == x);
+		return x && !(x & (x - 1));
+	}
+
+	int RoundUpToPow2(int x)
+	{
+		if (x < 0) return 0;
+		--x;
+		x |= x >> 1;
+		x |= x >> 2;
+		x |= x >> 4;
+		x |= x >> 8;
+		x |= x >> 16;
+		return x+1;
+	}
+
 	Leaf::Leaf():
 		dx(0),
 		dy(0),
 		code(0),
-		flags(0)
+		flags(0),
+		reserved(0)
 	{ }
 
 	TexCoords::TexCoords():
@@ -35,7 +60,8 @@ namespace BearLibTerminal
 		tv2(tv2)
 	{ }
 
-	Slot::Slot()
+	Slot::Slot():
+		texture_id(0)
 	{ }
 
 	Tile::Tile():
@@ -44,14 +70,20 @@ namespace BearLibTerminal
 		bounds(1, 1)
 	{ }
 
-	TileSlot::TileSlot()
+	TileSlot::TileSlot():
+		texture(nullptr)
 	{ }
 
 	AtlasTexture3::AtlasTexture3(Type type, Size initial_size):
 		m_type(type),
 		m_is_dirty(true)
 	{
-		// FIXME: check if GPU supports NPOTD, round up if necessary
+		if (!g_has_texture_npot && (!IsPowerOfTwo(initial_size.width) || !IsPowerOfTwo(initial_size.height)))
+		{
+			Size new_size(RoundUpToPow2(initial_size.width), RoundUpToPow2(initial_size.height));
+			LOG(Trace, "GPU does not support NPOTD textures, enlarging " << initial_size << " -> " << new_size);
+			initial_size = new_size;
+		}
 		m_canvas = Bitmap(initial_size, Color());
 		m_spaces.push_back(Rectangle(m_canvas.GetSize()));
 	}
@@ -59,12 +91,6 @@ namespace BearLibTerminal
 	AtlasTexture3::Type AtlasTexture3::GetType() const
 	{
 		return m_type;
-	}
-
-	static int RoundUpTo(int value, int to) // TODO: move to utils
-	{
-		int remainder = value % to;
-		return remainder? value + (to-remainder): value;
 	}
 
 	std::shared_ptr<TileSlot> AtlasTexture3::Add(const Bitmap& bitmap, Rectangle region)
@@ -220,12 +246,14 @@ namespace BearLibTerminal
 	bool AtlasTexture3::TryGrow()
 	{
 		// Expand to nearest greater POTD
-		// FIXME: properly calculate texture size, current is not necessary a POTD
-		// FIXME: unnecessary, if GPU doesn't support NPOTD, texture constructor will enlarge it to POTD
 		Size old_size = m_canvas.GetSize(), new_size = old_size;
 		(new_size.height <= new_size.width? new_size.height: new_size.width) *= 2;
+		if (new_size.width > g_max_texture_size || new_size.height > g_max_texture_size)
+		{
+			LOG(Debug, "Maximum texture size reached (" << new_size << "), cannot grow texture");
+			return false;
+		}
 
-		// FIXME: check if GPU supports textures of this size, return false if not
 		Bitmap new_canvas(new_size, Color());
 		new_canvas.Blit(m_canvas, Point());
 		m_canvas = std::move(new_canvas);
