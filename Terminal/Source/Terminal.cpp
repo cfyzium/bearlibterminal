@@ -126,7 +126,7 @@ namespace BearLibTerminal
 
 	void Terminal::UpdateDynamicTileset(Size size)
 	{
-		auto& tileset = m_world.tilesets[0xFFFD];
+		auto& tileset = m_world.tilesets[kUnicodeReplacementCharacter];
 		if (tileset) tileset->Remove();
 
 		OptionGroup options;
@@ -505,7 +505,7 @@ namespace BearLibTerminal
 
 	void Terminal::PutUnlocked(int x, int y, int dx, int dy, wchar_t code, Color* colors)
 	{
-		uint16_t u16code = (uint16_t)code; // TODO: use either wchar_t or uintxx_t
+		uint16_t u16code = (uint16_t)code;
 		if (m_world.tiles.slots.find(u16code) == m_world.tiles.slots.end())
 		{
 			m_fresh_codes.push_back(u16code);
@@ -873,7 +873,7 @@ namespace BearLibTerminal
 			if (!provided)
 			{
 				// Use Unicode replacement character code (MUST be already provided by dynamic tileset)
-				m_world.tiles.slots[code] = m_world.tiles.slots[0xFFFD];
+				m_world.tiles.slots[code] = m_world.tiles.slots[kUnicodeReplacementCharacter];
 			}
 		}
 

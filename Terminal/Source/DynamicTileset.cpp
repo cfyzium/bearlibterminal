@@ -10,6 +10,7 @@
 #include "Bitmap.hpp"
 #include "Utility.hpp"
 #include "Geometry.hpp"
+#include "Encoding.hpp"
 
 namespace BearLibTerminal
 {
@@ -44,7 +45,7 @@ namespace BearLibTerminal
 		int h2 = m_tile_size.height / 2;
 
 		// Add Unicode replacement character glyph
-		uint16_t code = 0xFFFD;
+		uint16_t code = kUnicodeReplacementCharacter;
 		Bitmap canvas(m_tile_size, Color());
 		for (int x=1; x<m_tile_size.width-1; x++)
 		{
@@ -76,7 +77,7 @@ namespace BearLibTerminal
 
 	bool DynamicTileset::Provides(uint16_t code)
 	{
-		if (code == 0xFFFD) return true;
+		if (code == kUnicodeReplacementCharacter) return true;
 
 		// TODO: Box Drawing and Block Elements
 

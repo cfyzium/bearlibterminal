@@ -67,9 +67,7 @@ namespace BearLibTerminal
 			LOG(Debug, "Tileset has " << columns << "x" << rows << " tiles");
 
 			TileSlot::Placement placement = TileSlot::Placement::Centered;
-			Point offset(-m_tile_size.width/2, -m_tile_size.height/2);
-			//int w2 = m_tile_size.width / 2; // TODO: round in a way to compensate state.half_cellsize rounding error
-			//int h2 = m_tile_size.height / 2;
+			Point offset(-m_tile_size.width/2, -m_tile_size.height/2); // TODO: round in a way to compensate state.half_cellsize rounding error
 			if (columns*rows == 1)
 			{
 				placement = TileSlot::Placement::Normal;
@@ -82,13 +80,13 @@ namespace BearLibTerminal
 				{
 					int i = y*columns + x;
 					wchar_t j = m_codepage->Convert(i);
-					if (j != 0xFFFD) // FIXME: Unicode replacement char
+					if (j != kUnicodeReplacementCharacter)
 					{
 						uint16_t code = m_base_code + j;
 						Rectangle region(Point(x*m_tile_size.width, y*m_tile_size.height), m_tile_size);
 						auto tile_slot = m_container.atlas.Add(m_cache, region);
-						tile_slot->offset = offset;//Point(-w2, -h2);
-						tile_slot->placement = placement;//TileSlot::Placement::Centered;
+						tile_slot->offset = offset;
+						tile_slot->placement = placement;
 						m_tiles[code] = tile_slot;
 						m_container.slots[code] = tile_slot;
 					}
@@ -111,7 +109,7 @@ namespace BearLibTerminal
 	{
 		for (auto i: m_tiles)
 		{
-			if (m_container.slots.count(i.first) && (void*)m_container.slots[i.first].get() == (void*)i.second.get()) // TODO: proper equality test
+			if (m_container.slots.count(i.first) && m_container.slots[i.first].get() == i.second.get())
 			{
 				m_container.slots.erase(i.first);
 			}

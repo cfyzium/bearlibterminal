@@ -120,7 +120,7 @@ namespace BearLibTerminal
 	wchar_t CustomCodepage::Convert(int value) const
 	{
 		auto i = m_forward.find(value);
-		return (i == m_forward.end())? 0xFFFD: i->second; // U+FFFD is a Unicode character replacement
+		return (i == m_forward.end())? kUnicodeReplacementCharacter: i->second;
 	}
 
 	int CustomCodepage::Convert(wchar_t value) const
@@ -135,7 +135,7 @@ namespace BearLibTerminal
 		for (size_t i=0; i<value.length(); i++)
 		{
 			auto j = m_forward.find(value[i]);
-			result[i] = (j == m_forward.end())? 0xFFFD: (wchar_t)j->second;
+			result[i] = (j == m_forward.end())? kUnicodeReplacementCharacter: (wchar_t)j->second;
 		}
 		return result;
 	}

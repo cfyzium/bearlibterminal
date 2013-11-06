@@ -25,6 +25,7 @@
 
 #include <string>
 #include <memory>
+#include <stdint.h>
 
 namespace BearLibTerminal
 {
@@ -47,6 +48,8 @@ namespace BearLibTerminal
 	extern std::unique_ptr<Encoding<char>> UTF8;
 	extern std::unique_ptr<Encoding<char16_t>> UTF16;
 	extern std::unique_ptr<Encoding<char32_t>> UTF32;
+
+	static const uint16_t kUnicodeReplacementCharacter = 0xFFFD;
 }
 
 #endif // BEARLIBTERMINAL_ENCODING_HPP
