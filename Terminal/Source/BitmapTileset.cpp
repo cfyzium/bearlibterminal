@@ -19,7 +19,8 @@ namespace BearLibTerminal
 {
 	BitmapTileset::BitmapTileset(TileContainer& container, OptionGroup& group):
 		StronglyTypedReloadableTileset(container),
-		m_base_code(0)
+		m_base_code(0),
+		m_alignment(Tile::Alignment::Unknown)
 	{
 		if (group.name != L"font" && !try_parse(group.name, m_base_code))
 		{
@@ -45,6 +46,11 @@ namespace BearLibTerminal
 			m_codepage = GetUnibyteEncoding(L"utf8");
 		}
 
+		if (group.attributes.count(L"alignment") && !try_parse(group.attributes[L"alignment"], m_alignment))
+		{
+			throw std::runtime_error("BitmapTileset: failed to parse 'alignemnt' attribute");
+		}
+
 		m_cache = LoadBitmap(*Resource::Open(group.attributes[L"name"], L"tileset-"));
 
 		if (m_tile_size.Area() == 0)
@@ -66,14 +72,25 @@ namespace BearLibTerminal
 			int rows = (int)std::floor(image_size.height / (float)m_tile_size.height);
 			LOG(Debug, "Tileset has " << columns << "x" << rows << " tiles");
 
-			TileSlot::Placement placement = TileSlot::Placement::Centered;
-			Point offset(-m_tile_size.width/2, -m_tile_size.height/2); // TODO: round in a way to compensate state.half_cellsize rounding error
-			if (columns*rows == 1)
+			if (m_alignment == Tile::Alignment::Unknown)
 			{
-				placement = TileSlot::Placement::Normal;
-				offset = Point();
+				if (columns*rows > 1)
+				{
+					m_alignment = Tile::Alignment::Center;
+				}
+				else
+				{
+					m_alignment = Tile::Alignment::TopLeft;
+				}
 			}
 
+			Point offset;
+			if (m_alignment == Tile::Alignment::Center)
+			{
+				offset = Point(-m_tile_size.width/2, -m_tile_size.height/2); // TODO: round in a way to compensate state.half_cellsize rounding error
+			}
+
+			// Iterate tiles left to right, top to bottom.
 			for (int y=0; y<rows; y++)
 			{
 				for (int x=0; x<columns; x++)
@@ -86,7 +103,7 @@ namespace BearLibTerminal
 						Rectangle region(Point(x*m_tile_size.width, y*m_tile_size.height), m_tile_size);
 						auto tile_slot = m_container.atlas.Add(m_cache, region);
 						tile_slot->offset = offset;
-						tile_slot->placement = placement;
+						tile_slot->alignment = m_alignment;
 						m_tiles[code] = tile_slot;
 						m_container.slots[code] = tile_slot;
 					}

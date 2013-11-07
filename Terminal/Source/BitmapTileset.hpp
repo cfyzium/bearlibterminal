@@ -29,6 +29,7 @@ namespace BearLibTerminal
 		uint16_t m_base_code;
 		Size m_tile_size;
 		std::unique_ptr<Encoding<char>> m_codepage;
+		Tile::Alignment m_alignment;
 	};
 }
 

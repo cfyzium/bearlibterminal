@@ -12,6 +12,8 @@
 #include "Bitmap.hpp"
 #include "Texture.hpp"
 #include "Rectangle.hpp"
+#include <istream>
+#include <ostream>
 #include <memory>
 #include <list>
 #include <set>
@@ -42,14 +44,17 @@ namespace BearLibTerminal
 
 	struct Tile
 	{
-		enum class Placement {Normal, Cropped, Centered};
+		enum class Alignment {Unknown, Center, TopLeft, TopRight, BottomLeft, BottomRight};
 		Tile();
 		virtual ~Tile() { }
 		virtual void Update(const Bitmap& bitmap) = 0;
-		Placement placement;
+		Alignment alignment;
 		Point offset;
 		Size bounds;
 	};
+
+	std::wostream& operator<<(std::wostream& s, const Tile::Alignment& value);
+	std::wistream& operator>>(std::wistream& s, Tile::Alignment& value);
 
 	class AtlasTexture3;
 

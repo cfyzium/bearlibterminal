@@ -64,11 +64,57 @@ namespace BearLibTerminal
 		texture_id(0)
 	{ }
 
+	// ------------------------------------------------------------------------
+
 	Tile::Tile():
-		placement(Placement::Normal),
+		alignment(Alignment::Unknown),
 		offset(0, 0),
 		bounds(1, 1)
 	{ }
+
+	std::wostream& operator<<(std::wostream& s, const Tile::Alignment& value)
+	{
+		switch (value)
+		{
+		case Tile::Alignment::Unknown:
+			s << L"unknown";
+			break;
+		case Tile::Alignment::Center:
+			s << L"center";
+			break;
+		case Tile::Alignment::TopLeft:
+			s << L"top-left";
+			break;
+		case Tile::Alignment::TopRight:
+			s << L"top-right";
+			break;
+		case Tile::Alignment::BottomLeft:
+			s << L"bottom-left";
+			break;
+		case Tile::Alignment::BottomRight:
+			s << L"bottom-right";
+			break;
+		}
+
+		return s;
+	}
+
+	std::wistream& operator>>(std::wistream& s, Tile::Alignment& value)
+	{
+		std::wstring temp;
+		s >> temp;
+
+		if (temp == L"center") value = Tile::Alignment::Center;
+		else if (temp == L"top-left") value = Tile::Alignment::TopLeft;
+		else if (temp == L"top-right") value = Tile::Alignment::TopRight;
+		else if (temp == L"bottom-left") value = Tile::Alignment::BottomLeft;
+		else if (temp == L"bottom-right") value = Tile::Alignment::BottomRight;
+		else s.setstate(s.failbit);
+
+		return s;
+	}
+
+	// ------------------------------------------------------------------------
 
 	TileSlot::TileSlot():
 		texture(nullptr)
@@ -313,15 +359,33 @@ namespace BearLibTerminal
 	{
 		int left, top;
 
-		if (placement == Placement::Centered)
+		switch (alignment)
 		{
-			left = x + w2 + offset.x + leaf.dx;
-			top = y + h2 + offset.y + leaf.dy;
-		}
-		else
-		{
-			left = x + leaf.dx;
-			top = y + leaf.dy;
+		case Tile::Alignment::Center:
+			left = x + offset.x + w2 + leaf.dx;
+			top = y + offset.y + h2 + leaf.dy;
+			break;
+		case Tile::Alignment::TopLeft:
+			left = x + offset.x + leaf.dx;
+			top = y + offset.y + leaf.dy;
+			break;
+		case Tile::Alignment::TopRight:
+			left = x + offset.x + 2*w2 - texture_region.width + leaf.dx;
+			top = y + offset.y + leaf.dy;
+			break;
+		case Tile::Alignment::BottomLeft:
+			left = x + offset.x + leaf.dx;
+			top = y + offset.y + 2*h2 - texture_region.height + leaf.dy;
+			break;
+		case Tile::Alignment::BottomRight:
+			left = x + offset.x + 2*w2 - texture_region.width + leaf.dx;
+			top = y + offset.y + 2*h2 - texture_region.height + leaf.dy;
+			break;
+		default:
+			// Same as TopLeft
+			left = x + offset.x + leaf.dx;
+			top = y + offset.y + leaf.dy;
+			break;
 		}
 
 		int right = left + texture_region.width;

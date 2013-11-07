@@ -59,7 +59,7 @@ namespace BearLibTerminal
 		}
 		auto tile_slot = m_container.atlas.Add(canvas, Rectangle(m_tile_size));
 		tile_slot->offset = Point(-w2, -h2);
-		tile_slot->placement = TileSlot::Placement::Centered;
+		tile_slot->alignment = TileSlot::Alignment::Center;
 		m_tiles[code] = tile_slot;
 		m_container.slots[code] = tile_slot;
 		LOG(Info, L"Added Unicode replacement character tile (" << m_tile_size << L")");
