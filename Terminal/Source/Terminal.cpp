@@ -859,6 +859,12 @@ namespace BearLibTerminal
 	{
 		for (auto code: m_fresh_codes) // FIXME: Box Drawing (2500–257F) and Block Elements (2580–259F) are searched in different order
 		{
+			if (m_world.tiles.slots.find(code) != m_world.tiles.slots.end())
+			{
+				// Might be already prepared on previous iteration.
+				continue;
+			}
+
 			bool provided = false;
 			for (auto i=m_world.tilesets.rbegin(); i != m_world.tilesets.rend(); i++)
 			{

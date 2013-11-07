@@ -44,6 +44,7 @@ namespace BearLibTerminal
 
 		if (group.attributes.count(L"codepage"))
 		{
+			// TODO: check for error
 			m_codepage = GetUnibyteEncoding(group.attributes[L"codepage"]);
 		}
 		else
@@ -51,7 +52,7 @@ namespace BearLibTerminal
 			m_codepage = GetUnibyteEncoding(L"utf8");
 		}
 
-		if (group.attributes.count(L"alignment") && !try_parse(group.attributes[L"alignment"], m_alignment))
+		if (group.attributes.count(L"align") && !try_parse(group.attributes[L"align"], m_alignment))
 		{
 			throw std::runtime_error("BitmapTileset: failed to parse 'alignemnt' attribute");
 		}
@@ -131,6 +132,8 @@ namespace BearLibTerminal
 				m_container.slots[i.first] = i.second;
 			}
 		}
+
+		return true;
 	}
 
 	void BitmapTileset::Remove()

@@ -23,13 +23,13 @@ set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${LF}")
 find_package(OpenGL)
 
 #include_directories(./include)
-#include_directories(../Dependencies/freetype2/include)
 #include_directories(${OPENGL_INCLUDE_DIR})
 include_directories(./Include)
+include_directories(../Dependencies/FreeType/Include)
 
 add_library(BearLibTerminal SHARED ${TERMINAL_SOURCES})
 
-#target_link_libraries(BearLibTerminal freetype2-minimal-static)
+target_link_libraries(BearLibTerminal freetype2-minimal-static)
 target_link_libraries(BearLibTerminal ${OPENGL_gl_LIBRARY})
 if(WIN32)
 	target_link_libraries(BearLibTerminal winmm.lib)

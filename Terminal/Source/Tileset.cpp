@@ -7,6 +7,7 @@
 
 #include "Tileset.hpp"
 #include "BitmapTileset.hpp"
+#include "TrueTypeTileset.hpp"
 #include "DynamicTileset.hpp"
 #include "Utility.hpp"
 #include "Log.hpp"
@@ -51,6 +52,10 @@ namespace BearLibTerminal
 		if (is_bitmap || options.attributes[L"name"] == L"default")
 		{
 			return std::unique_ptr<Tileset>(new BitmapTileset(container, options));
+		}
+		else if (file_extension(options.attributes[L"name"]) == L"ttf")
+		{
+			return std::unique_ptr<Tileset>(new TrueTypeTileset(container, options));
 		}
 		else if (options.attributes[L"name"] == L"dynamic")
 		{
