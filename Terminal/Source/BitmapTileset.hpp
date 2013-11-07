@@ -28,6 +28,7 @@ namespace BearLibTerminal
 		Bitmap m_cache;
 		uint16_t m_base_code;
 		Size m_tile_size;
+		Size m_bbox_size;
 		std::unique_ptr<Encoding<char>> m_codepage;
 		Tile::Alignment m_alignment;
 	};

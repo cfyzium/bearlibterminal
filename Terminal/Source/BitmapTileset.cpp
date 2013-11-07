@@ -37,6 +37,11 @@ namespace BearLibTerminal
 			throw std::runtime_error("BitmapTileset: failed to parse 'size' attribute");
 		}
 
+		if (group.attributes.count(L"bbox") && !try_parse(group.attributes[L"bbox"], m_bbox_size))
+		{
+			throw std::runtime_error("BitmapTileset: failed to parse 'bbox' attribute");
+		}
+
 		if (group.attributes.count(L"codepage"))
 		{
 			m_codepage = GetUnibyteEncoding(group.attributes[L"codepage"]);
@@ -72,6 +77,11 @@ namespace BearLibTerminal
 			int rows = (int)std::floor(image_size.height / (float)m_tile_size.height);
 			LOG(Debug, "Tileset has " << columns << "x" << rows << " tiles");
 
+			if (m_bbox_size.width < 1 || m_bbox_size.height < 1)
+			{
+				m_bbox_size = Size(1, 1);
+			}
+
 			if (m_alignment == Tile::Alignment::Unknown)
 			{
 				if (columns*rows > 1)
@@ -104,6 +114,7 @@ namespace BearLibTerminal
 						auto tile_slot = m_container.atlas.Add(m_cache, region);
 						tile_slot->offset = offset;
 						tile_slot->alignment = m_alignment;
+						tile_slot->bounds = m_bbox_size;
 						m_tiles[code] = tile_slot;
 						m_container.slots[code] = tile_slot;
 					}

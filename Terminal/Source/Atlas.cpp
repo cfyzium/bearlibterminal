@@ -116,10 +116,6 @@ namespace BearLibTerminal
 
 	// ------------------------------------------------------------------------
 
-	TileSlot::TileSlot():
-		texture(nullptr)
-	{ }
-
 	AtlasTexture3::AtlasTexture3(Type type, Size initial_size):
 		m_type(type),
 		m_is_dirty(true)
@@ -350,6 +346,10 @@ namespace BearLibTerminal
 
 	// ------------------------------------------------------------------------
 
+	TileSlot::TileSlot():
+		texture(nullptr)
+	{ }
+
 	void TileSlot::BindTexture()
 	{
 		texture->Bind();
@@ -357,7 +357,13 @@ namespace BearLibTerminal
 
 	void TileSlot::Draw(const Leaf& leaf, int x, int y, int w2, int h2)
 	{
+		// TODO: Think up of some optimization?
+		// There are a lot of calculations done.
+
 		int left, top;
+
+		w2 *= bounds.width;
+		h2 *= bounds.height;
 
 		switch (alignment)
 		{
