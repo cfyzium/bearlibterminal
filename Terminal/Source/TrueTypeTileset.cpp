@@ -24,8 +24,6 @@ namespace BearLibTerminal
 		m_render_mode(FT_RENDER_MODE_NORMAL),
 		m_monospace(false)
 	{
-		// name
-
 		if (group.name != L"font" && !try_parse(group.name, m_base_code))
 		{
 			throw std::runtime_error("TrueTypeTileset: failed to parse base code");
@@ -267,7 +265,6 @@ namespace BearLibTerminal
 
 	void TrueTypeTileset::Reload(TrueTypeTileset&& tileset)
 	{
-		LOG(Trace, "exception: NYI");
 		throw std::runtime_error("TrueTypeTileset::Reload: NYI"); // FIXME: NYI
 	}
 
@@ -375,13 +372,6 @@ namespace BearLibTerminal
 					uint8_t alpha = (byte & (1 << (7-j)))? 255: 0;
 					glyph(x, y) = Color(alpha, 255, 255, 255);
 				}
-
-				/*
-				if (x == 0 || y == 0 || x == columns-1 || y == rows-1)
-				{
-					glyph(x, y) = Color(255, 255, 255, 255);
-				}
-				//*/
 			}
 		}
 
@@ -408,14 +398,4 @@ namespace BearLibTerminal
 
 		return glyph;
 	}
-	//private:
-	//	uint16_t m_base_code;
-	//	Size m_tile_size;
-	//	Size m_bbox_size;
-	//	std::unique_ptr<Encoding<char>> m_codepage;
-	//	Tile::Alignment m_alignment;
-	//	FT_Library m_font_library;
-	//	FT_Face m_font_face;
-	//	FT_Render_Mode m_render_mode;
-	//};
 }

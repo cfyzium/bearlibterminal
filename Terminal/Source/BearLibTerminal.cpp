@@ -26,6 +26,7 @@
 #include "Palette.hpp"
 #include "Log.hpp"
 #include <memory>
+#include <string.h>
 
 namespace
 {
@@ -173,19 +174,33 @@ int terminal_read_char()
 	return code > 0? encoding.Convert((char16_t)code): code;
 }
 
+template<typename char_t, typename enc_t> int read_str(int x, int y, char_t* buffer, int max, enc_t& encoding)
+{
+	if (!g_instance) return -1;
+	std::wstring wide_buffer = encoding.Convert((const char_t*)buffer);
+	wide_buffer.reserve(max+1);
+	int rc = g_instance->ReadString(x, y, &wide_buffer[0], max);
+	if (rc >= 0)
+	{
+		std::basic_string<char_t> result = encoding.Convert(wide_buffer.c_str());
+		memcpy(buffer, result.data(), sizeof(char_t)*result.length());
+	}
+	return rc;
+}
+
 int terminal_read_str8(int x, int y, int8_t* buffer, int max)
 {
-	// FIXME: NYI
+	return read_str(x, y, (char*)buffer, max, *BearLibTerminal::UTF8);
 }
 
 int terminal_read_str16(int x, int y, int16_t* buffer, int max)
 {
-	// FIXME: NYI
+	return read_str(x, y, (char16_t*)buffer, max, *BearLibTerminal::UTF16);
 }
 
 int terminal_read_str32(int x, int y, int32_t* buffer, int max)
 {
-	// FIXME: NYI
+	return read_str(x, y, (char32_t*)buffer, max, *BearLibTerminal::UTF32);
 }
 
 color_t color_from_name8(const int8_t* name)

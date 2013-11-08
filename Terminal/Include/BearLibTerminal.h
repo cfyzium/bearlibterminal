@@ -173,8 +173,9 @@
 /*
  * Input result codes for terminal_read, terminal_read_char and terminal_read_str.
  */
-#define TK_INPUT_CALL_AGAIN   0
+#define TK_INPUT_NONE         0
 #define TK_INPUT_CANCELLED   -1
+#define TK_INPUT_CALL_AGAIN  -2
 
 /*
  * Terminal use unsigned 32-bit value for color representation in ARGB order (0xAARRGGBB), e. g.

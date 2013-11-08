@@ -73,6 +73,8 @@ namespace BearLibTerminal
 		void ConsumeStroke(const Keystroke& stroke);
 		Keystroke ReadKeystroke(int timeout);
 		int ReadCharInternal(int timeout);
+		int ReadStringInternalBlocking(int x, int y, wchar_t* buffer, int max);
+		int ReadStringInternalNonblocking(wchar_t* buffer, int max);
 		void OnWindowClose();
 		void OnWindowRedraw();
 		void OnWindowInput(Keystroke keystroke);

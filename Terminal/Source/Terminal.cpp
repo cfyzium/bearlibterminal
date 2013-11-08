@@ -651,6 +651,11 @@ namespace BearLibTerminal
 				{
 					try_parse(value, base);
 				}
+				else if (name == L"bbox")
+				{
+					try_parse(value, bbox);
+					// FIXME: NYI
+				}
 				else if (name[0] == 'u' || name[0] == 'U')
 				{
 					if (name.length() > 2)
@@ -798,12 +803,12 @@ namespace BearLibTerminal
 			if (stroke.scancode == TK_ESCAPE)
 			{
 				// Just break
-				return -1;
+				return TK_INPUT_CANCELLED;
 			}
 			else if (stroke.scancode == 0)
 			{
 				// No input available
-				return 0;
+				return TK_INPUT_CALL_AGAIN;
 			}
 			else if (stroke.character > 0 && !stroke.released)
 			{
@@ -823,13 +828,170 @@ namespace BearLibTerminal
 		return ReadCharInternal(nonblocking? 0: std::numeric_limits<int>::max());
 	}
 
+	int Terminal::ReadStringInternalBlocking(int x, int y, wchar_t* buffer, int max)
+	{
+		std::vector<Cell> original;
+		int composition_mode = m_world.state.composition;
+		m_world.state.composition = TK_COMPOSITION_ON;
+
+		// Syncronously retrieve/adjust some values
+		{
+			std::lock_guard<std::mutex> guard(m_lock);
+
+			if (buffer == nullptr || max <= 0)
+			{
+				LOG(Error, "Invalid buffer parameters were passed to string reading function");
+				return 0;
+			}
+
+			if (x < 0 || x >= m_world.stage.size.width || y < 0 || y >= m_world.stage.size.height)
+			{
+				LOG(Error, "Invalid location parameters were passed to string reading function");
+				return 0;
+			}
+
+			max = std::min(max, m_world.stage.size.width-x);
+			for (int i=0; i<max; i++)
+			{
+				Layer& layer = m_world.stage.backbuffer.layers[m_world.state.layer];
+				original.push_back(layer.cells[y*m_world.stage.size.width+x+i]);
+			}
+		}
+
+		// Garbage string protection
+		for (int i = max; i >= 0; i--) if (buffer[i] == 0) break; else buffer[i] = 0;
+		int cursor = std::wcslen(buffer);
+
+		auto put_buffer = [&](bool put_cursor)
+		{
+			Print(x, y, buffer);
+			if (put_cursor && cursor < max) Put(x+cursor, y, m_options.input_cursor_symbol);
+		};
+
+		auto restore_scene = [&]()
+		{
+			std::lock_guard<std::mutex> guard(m_lock);
+			for (int i = 0; i < max; i++)
+			{
+				Layer& layer = m_world.stage.backbuffer.layers[m_world.state.layer];
+				layer.cells[y*m_world.stage.size.width+x+i] = original[i];
+			}
+		};
+
+		int rc = 0;
+		bool show_cursor = true;
+
+		while (true)
+		{
+			restore_scene();
+			put_buffer(show_cursor);
+			Refresh();
+
+			auto key = ReadKeystroke(m_options.input_cursor_blink_rate);
+			if (key.scancode == 0)
+			{
+				// Timed out
+				show_cursor = !show_cursor;
+			}
+			else if (!key.released)
+			{
+				if (key.character > 0)
+				{
+					if (cursor < max)
+					{
+						buffer[cursor++] = key.character;
+						show_cursor = true;
+					}
+				}
+				else if (key.scancode == TK_RETURN)
+				{
+					rc = wcslen(buffer);
+					break;
+				}
+				else if (key.scancode == TK_ESCAPE || key.scancode == TK_CLOSE)
+				{
+					rc = TK_INPUT_CANCELLED;
+					break;
+				}
+				else if (key.scancode == TK_BACK)
+				{
+					if (cursor > 0)
+					{
+						buffer[--cursor] = 0;
+						show_cursor = true;
+					}
+				}
+			}
+		}
+
+		// Restore
+		restore_scene();
+		m_world.state.composition = composition_mode;
+
+		return rc;
+	}
+
+	int Terminal::ReadStringInternalNonblocking(wchar_t* buffer, int max)
+	{
+		if (buffer == nullptr || max <= 0)
+		{
+			LOG(Error, "Invalid buffer parameters were passed to string reading function");
+			return 0;
+		}
+
+		// Garbage string protection
+		for (int i = max; i >= 0; i--) if (buffer[i] == 0) break; else buffer[i] = 0;
+		int cursor = std::wcslen(buffer);
+		int rc = 0;
+
+		while (true)
+		{
+			auto key = ReadKeystroke(0);
+			if (key.scancode == 0)
+			{
+				rc = TK_INPUT_CALL_AGAIN;
+				break;
+			}
+			else if (!key.released)
+			{
+				if (key.character > 0)
+				{
+					if (cursor < max)
+					{
+						buffer[cursor++] = key.character;
+					}
+				}
+				else if (key.scancode == TK_RETURN)
+				{
+					rc = wcslen(buffer);
+					break;
+				}
+				else if (key.scancode == TK_ESCAPE || key.scancode == TK_CLOSE)
+				{
+					rc = TK_INPUT_CANCELLED;
+					break;
+				}
+				else if (key.scancode == TK_BACK)
+				{
+					if (cursor > 0)
+					{
+						buffer[--cursor] = 0;
+					}
+				}
+			}
+		}
+
+		return rc;
+	}
+
 	/**
 	 * Reads whole string. Operates vastly differently in blocking and non-blocking modes
 	 */
 	int Terminal::ReadString(int x, int y, wchar_t* buffer, int max)
 	{
-		// FIXME: NYI
-		// ReadCharInternal should help alot
+		return m_options.input_nonblocking?
+			ReadStringInternalNonblocking(buffer, max):
+			ReadStringInternalBlocking(x, y, buffer, max);
 	}
 
 	const Encoding<char>& Terminal::GetEncoding() const

@@ -79,6 +79,13 @@ int main()
 
 	terminal_refresh();
 	terminal_read();
+
+	wchar_t buffer[100] = {0};
+	terminal_read_wstr(2, 22, buffer, 16);
+	terminal_wprint(2, 23, buffer);
+	terminal_refresh();
+	terminal_read();
+
 	terminal_close();
 	return 0;
 }
