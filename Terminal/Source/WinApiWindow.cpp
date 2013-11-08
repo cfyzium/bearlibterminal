@@ -28,6 +28,7 @@
 #include "BearLibTerminal.h"
 #include "Point.hpp"
 #include "Log.hpp"
+#include "OpenGL.hpp"
 
 #include <Mmsystem.h>
 
