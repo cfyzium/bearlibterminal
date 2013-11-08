@@ -116,7 +116,7 @@ namespace BearLibTerminal
 
 	// ------------------------------------------------------------------------
 
-	AtlasTexture3::AtlasTexture3(Type type, Size initial_size):
+	AtlasTexture::AtlasTexture(Type type, Size initial_size):
 		m_type(type),
 		m_is_dirty(true)
 	{
@@ -130,12 +130,12 @@ namespace BearLibTerminal
 		m_spaces.push_back(Rectangle(m_canvas.GetSize()));
 	}
 
-	AtlasTexture3::Type AtlasTexture3::GetType() const
+	AtlasTexture::Type AtlasTexture::GetType() const
 	{
 		return m_type;
 	}
 
-	std::shared_ptr<TileSlot> AtlasTexture3::Add(const Bitmap& bitmap, Rectangle region)
+	std::shared_ptr<TileSlot> AtlasTexture::Add(const Bitmap& bitmap, Rectangle region)
 	{
 		// Round requested rectangle dimensions to multiple of 4 for more discrete space partitioning
 		Size tile_size = region.Size();
@@ -234,7 +234,7 @@ namespace BearLibTerminal
 		return result;
 	}
 
-	void AtlasTexture3::Update(std::shared_ptr<TileSlot> slot, const Bitmap& bitmap)
+	void AtlasTexture::Update(std::shared_ptr<TileSlot> slot, const Bitmap& bitmap)
 	{
 		if (slot->texture != this)
 		{
@@ -245,7 +245,7 @@ namespace BearLibTerminal
 		m_canvas.BlitUnchecked(bitmap, slot->texture_region.Location());
 	}
 
-	void AtlasTexture3::Remove(std::shared_ptr<TileSlot> slot)
+	void AtlasTexture::Remove(std::shared_ptr<TileSlot> slot)
 	{
 		auto i = std::find(m_slots.begin(), m_slots.end(), slot);
 		if (i == m_slots.end())
@@ -258,12 +258,12 @@ namespace BearLibTerminal
 		PostprocessSpaces();
 	}
 
-	bool AtlasTexture3::IsEmpty() const
+	bool AtlasTexture::IsEmpty() const
 	{
 		return m_slots.empty();
 	}
 
-	void AtlasTexture3::Refresh()
+	void AtlasTexture::Refresh()
 	{
 		if (m_is_dirty)
 		{
@@ -272,12 +272,12 @@ namespace BearLibTerminal
 		}
 	}
 
-	void AtlasTexture3::Bind()
+	void AtlasTexture::Bind()
 	{
 		m_texture.Bind();
 	}
 
-	void AtlasTexture3::Dispose()
+	void AtlasTexture::Dispose()
 	{
 		m_slots.clear();
 		m_spaces.clear();
@@ -285,7 +285,7 @@ namespace BearLibTerminal
 		m_canvas = Bitmap();
 	}
 
-	bool AtlasTexture3::TryGrow()
+	bool AtlasTexture::TryGrow()
 	{
 		// Expand to nearest greater POTD
 		Size old_size = m_canvas.GetSize(), new_size = old_size;
@@ -321,13 +321,13 @@ namespace BearLibTerminal
 		return true;
 	}
 
-	void AtlasTexture3::PostprocessSpaces()
+	void AtlasTexture::PostprocessSpaces()
 	{
 		// FIXME: sort spaces
 		// TODO: merge spaces
 	}
 
-	TexCoords AtlasTexture3::CalcTexCoords(Rectangle region)
+	TexCoords AtlasTexture::CalcTexCoords(Rectangle region)
 	{
 		float x1 = region.left;
 		float x2 = region.left + region.width;
@@ -453,7 +453,7 @@ namespace BearLibTerminal
 	{
 		Size size = region.Size();
 
-		AtlasTexture3::Type type = AtlasTexture3::Type::Tile;
+		AtlasTexture::Type type = AtlasTexture::Type::Tile;
 		if (size.width >= 64 || size.height >= 64)
 		{
 			float aspect = size.width / (float)size.height;
@@ -461,11 +461,11 @@ namespace BearLibTerminal
 			if (aspect >= 1/aspect_treshold && aspect <= aspect_treshold)
 			{
 				// The image is too bulky to be considered tile
-				type = AtlasTexture3::Type::Sprite;
+				type = AtlasTexture::Type::Sprite;
 			}
 		}
 
-		if (type == AtlasTexture3::Type::Sprite)
+		if (type == AtlasTexture::Type::Sprite)
 		{
 			// Allocate whole texture for this image
 			m_textures.emplace_back(type, size);
@@ -498,7 +498,7 @@ namespace BearLibTerminal
 		if (slot->texture->IsEmpty())
 		{
 			// Remove texture
-			auto i = std::find_if(m_textures.begin(), m_textures.end(), [&](const AtlasTexture3& j){return &j == slot->texture;});
+			auto i = std::find_if(m_textures.begin(), m_textures.end(), [&](const AtlasTexture& j){return &j == slot->texture;});
 			if (i == m_textures.end())
 			{
 				throw std::runtime_error("Atlas::Remove(...): ownership mismatch");

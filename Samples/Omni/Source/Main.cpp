@@ -25,6 +25,7 @@ int main()
 	terminal_set("0xE400: UbuntuMono-R.ttf, size=12");
 	terminal_set("0xE500: Ubuntu-R.ttf, size=12");
 	terminal_set("0xE600: UbuntuMono-RI.ttf, size=12");
+	terminal_set("0xE700: UbuntuMono-R.ttf, size=24x24");
 	terminal_color(0xFF000000);
 	terminal_bkcolor(0xFFEE9000);
 	terminal_wprint(2, 2, L"Hello, [color=white]world[/color].[U+2250] \x1234 {абв} [base=0xE000]abc");
@@ -72,6 +73,9 @@ int main()
 
 	for (int i=0; i<20; i++) terminal_put(24+i, 18, 0xFFFD);
 	terminal_print(24, 18, "[base=0xE600]Hello, world!");
+
+	for (int i=0; i<20; i++) terminal_put(24+i, 20, 0xFFFD);
+	terminal_print(24, 20, "[base=0xE700]Hello, world!");
 
 	terminal_refresh();
 	terminal_read();

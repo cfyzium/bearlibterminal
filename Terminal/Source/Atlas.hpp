@@ -56,7 +56,7 @@ namespace BearLibTerminal
 	std::wostream& operator<<(std::wostream& s, const Tile::Alignment& value);
 	std::wistream& operator>>(std::wistream& s, Tile::Alignment& value);
 
-	class AtlasTexture3;
+	class AtlasTexture;
 
 	struct TexCoords
 	{
@@ -67,7 +67,7 @@ namespace BearLibTerminal
 
 	struct TileSlot: Slot, Tile, std::enable_shared_from_this<TileSlot>
 	{
-		AtlasTexture3* texture;
+		AtlasTexture* texture;
 		Size space_size;
 		Rectangle texture_region;
 		TexCoords texture_coords;
@@ -78,12 +78,12 @@ namespace BearLibTerminal
 		void Update(const Bitmap& bitmap) override;
 	};
 
-	class AtlasTexture3
+	class AtlasTexture
 	{
 	public:
 		enum class Type {Tile, Sprite};
 
-		AtlasTexture3(Type type, Size initial_size);
+		AtlasTexture(Type type, Size initial_size);
 		Type GetType() const;
 		std::shared_ptr<TileSlot> Add(const Bitmap& bitmap, Rectangle region);
 		void Update(std::shared_ptr<TileSlot> slot, const Bitmap& bitmap);
@@ -115,7 +115,7 @@ namespace BearLibTerminal
 		void Dispose();
 
 	private:
-		std::list<AtlasTexture3> m_textures;
+		std::list<AtlasTexture> m_textures;
 	};
 }
 

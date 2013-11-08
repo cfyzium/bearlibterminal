@@ -32,6 +32,7 @@
 #include <unistd.h>
 #include <sys/time.h>
 #include "BearLibTerminal.h"
+#include <future>
 
 namespace BearLibTerminal
 {
@@ -400,8 +401,18 @@ namespace BearLibTerminal
 		Semaphore semaphore;
 	};
 
+	struct InvokationSentry2
+	{
+		std::packaged_task<void()> task;
+
+		InvokationSentry2(std::function<void()> func):
+			task(func)
+		{ }
+	};
+
 	void X11Window::Invoke(std::function<void()> func)
 	{
+		/*
 		InvokationSentry sentry;
 		sentry.func = func;
 
@@ -421,6 +432,27 @@ namespace BearLibTerminal
 		XFlush(m_private->display);
 
 		sentry.semaphore.Wait();
+		/*/
+		auto sentry = std::make_shared<InvokationSentry2>(func);
+		std::future<void> future = sentry->task.get_future();
+
+		XClientMessageEvent event;
+		memset(&event, 0, sizeof(XClientMessageEvent));
+		event.type = ClientMessage;
+		event.window = m_private->window;
+		event.format = 32;
+
+		// XXX: bitness-agnostic event marking hack
+		event.data.l[0] = 0;
+		uint64_t* l64 = (uint64_t*)event.data.l;
+		l64[0] = (uint64_t)this;
+		l64[1] = (uint64_t)&sentry;
+
+		XSendEvent(m_private->display, m_private->window, 0, 0, (XEvent*)&event);
+		XFlush(m_private->display);
+
+		future.get();
+		//*/
 	}
 
 	void X11Window::ThreadFunction()
@@ -535,10 +567,16 @@ namespace BearLibTerminal
 				}
 				else if (e.type == ClientMessage && e.xclient.format == 32 && ((uint64_t*)e.xclient.data.l)[0] == (uint64_t)this)
 				{
+					/*
 					uint64_t* l64 = (uint64_t*)e.xclient.data.l;
 					InvokationSentry* sentry = (InvokationSentry*)l64[1];
 					sentry->func();
 					sentry->semaphore.Notify();
+					/*/
+					uint64_t* l64 = (uint64_t*)e.xclient.data.l;
+					auto sentry = *(std::shared_ptr<InvokationSentry2>*)l64[1];
+					sentry->task();
+					//*/
 				}
 				else if (e.type == ClientMessage && e.xclient.data.l[0] == (long)wmDeleteMessage)
 				{

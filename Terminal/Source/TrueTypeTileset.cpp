@@ -146,7 +146,7 @@ namespace BearLibTerminal
 		{
 			// Only height was specified, e. g. size=12
 
-			if (FT_Set_Char_Size(m_font_face, (uint32_t)(m_tile_size.height*64), 0, 96*hres, 96))
+			if (FT_Set_Char_Size(m_font_face, 0, (uint32_t)(m_tile_size.height*64), 96*hres, 96))
 			{
 				throw std::runtime_error("TrueTypeTileset: can't setup font size");
 			}
@@ -167,7 +167,62 @@ namespace BearLibTerminal
 			// Glyph bbox was specified, e. g. size=8x12
 			// Must guess required character size
 
-			throw std::runtime_error("TrueTypeTileset: glyph bbox NYI");
+			auto get_size = [&](float height) -> Size
+			{
+				if (FT_Set_Char_Size(m_font_face, 0, (uint32_t)(height*64), 96*hres, 96))
+				{
+					throw std::runtime_error("TrueTypeTileset: can't setup font size");
+				}
+
+				int w = (int)std::ceil(get_metrics('@').horiAdvance/64.0f/64.0f);
+				int h = m_font_face->size->metrics.height >> 6;
+
+				return Size(w, h);
+			};
+
+			float left = 1.0f;
+			float right = 96.0f;
+			float guessed = 10.0f;
+
+			while (true)
+			{
+				Size size = get_size(guessed);
+				if (size.width > m_tile_size.width || size.height > m_tile_size.height)
+				{
+					// This is too big by at least one dimension.
+					float temp = guessed;
+					right = guessed;
+					guessed = (left + right) / 2.0f;
+					LOG(Trace, "height " << temp << " was to big (" << size << " / " << m_tile_size << "), will try " << guessed << "; [" << left << ", " << right << "]");
+				}
+				else if (size.width <= m_tile_size.width && size.height <= m_tile_size.height)
+				{
+					// Smaller than or equal to requested size.
+					if (right - guessed < 1.0f)
+					{
+						LOG(Trace, "height " << guessed << " is smaller or equal (" << size << " / " << m_tile_size << "), but right border " << right << " is too close, stopping");
+						break;
+					}
+					else
+					{
+						float temp = guessed;
+						left = guessed;
+						guessed = (left + right) / 2.0f;
+						LOG(Trace, "height " << temp << " is smaller or equal (" << size << " / " << m_tile_size << "), will try " << guessed << "; [" << left << ", " << right << "]");
+					}
+				}
+			}
+
+			int dot_width = (int)std::ceil(get_metrics('.').horiAdvance/64.0f/64.0f);
+			int at_width = (int)std::ceil(get_metrics('@').horiAdvance/64.0f/64.0f);
+			m_monospace = dot_width == at_width;
+
+			int height = m_font_face->size->metrics.height >> 6;
+			int width = at_width;
+
+			m_tile_size = Size(width, height);
+
+			LOG(Trace, "Font tile size is " << m_tile_size << ", font is " << (m_monospace? "monospace": "not monospace"));
 		}
 
 		if (m_render_mode == FT_RENDER_MODE_LCD)
@@ -212,6 +267,7 @@ namespace BearLibTerminal
 
 	void TrueTypeTileset::Reload(TrueTypeTileset&& tileset)
 	{
+		LOG(Trace, "exception: NYI");
 		throw std::runtime_error("TrueTypeTileset::Reload: NYI"); // FIXME: NYI
 	}
 
