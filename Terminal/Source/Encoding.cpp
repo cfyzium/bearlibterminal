@@ -24,16 +24,19 @@ namespace BearLibTerminal
 	 */
 	struct CustomCodepage: Encoding<char>
 	{
-		CustomCodepage(std::istream& stream);
-		wchar_t Convert(int value) const;
-		int Convert(wchar_t value) const;
-		std::wstring Convert(const std::string& value) const;
-		std::string Convert(const std::wstring& value) const;
+		CustomCodepage(const std::wstring& name, std::istream& stream);
+		wchar_t Convert(int value) const override;
+		int Convert(wchar_t value) const override;
+		std::wstring Convert(const std::string& value) const override;
+		std::string Convert(const std::wstring& value) const override;
+		std::wstring GetName() const override;
 		std::unordered_map<int, wchar_t> m_forward;  // custom -> wchar_t
 		std::unordered_map<wchar_t, int> m_backward; // wchar_t -> custom
+		std::wstring m_name;
 	};
 
-	CustomCodepage::CustomCodepage(std::istream& stream)
+	CustomCodepage::CustomCodepage(const std::wstring& name, std::istream& stream):
+		m_name(name)
 	{
 		int base = 0;
 
@@ -151,6 +154,11 @@ namespace BearLibTerminal
 		return result;
 	}
 
+	std::wstring CustomCodepage::GetName() const
+	{
+		return m_name;
+	}
+
 	// ------------------------------------------------------------------------
 
 	struct UTF8Encoding: Encoding<char>
@@ -159,6 +167,7 @@ namespace BearLibTerminal
 		int Convert(wchar_t value) const override;
 		std::wstring Convert(const std::string& value) const override;
 		std::string Convert(const std::wstring& value) const override;
+		std::wstring GetName() const override;
 	};
 
 	wchar_t UTF8Encoding::Convert(int value) const
@@ -185,6 +194,11 @@ namespace BearLibTerminal
 		return result;
 	}
 
+	std::wstring UTF8Encoding::GetName() const
+	{
+		return L"utf-8";
+	}
+
 	std::unique_ptr<Encoding<char>> UTF8(new UTF8Encoding());
 
 	// ------------------------------------------------------------------------
@@ -195,6 +209,7 @@ namespace BearLibTerminal
 		int Convert(wchar_t value) const override;
 		std::wstring Convert(const std::u16string& value) const override;
 		std::u16string Convert(const std::wstring& value) const override;
+		std::wstring GetName() const override;
 	};
 
 	wchar_t UCS2Encoding::Convert(int value) const
@@ -221,6 +236,11 @@ namespace BearLibTerminal
 		return result;
 	}
 
+	std::wstring UCS2Encoding::GetName() const
+	{
+		return L"ucs-2";
+	}
+
 	std::unique_ptr<Encoding<char16_t>> UTF16(new UCS2Encoding());
 
 	// ------------------------------------------------------------------------
@@ -231,6 +251,7 @@ namespace BearLibTerminal
 		int Convert(wchar_t value) const override;
 		std::wstring Convert(const std::u32string& value) const override;
 		std::u32string Convert(const std::wstring& value) const override;
+		std::wstring GetName() const override;
 	};
 
 	wchar_t UCS4Encoding::Convert(int value) const
@@ -257,6 +278,11 @@ namespace BearLibTerminal
 		return result;
 	}
 
+	std::wstring UCS4Encoding::GetName() const
+	{
+		return L"ucs-4";
+	}
+
 	std::unique_ptr<Encoding<char32_t>> UTF32(new UCS4Encoding());
 
 	// ------------------------------------------------------------------------
@@ -274,7 +300,7 @@ namespace BearLibTerminal
 			{
 				throw std::runtime_error("Failed to locate codepage resource for %name"); // FIXME: formatting
 			}
-			return std::unique_ptr<Encoding<char>>(new CustomCodepage(*stream));
+			return std::unique_ptr<Encoding<char>>(new CustomCodepage(name, *stream));
 		}
 	}
 }

@@ -231,6 +231,11 @@ namespace BearLibTerminal
 
 	TrueTypeTileset::~TrueTypeTileset()
 	{
+		Dispose();
+	}
+
+	void TrueTypeTileset::Dispose()
+	{
 		if (m_font_face)
 		{
 			FT_Done_Face(m_font_face);
@@ -265,7 +270,24 @@ namespace BearLibTerminal
 
 	void TrueTypeTileset::Reload(TrueTypeTileset&& tileset)
 	{
-		throw std::runtime_error("TrueTypeTileset::Reload: NYI"); // FIXME: NYI
+		// Clean
+		Remove();
+		Dispose();
+
+		// Steal
+		m_tile_size = tileset.m_tile_size;
+		m_bbox_size = tileset.m_bbox_size;
+		m_codepage = std::move(tileset.m_codepage);
+		m_alignment = tileset.m_alignment;
+		m_font_library = tileset.m_font_library;
+		m_font_face = tileset.m_font_face;
+		m_render_mode = tileset.m_render_mode;
+		m_monospace = tileset.m_monospace;
+		tileset.m_font_library = nullptr;
+		tileset.m_font_face = nullptr;
+
+		// Apply
+		Save();
 	}
 
 	Size TrueTypeTileset::GetBoundingBoxSize()

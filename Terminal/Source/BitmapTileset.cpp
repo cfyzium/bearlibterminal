@@ -67,34 +67,35 @@ namespace BearLibTerminal
 		{
 			throw std::runtime_error("Bitmap tileset: bitmap is smaller than tile size");
 		}
+
+		if (m_bbox_size.width < 1 || m_bbox_size.height < 1)
+		{
+			m_bbox_size = Size(1, 1);
+		}
+
+		Size image_size = m_cache.GetSize();
+		int columns = (int)std::floor(image_size.width / (float)m_tile_size.width);
+		int rows = (int)std::floor(image_size.height / (float)m_tile_size.height);
+		m_grid_size = Size(columns, rows);
+		LOG(Debug, "Tileset has " << columns << "x" << rows << " tiles");
+
+		if (m_alignment == Tile::Alignment::Unknown)
+		{
+			if (m_grid_size.Area() > 1)
+			{
+				m_alignment = Tile::Alignment::Center;
+			}
+			else
+			{
+				m_alignment = Tile::Alignment::TopLeft;
+			}
+		}
 	}
 
 	bool BitmapTileset::Save()
 	{
 		if (!m_cache.IsEmpty())
 		{
-			Size image_size = m_cache.GetSize();
-			int columns = (int)std::floor(image_size.width / (float)m_tile_size.width);
-			int rows = (int)std::floor(image_size.height / (float)m_tile_size.height);
-			LOG(Debug, "Tileset has " << columns << "x" << rows << " tiles");
-
-			if (m_bbox_size.width < 1 || m_bbox_size.height < 1)
-			{
-				m_bbox_size = Size(1, 1);
-			}
-
-			if (m_alignment == Tile::Alignment::Unknown)
-			{
-				if (columns*rows > 1)
-				{
-					m_alignment = Tile::Alignment::Center;
-				}
-				else
-				{
-					m_alignment = Tile::Alignment::TopLeft;
-				}
-			}
-
 			Point offset;
 			if (m_alignment == Tile::Alignment::Center)
 			{
@@ -102,11 +103,11 @@ namespace BearLibTerminal
 			}
 
 			// Iterate tiles left to right, top to bottom.
-			for (int y=0; y<rows; y++)
+			for (int y=0; y<m_grid_size.height; y++)
 			{
-				for (int x=0; x<columns; x++)
+				for (int x=0; x<m_grid_size.width; x++)
 				{
-					int i = y*columns + x;
+					int i = y*m_grid_size.width + x;
 					wchar_t j = m_codepage->Convert(i);
 					if (j != kUnicodeReplacementCharacter)
 					{
@@ -151,9 +152,18 @@ namespace BearLibTerminal
 
 	void BitmapTileset::Reload(BitmapTileset&& tileset)
 	{
-		if (m_tiles.size() == 1 && m_tiles.begin()->second->texture_region.Size() == tileset.m_cache.GetSize())
+		bool eligible_to_update =
+			(m_tile_size == tileset.m_tile_size) &&
+			(m_bbox_size == tileset.m_bbox_size) &&
+			(m_codepage->GetName() == tileset.m_codepage->GetName()) &&
+			(m_alignment == tileset.m_alignment) &&
+			(m_tiles.size() == 1) &&
+			(m_tiles.begin()->second->texture_region.Size() == tileset.m_cache.GetSize());
+
+		if (eligible_to_update)
 		{
-			// Tileset contains one tile with the same dimensions
+			// Tileset contains exactly one tile with the same dimensions and
+			// all other parameters are the same.
 			m_tiles.begin()->second->Update(tileset.m_cache);
 		}
 		else

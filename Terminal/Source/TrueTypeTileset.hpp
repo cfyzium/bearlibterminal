@@ -21,6 +21,7 @@ namespace BearLibTerminal
 	public:
 		TrueTypeTileset(TileContainer& container, OptionGroup& group);
 		~TrueTypeTileset();
+		void Dispose();
 		void Remove() override;
 		bool Save() override;
 		void Reload(TrueTypeTileset&& tileset) override;

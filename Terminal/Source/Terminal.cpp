@@ -205,7 +205,7 @@ namespace BearLibTerminal
 
 		if (updated.terminal_encoding != m_options.terminal_encoding)
 		{
-			m_encoding = GetUnibyteEncoding(updated.terminal_encoding); // TODO: move encoding to options
+			m_encoding = GetUnibyteEncoding(updated.terminal_encoding);
 		}
 
 		// Apply on per-option basis
@@ -402,7 +402,7 @@ namespace BearLibTerminal
 
 		if (group.attributes.count(L"file"))
 		{
-			options.log_filename = group.attributes[L"file"]; // TODO: validate file access
+			options.log_filename = group.attributes[L"file"];
 		}
 
 		if (group.attributes.count(L"level") && !try_parse(group.attributes[L"level"], options.log_level))
