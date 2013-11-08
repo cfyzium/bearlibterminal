@@ -99,7 +99,8 @@ namespace BearLibTerminal
 			Point offset;
 			if (m_alignment == Tile::Alignment::Center)
 			{
-				offset = Point(-m_tile_size.width/2, -m_tile_size.height/2); // TODO: round in a way to compensate state.half_cellsize rounding error
+				// TODO: round in a way to compensate state.half_cellsize rounding error
+				offset = Point(-m_tile_size.width/2, -m_tile_size.height/2);
 			}
 
 			// Iterate tiles left to right, top to bottom.
