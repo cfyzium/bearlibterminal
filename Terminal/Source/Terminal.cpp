@@ -19,7 +19,8 @@ namespace BearLibTerminal
 	Terminal::Terminal():
 		m_state{kHidden},
 		m_vars{},
-		m_synchronous{false}
+		m_asynchronous{true},
+		m_current_texture(0)
 	{
 		// Try to create window
 		m_window = Window::Create();
@@ -39,15 +40,15 @@ namespace BearLibTerminal
 
 	void Terminal::InvokeOnRenderingThread(std::function<void()> func)
 	{
-		if (m_synchronous)
-		{
-			// Terminal (current thread) owns rendering context
-			func();
-		}
-		else
+		if (m_asynchronous)
 		{
 			// Window thread owns rendering context
 			m_window->Invoke(func);
+		}
+		else
+		{
+			// Terminal (current thread) owns rendering context
+			func();
 		}
 	}
 
@@ -142,6 +143,13 @@ namespace BearLibTerminal
 	{
 		std::lock_guard<std::mutex> guard(m_lock);
 
+		if (!m_asynchronous)
+		{
+			// Must finish rendering block or else it may confuse
+			// GPU later when applying tilesets.
+			glEnd();
+		}
+
 		auto groups = ParseOptions(value);
 
 		Options updated = m_options;
@@ -167,6 +175,10 @@ namespace BearLibTerminal
 			{
 				ValidateInputOptions(group, updated);
 			}
+			else if (group.name == L"output")
+			{
+				ValidateOutputOptions(group, updated);
+			}
 			else if (group.name == L"terminal")
 			{
 				ValidateTerminalOptions(group, updated);
@@ -184,6 +196,15 @@ namespace BearLibTerminal
 					LOG(Debug, "Successfully loaded a tileset for base code " << base_code);
 				}
 			}
+		}
+
+		if (updated.output_synchronous != m_options.output_synchronous)
+		{
+			// Rendering mode changed
+			LOG(Debug, "Switching to " << (updated.output_synchronous? "synchronous": "asynchronous") << " rendering mode");
+			InvokeOnRenderingThread([&]{m_window->ReleaseRC();});
+			m_asynchronous = !updated.output_synchronous;
+			InvokeOnRenderingThread([&]{m_window->AcquireRC();});
 		}
 
 		// All options and parameters must be validated, may try to apply them
@@ -271,6 +292,12 @@ namespace BearLibTerminal
 		}
 
 		m_options = updated;
+
+		if (!m_asynchronous)
+		{
+			// Start rendering block if terminal is currently in synchronous mode
+			glBegin(GL_QUADS);
+		}
 	}
 
 	void Terminal::ValidateTerminalOptions(OptionGroup& group, Options& options)
@@ -396,6 +423,21 @@ namespace BearLibTerminal
 		if (options.input_cursor_blink_rate <= 0) options.input_cursor_blink_rate = 1;
 	}
 
+	void Terminal::ValidateOutputOptions(OptionGroup& group, Options& options)
+	{
+		// Possible options: postformatting, synchronous
+
+		if (group.attributes.count(L"postformatting") && !try_parse(group.attributes[L"postformatting"], options.output_postformatting))
+		{
+			throw std::runtime_error("output.postformatting cannot be parsed");
+		}
+
+		if (group.attributes.count(L"synchronous") && !try_parse(group.attributes[L"synchronous"], options.output_synchronous))
+		{
+			throw std::runtime_error("output.synchronous cannot be parsed");
+		}
+	}
+
 	void Terminal::ValidateLoggingOptions(OptionGroup& group, Options& options)
 	{
 		// Possible options: file, level, mode
@@ -418,56 +460,82 @@ namespace BearLibTerminal
 
 	void Terminal::Refresh()
 	{
-		// XXX: m_state here is not protected by lock because
-		// Window::Show will try to refresh syncronously which causes deadlock.
-
-		// If window is not visible, show it
-		if (m_state == kHidden)
+		if (m_asynchronous)
 		{
-			m_window->Show();
-			m_state = kVisible;
+			// XXX: m_state here is not protected by lock because
+			// Window::Show will try to refresh syncronously which causes deadlock.
+
+			// If window is not visible, show it
+			if (m_state == kHidden)
+			{
+				m_window->Show();
+				m_state = kVisible;
+			}
+
+			// Ignore irrelevant redraw calls (in case something has failed and state is kClosed)
+			if (m_state != kVisible) return;
+
+			{
+				std::lock_guard<std::mutex> guard(m_lock);
+				m_world.stage.frontbuffer = m_world.stage.backbuffer;
+			}
+
+			// NOTE: this call will syncronously wait OnWindowRedraw completion
+			m_window->Redraw();
 		}
-
-		// Ignore irrelevant redraw calls (in case something has failed and state is kClosed)
-		if (m_state != kVisible) return;
-
+		else
 		{
-			std::lock_guard<std::mutex> guard(m_lock);
-			m_world.stage.frontbuffer = m_world.stage.backbuffer;
+			glEnd();
+			// NOTE: debug overlays go here
+			m_window->SwapBuffers();
+			glBegin(GL_QUADS);
 		}
-
-		// NOTE: this call will syncronously wait OnWindowRedraw completion
-		m_window->Redraw();
 	}
 
 	void Terminal::Clear()
 	{
-		std::lock_guard<std::mutex> guard(m_lock);
-		m_world.stage.Resize(m_world.stage.size);
+		if (m_asynchronous)
+		{
+			std::lock_guard<std::mutex> guard(m_lock);
+			m_world.stage.Resize(m_world.stage.size);
+		}
+		else
+		{
+			glEnd();
+			glClear(GL_COLOR_BUFFER_BIT);
+			glBegin(GL_QUADS);
+		}
 	}
 
 	void Terminal::Clear(int x, int y, int w, int h)
 	{
-		std::lock_guard<std::mutex> guard(m_lock);
-
-		Size stage_size = m_world.stage.size;
-		if (x < 0) x = 0;
-		if (y < 0) y = 0;
-		if (x+w >= stage_size.width) w = stage_size.width-x;
-		if (y+h >= stage_size.height) h = stage_size.height-y;
-
-		Layer& layer = m_world.stage.backbuffer.layers[m_world.state.layer];
-		for (int i=x; i<x+w; i++)
+		if (m_asynchronous)
 		{
-			for (int j=y; j<y+h; j++)
+			std::lock_guard<std::mutex> guard(m_lock);
+
+			Size stage_size = m_world.stage.size;
+			if (x < 0) x = 0;
+			if (y < 0) y = 0;
+			if (x+w >= stage_size.width) w = stage_size.width-x;
+			if (y+h >= stage_size.height) h = stage_size.height-y;
+
+			Layer& layer = m_world.stage.backbuffer.layers[m_world.state.layer];
+			for (int i=x; i<x+w; i++)
 			{
-				int i = stage_size.width*j+i;
-				layer.cells[i].leafs.clear();
-				if (m_world.state.layer == 0)
+				for (int j=y; j<y+h; j++)
 				{
-					m_world.stage.backbuffer.background[i] = m_world.state.bkcolor;
+					int i = stage_size.width*j+i;
+					layer.cells[i].leafs.clear();
+					if (m_world.state.layer == 0)
+					{
+						m_world.stage.backbuffer.background[i] = m_world.state.bkcolor;
+					}
 				}
 			}
+		}
+		else
+		{
+			// FIXME: NYI
 		}
 	}
 
@@ -505,35 +573,69 @@ namespace BearLibTerminal
 
 	void Terminal::PutUnlocked(int x, int y, int dx, int dy, wchar_t code, Color* colors)
 	{
-		uint16_t u16code = (uint16_t)code;
-		if (m_world.tiles.slots.find(u16code) == m_world.tiles.slots.end())
+		if (m_asynchronous)
 		{
-			m_fresh_codes.push_back(u16code);
-		}
-
-		// NOTE: layer must be already allocated by SetLayer
-		int index = y*m_world.stage.size.width+x;
-		Cell& cell = m_world.stage.backbuffer.layers[m_world.state.layer].cells[index];
-
-		if (code != 0)
-		{
-			if (m_world.state.composition == TK_COMPOSITION_OFF)
+			uint16_t u16code = (uint16_t)code;
+			if (m_world.tiles.slots.find(u16code) == m_world.tiles.slots.end())
 			{
-				cell.leafs.clear();
+				m_fresh_codes.push_back(u16code);
 			}
 
-			cell.leafs.emplace_back();
-			Leaf& leaf = cell.leafs.back();
+			// NOTE: layer must be already allocated by SetLayer
+			int index = y*m_world.stage.size.width+x;
+			Cell& cell = m_world.stage.backbuffer.layers[m_world.state.layer].cells[index];
 
-			// Character
-			leaf.code = u16code;
+			if (code != 0)
+			{
+				if (m_world.state.composition == TK_COMPOSITION_OFF)
+				{
+					cell.leafs.clear();
+				}
 
-			// Offset
+				cell.leafs.emplace_back();
+				Leaf& leaf = cell.leafs.back();
+
+				// Character
+				leaf.code = u16code;
+
+				// Offset
+				leaf.dx = dx;
+				leaf.dy = dy;
+
+				// Foreground colors
+				if (colors)
+				{
+					for (int i=0; i<4; i++) leaf.color[i] = colors[i];
+					leaf.flags |= Leaf::CornerColored;
+				}
+				else
+				{
+					leaf.color[0] = m_world.state.color;
+				}
+
+				// Background color
+				if (m_world.state.layer == 0)
+				{
+					m_world.stage.backbuffer.background[index] = m_world.state.bkcolor;
+				}
+			}
+			else
+			{
+				// Character code '0' means 'erase cell'
+				cell.leafs.clear();
+				if (m_world.state.layer == 0)
+				{
+					m_world.stage.backbuffer.background[index] = Color(); // Transparent color, no background
+				}
+			}
+		}
+		else
+		{
+			Leaf leaf;
 			leaf.dx = dx;
 			leaf.dy = dy;
 
-			// Foreground colors
-			if (colors != nullptr)
+			if (colors)
 			{
 				for (int i=0; i<4; i++) leaf.color[i] = colors[i];
 				leaf.flags |= Leaf::CornerColored;
@@ -543,20 +645,33 @@ namespace BearLibTerminal
 				leaf.color[0] = m_world.state.color;
 			}
 
-			// Background color
-			if (m_world.state.layer == 0)
+			auto j = m_world.tiles.slots.find(code);
+			if (j == m_world.tiles.slots.end())
 			{
-				m_world.stage.backbuffer.background[index] = m_world.state.bkcolor;
+				LOG(Trace, "Trying to prepare character " << (int)code << " in sybchronous mode");
+				m_fresh_codes.emplace_back(code);
+				PrepareFreshCharacters();
+				j = m_world.tiles.slots.find(code);
 			}
-		}
-		else
-		{
-			// Character code '0' means 'erase cell'
-			cell.leafs.clear();
-			if (m_world.state.layer == 0)
+
+			auto& slot = *(j->second);
+			if (slot.texture_id != m_current_texture)
 			{
-				m_world.stage.backbuffer.background[index] = Color(); // Transparent color, no background
+				LOG(Trace, "Wrong texture is currently bound, rebinding while in synchornous mode");
+				glEnd();
+				slot.BindTexture();
+				m_current_texture = slot.texture_id;
+				glBegin(GL_QUADS);
 			}
+
+			slot.Draw
+			(
+				leaf,
+				m_world.state.cellsize.width * x,
+				m_world.state.cellsize.height * y,
+				m_world.state.half_cellsize.width,
+				m_world.state.half_cellsize.height
+			);
 		}
 	}
 
@@ -572,6 +687,24 @@ namespace BearLibTerminal
 		std::lock_guard<std::mutex> guard(m_lock);
 		if (x < 0 || y < 0 || x >= m_world.stage.size.width || y >= m_world.stage.size.height) return;
 		PutUnlocked(x, y, dx, dy, code, corners);
+	}
+
+	void Terminal::CustomRendering(int mode)
+	{
+		if (m_asynchronous) return;
+
+		if (mode == 1)
+		{
+			// Enter custom rendering, stop current rendering block
+			glEnd();
+		}
+		else
+		{
+			// Leave custom rendering, resume rendering block.
+			// Texture must be reset so it can be properly reapplied later.
+			m_current_texture = 0;
+			glBegin(GL_QUADS);
+		}
 	}
 
 	int Terminal::Print(int x0, int y0, const std::wstring& s)
@@ -781,6 +914,7 @@ namespace BearLibTerminal
 	int Terminal::Read()
 	{
 		bool nonblocking = get_locked(m_options.input_nonblocking, m_lock);
+		if (!m_asynchronous) nonblocking = true;
 		Keystroke stroke = ReadKeystroke(nonblocking? 0: std::numeric_limits<int>::max());
 		int result = stroke.scancode;
 		if (stroke.released) result |= TK_FLAG_RELEASED;
@@ -825,6 +959,7 @@ namespace BearLibTerminal
 	int Terminal::ReadChar()
 	{
 		bool nonblocking = get_locked(m_options.input_nonblocking, m_lock);
+		if (!m_asynchronous) nonblocking = true;
 		return ReadCharInternal(nonblocking? 0: std::numeric_limits<int>::max());
 	}
 
@@ -989,7 +1124,7 @@ namespace BearLibTerminal
 	 */
 	int Terminal::ReadString(int x, int y, wchar_t* buffer, int max)
 	{
-		return m_options.input_nonblocking?
+		return (m_options.input_nonblocking || !m_asynchronous)?
 			ReadStringInternalNonblocking(buffer, max):
 			ReadStringInternalBlocking(x, y, buffer, max);
 	}
@@ -1027,17 +1162,29 @@ namespace BearLibTerminal
 				continue;
 			}
 
-			// FIXME: Box Drawing (2500–257F) and Block Elements (2580–259F) are searched in different order
-			//   dynamic tileset is searched before main tileset if it is TrueType and after if it is Bitmap
 			bool provided = false;
+
+			// Box Drawing (2500–257F) and Block Elements (2580–259F) are searched in different order
+			bool is_dynamic = (code >= 0x2500 && code <= 0x257F) || (code >= 0x2580 && code <= 0x259F);
+
 			for (auto i=m_world.tilesets.rbegin(); i != m_world.tilesets.rend(); i++)
 			{
-				if (i->second->Provides(code))
+				if (is_dynamic && (i->first == kUnicodeReplacementCharacter || (!i->first && i->second->GetType() == Tileset::Type::TrueType)))
+				{
+					continue;
+				}
+				else if (i->second->Provides(code))
 				{
 					i->second->Prepare(code);
 					provided = true;
 					break;
 				}
+			}
+
+			if (!provided && m_world.tilesets[kUnicodeReplacementCharacter]->Provides(code))
+			{
+				m_world.tilesets[kUnicodeReplacementCharacter]->Prepare(code);
+				provided = true;
 			}
 
 			if (!provided)

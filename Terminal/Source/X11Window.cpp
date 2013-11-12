@@ -215,7 +215,8 @@ namespace BearLibTerminal
 		try
 		{
 			if (m_on_redraw) m_on_redraw();
-			glXSwapBuffers(m_private->display, m_private->window);
+			//glXSwapBuffers(m_private->display, m_private->window);
+			SwapBuffers();
 		}
 		catch (std::exception& e)
 		{
@@ -787,6 +788,11 @@ namespace BearLibTerminal
 	{
 		glXMakeCurrent(m_private->display, None, NULL);
 		return true;
+	}
+
+	void X11Window::SwapBuffers()
+	{
+		glXSwapBuffers(m_private->display, m_private->window);
 	}
 
 	void X11Window::ReportInput(const Keystroke& keystroke)

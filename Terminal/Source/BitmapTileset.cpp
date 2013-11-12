@@ -184,6 +184,11 @@ namespace BearLibTerminal
 		return m_tile_size;
 	}
 
+	Tileset::Type BitmapTileset::GetType()
+	{
+		return Type::Bitmap;
+	}
+
 	bool BitmapTileset::Provides(uint16_t code)
 	{
 		return m_tiles.count(code) > 0;

@@ -58,6 +58,7 @@ namespace BearLibTerminal
 		virtual void Invoke(std::function<void()> func) = 0;
 		virtual bool AcquireRC() = 0;
 		virtual bool ReleaseRC() = 0;
+		virtual void SwapBuffers() = 0;
 		static std::unique_ptr<Window> Create();
 	protected:
 		Window();

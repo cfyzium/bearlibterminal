@@ -295,6 +295,11 @@ namespace BearLibTerminal
 		return m_tile_size;
 	}
 
+	Tileset::Type TrueTypeTileset::GetType()
+	{
+		return Type::TrueType;
+	}
+
 	bool TrueTypeTileset::Provides(uint16_t code)
 	{
 		if (code < m_base_code) return false;

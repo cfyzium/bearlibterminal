@@ -22,6 +22,7 @@ namespace BearLibTerminal
 		bool Save() override;
 		void Reload(BitmapTileset&& tileset) override;
 		Size GetBoundingBoxSize() override;
+		Type GetType() override;
 		bool Provides(uint16_t code) override;
 		void Prepare(uint16_t code) override;
 	private:

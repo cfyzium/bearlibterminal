@@ -51,6 +51,7 @@ namespace BearLibTerminal
 		void SetComposition(int mode);
 		void Put(int x, int y, wchar_t code);
 		void PutExtended(int x, int y, int dx, int dy, wchar_t code, Color* corners);
+		void CustomRendering(int mode);
 		int Print(int x, int y, const std::wstring& str);
 		int HasInput();
 		int GetState(int code);
@@ -64,6 +65,7 @@ namespace BearLibTerminal
 		void UpdateDynamicTileset(Size size);
 		void ValidateWindowOptions(OptionGroup& group, Options& options);
 		void ValidateInputOptions(OptionGroup& group, Options& options);
+		void ValidateOutputOptions(OptionGroup& group, Options& options);
 		void ValidateTerminalOptions(OptionGroup& group, Options& options);
 		void ValidateLoggingOptions(OptionGroup& group, Options& options);
 		void ConfigureViewport();
@@ -91,7 +93,8 @@ namespace BearLibTerminal
 		World m_world;
 		Options m_options;
 		std::list<uint16_t> m_fresh_codes;
-		std::atomic<bool> m_synchronous;
+		std::atomic<bool> m_asynchronous;
+		uint64_t m_current_texture;
 	};
 }
 

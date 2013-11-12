@@ -154,6 +154,11 @@ namespace BearLibTerminal
 		return m_size;
 	}
 
+	Texture::handle_t Texture::GetHandle() const
+	{
+		return m_handle;
+	}
+
 	void Texture::Enable()
 	{
 		glEnable(GL_TEXTURE_2D);
@@ -168,5 +173,10 @@ namespace BearLibTerminal
 	{
 		glBindTexture(GL_TEXTURE_2D, 0);
 		m_currently_bound_handle = 0;
+	}
+
+	Texture::handle_t Texture::BoundId()
+	{
+		return m_currently_bound_handle;
 	}
 }

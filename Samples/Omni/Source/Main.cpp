@@ -77,6 +77,12 @@ int main()
 	for (int i=0; i<20; i++) terminal_put(24+i, 20, 0xFFFD);
 	terminal_print(24, 20, "[base=0xE700]Hello, world!");
 
+	for (int i=0; i<10; i++)
+	{
+		terminal_put(2+i, 23, 0xFFFD);
+		terminal_put(2+i, 23, 0x2500+i);
+	}
+
 	terminal_refresh();
 	terminal_read();
 

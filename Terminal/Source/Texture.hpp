@@ -42,9 +42,11 @@ namespace BearLibTerminal
 		void Update(const Bitmap& bitmap);
 		void Update(Rectangle area, const Bitmap& bitmap);
 		Size GetSize() const;
+		handle_t GetHandle() const;
 		static void Enable();
 		static void Disable();
 		static void Unbind();
+		static handle_t BoundId();
 
 		// NonCopyable, NonAssignable
 		Texture(const Texture&) = delete;

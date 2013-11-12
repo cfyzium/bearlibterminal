@@ -375,6 +375,11 @@ namespace BearLibTerminal
 		return true;
 	}
 
+	void WinApiWindow::SwapBuffers()
+	{
+		SwapBuffers(m_device_context);
+	}
+
 	void WinApiWindow::DestroyWindowObject()
 	{
 		if ( m_handle )
@@ -422,7 +427,8 @@ namespace BearLibTerminal
 		{
 			//*
 			if ( m_on_redraw ) m_on_redraw();
-			SwapBuffers(m_device_context);
+			//SwapBuffers(m_device_context);
+			SwapBuffers();
 			/*/
 			uint64_t s = StartTiming();
 			if ( m_on_redraw ) m_on_redraw();
