@@ -645,23 +645,42 @@ namespace BearLibTerminal
 				leaf.color[0] = m_world.state.color;
 			}
 
+			bool inside_drawing_block = true;
+
 			auto j = m_world.tiles.slots.find(code);
 			if (j == m_world.tiles.slots.end())
 			{
-				LOG(Trace, "Trying to prepare character " << (int)code << " in sybchronous mode");
+				if (inside_drawing_block)
+				{
+					glEnd();
+					inside_drawing_block = false;
+				}
+
+				LOG(Trace, "Trying to prepare character " << (int)code << " in synchronous mode");
 				m_fresh_codes.emplace_back(code);
 				PrepareFreshCharacters();
+				m_world.tiles.atlas.Refresh();
 				j = m_world.tiles.slots.find(code);
 			}
 
 			auto& slot = *(j->second);
 			if (slot.texture_id != m_current_texture)
 			{
+				if (inside_drawing_block)
+				{
+					glEnd();
+					inside_drawing_block = false;
+				}
+
 				LOG(Trace, "Wrong texture is currently bound, rebinding while in synchornous mode");
-				glEnd();
 				slot.BindTexture();
 				m_current_texture = slot.texture_id;
+			}
+
+			if (!inside_drawing_block)
+			{
 				glBegin(GL_QUADS);
+				inside_drawing_block = true;
 			}
 
 			slot.Draw

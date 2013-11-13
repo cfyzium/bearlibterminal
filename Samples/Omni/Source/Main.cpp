@@ -6,6 +6,7 @@
  */
 
 #include "BearLibTerminal.h"
+#include <Windows.h>
 
 TERMINAL_TAKE_CARE_OF_WINMAIN
 
@@ -91,6 +92,16 @@ int main()
 	terminal_wprint(2, 23, buffer);
 	terminal_refresh();
 	terminal_read();
+
+	//terminal_set("");
+	terminal_set("font: UbuntuMono-R.ttf, size=12; output.synchronous=true");
+	for (int i=0; i<20; i++)
+	{
+		terminal_clear();
+		terminal_put(1+i, 1, L'Ы');
+		terminal_refresh();
+		Sleep(250);
+	}
 
 	terminal_close();
 	return 0;

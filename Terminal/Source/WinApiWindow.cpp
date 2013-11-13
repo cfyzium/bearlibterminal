@@ -377,7 +377,7 @@ namespace BearLibTerminal
 
 	void WinApiWindow::SwapBuffers()
 	{
-		SwapBuffers(m_device_context);
+		::SwapBuffers(m_device_context);
 	}
 
 	void WinApiWindow::DestroyWindowObject()
