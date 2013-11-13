@@ -20,7 +20,8 @@ namespace BearLibTerminal
 		m_state{kHidden},
 		m_vars{},
 		m_asynchronous{true},
-		m_current_texture(0)
+		m_current_texture(0),
+		m_inside_drawing_block(false)
 	{
 		// Try to create window
 		m_window = Window::Create();
@@ -35,6 +36,12 @@ namespace BearLibTerminal
 
 	Terminal::~Terminal()
 	{
+		if (!m_asynchronous && m_window)
+		{
+			// Must rebind OpenGL context to window thread for safe deinitialization
+			SwitchRenderingThread(true);
+		}
+
 		m_window.reset();
 	}
 
@@ -49,6 +56,32 @@ namespace BearLibTerminal
 		{
 			// Terminal (current thread) owns rendering context
 			func();
+		}
+	}
+
+	void Terminal::SwitchRenderingThread(bool window)
+	{
+		InvokeOnRenderingThread([&]{m_window->ReleaseRC();});
+		m_asynchronous = window;
+		InvokeOnRenderingThread([&]{m_window->AcquireRC();});
+	}
+
+	void Terminal::LeaveDrawingBlock()
+	{
+		if (!m_asynchronous && m_inside_drawing_block)
+		{
+			glEnd();
+			m_inside_drawing_block = false;
+		}
+	}
+
+	void Terminal::EnterDrawingBlock()
+	{
+		if (!m_asynchronous && !m_inside_drawing_block)
+		{
+			m_world.tiles.atlas.Refresh();
+			glBegin(GL_QUADS);
+			m_inside_drawing_block = true;
 		}
 	}
 
@@ -142,13 +175,7 @@ namespace BearLibTerminal
 	void Terminal::SetOptionsInternal(const std::wstring& value)
 	{
 		std::lock_guard<std::mutex> guard(m_lock);
-
-		if (!m_asynchronous)
-		{
-			// Must finish rendering block or else it may confuse
-			// GPU later when applying tilesets.
-			glEnd();
-		}
+		if (!m_asynchronous) LeaveDrawingBlock();
 
 		auto groups = ParseOptions(value);
 
@@ -198,13 +225,15 @@ namespace BearLibTerminal
 			}
 		}
 
-		if (updated.output_synchronous != m_options.output_synchronous)
+		if (updated.output_asynchronous != m_options.output_asynchronous)
 		{
-			// Rendering mode changed
-			LOG(Debug, "Switching to " << (updated.output_synchronous? "synchronous": "asynchronous") << " rendering mode");
-			InvokeOnRenderingThread([&]{m_window->ReleaseRC();});
-			m_asynchronous = !updated.output_synchronous;
-			InvokeOnRenderingThread([&]{m_window->AcquireRC();});
+			LOG(Debug, "Switching to " << (updated.output_asynchronous? "asynchronous": "synchronous") << " rendering mode");
+			SwitchRenderingThread(updated.output_asynchronous);
+		}
+
+		if (updated.output_vsync != m_options.output_vsync)
+		{
+			InvokeOnRenderingThread([&]{m_window->SetVSync(updated.output_vsync);});
 		}
 
 		// All options and parameters must be validated, may try to apply them
@@ -292,12 +321,6 @@ namespace BearLibTerminal
 		}
 
 		m_options = updated;
-
-		if (!m_asynchronous)
-		{
-			// Start rendering block if terminal is currently in synchronous mode
-			glBegin(GL_QUADS);
-		}
 	}
 
 	void Terminal::ValidateTerminalOptions(OptionGroup& group, Options& options)
@@ -425,16 +448,21 @@ namespace BearLibTerminal
 
 	void Terminal::ValidateOutputOptions(OptionGroup& group, Options& options)
 	{
-		// Possible options: postformatting, synchronous
+		// Possible options: postformatting, synchronous, vsync
 
 		if (group.attributes.count(L"postformatting") && !try_parse(group.attributes[L"postformatting"], options.output_postformatting))
 		{
 			throw std::runtime_error("output.postformatting cannot be parsed");
 		}
 
-		if (group.attributes.count(L"synchronous") && !try_parse(group.attributes[L"synchronous"], options.output_synchronous))
+		if (group.attributes.count(L"asynchronous") && !try_parse(group.attributes[L"asynchronous"], options.output_asynchronous))
 		{
-			throw std::runtime_error("output.synchronous cannot be parsed");
+			throw std::runtime_error("output.asynchronous cannot be parsed");
+		}
+
+		if (group.attributes.count(L"vsync") && !try_parse(group.attributes[L"vsync"], options.output_vsync))
+		{
+			throw std::runtime_error("output.vsync cannot be parsed");
 		}
 	}
 
@@ -462,8 +490,9 @@ namespace BearLibTerminal
 	{
 		if (m_asynchronous)
 		{
-			// XXX: m_state here is not protected by lock because
-			// Window::Show will try to refresh syncronously which causes deadlock.
+			// FIXME: m_state here is not protected by lock because
+			// Window::Show will try to repaint syncronously which causes deadlock.
+			// This additional repaint is unnecessary.
 
 			// If window is not visible, show it
 			if (m_state == kHidden)
@@ -472,23 +501,25 @@ namespace BearLibTerminal
 				m_state = kVisible;
 			}
 
-			// Ignore irrelevant redraw calls (in case something has failed and state is kClosed)
+			// Ignore irrelevant redraw calls (in case something has failed and
+			// state is already kClosed).
 			if (m_state != kVisible) return;
 
+			// Synchronously copy backbuffer to frontbuffer
 			{
 				std::lock_guard<std::mutex> guard(m_lock);
 				m_world.stage.frontbuffer = m_world.stage.backbuffer;
 			}
 
-			// NOTE: this call will syncronously wait OnWindowRedraw completion
+			// NOTE: this call will wait OnWindowRedraw completion
 			m_window->Redraw();
 		}
 		else
 		{
-			glEnd();
+			LeaveDrawingBlock();
 			// NOTE: debug overlays go here
+			//m_window->Invoke([]{});
 			m_window->SwapBuffers();
-			glBegin(GL_QUADS);
 		}
 	}
 
@@ -501,9 +532,8 @@ namespace BearLibTerminal
 		}
 		else
 		{
-			glEnd();
+			LeaveDrawingBlock();
 			glClear(GL_COLOR_BUFFER_BIT);
-			glBegin(GL_QUADS);
 		}
 	}
 
@@ -631,6 +661,7 @@ namespace BearLibTerminal
 		}
 		else
 		{
+			// TODO: easier leaf construct, more direct drawing procedure
 			Leaf leaf;
 			leaf.dx = dx;
 			leaf.dy = dy;
@@ -645,44 +676,26 @@ namespace BearLibTerminal
 				leaf.color[0] = m_world.state.color;
 			}
 
-			bool inside_drawing_block = true;
-
 			auto j = m_world.tiles.slots.find(code);
 			if (j == m_world.tiles.slots.end())
 			{
-				if (inside_drawing_block)
-				{
-					glEnd();
-					inside_drawing_block = false;
-				}
-
 				LOG(Trace, "Trying to prepare character " << (int)code << " in synchronous mode");
+				LeaveDrawingBlock();
 				m_fresh_codes.emplace_back(code);
 				PrepareFreshCharacters();
-				m_world.tiles.atlas.Refresh();
 				j = m_world.tiles.slots.find(code);
 			}
 
 			auto& slot = *(j->second);
 			if (slot.texture_id != m_current_texture)
 			{
-				if (inside_drawing_block)
-				{
-					glEnd();
-					inside_drawing_block = false;
-				}
-
 				LOG(Trace, "Wrong texture is currently bound, rebinding while in synchornous mode");
+				LeaveDrawingBlock();
 				slot.BindTexture();
 				m_current_texture = slot.texture_id;
 			}
 
-			if (!inside_drawing_block)
-			{
-				glBegin(GL_QUADS);
-				inside_drawing_block = true;
-			}
-
+			EnterDrawingBlock();
 			slot.Draw
 			(
 				leaf,
@@ -715,14 +728,14 @@ namespace BearLibTerminal
 		if (mode == 1)
 		{
 			// Enter custom rendering, stop current rendering block
-			glEnd();
+			LeaveDrawingBlock();
 		}
 		else
 		{
 			// Leave custom rendering, resume rendering block.
 			// Texture must be reset so it can be properly reapplied later.
+			glEnable(GL_TEXTURE_2D);
 			m_current_texture = 0;
-			glBegin(GL_QUADS);
 		}
 	}
 
@@ -1188,9 +1201,17 @@ namespace BearLibTerminal
 
 			for (auto i=m_world.tilesets.rbegin(); i != m_world.tilesets.rend(); i++)
 			{
-				if (is_dynamic && (i->first == kUnicodeReplacementCharacter || (!i->first && i->second->GetType() == Tileset::Type::TrueType)))
+				if (is_dynamic)
 				{
-					continue;
+					// While searching for dynamic character provider, skip (at leaft for now):
+					// * dynamic tileset at 0xFFFD base code
+					// * basic tileset at 0x0000 code (only if it is of TrueType type)
+
+					bool unsuitable =
+						(i->first == kUnicodeReplacementCharacter) ||
+						((i->first == 0x0000 && i->second->GetType() == Tileset::Type::TrueType));
+
+					if (unsuitable) continue;
 				}
 				else if (i->second->Provides(code))
 				{
@@ -1200,6 +1221,7 @@ namespace BearLibTerminal
 				}
 			}
 
+			// If nothing was found, use dynamic tileset as a last resort
 			if (!provided && m_world.tilesets[kUnicodeReplacementCharacter]->Provides(code))
 			{
 				m_world.tilesets[kUnicodeReplacementCharacter]->Prepare(code);
@@ -1226,19 +1248,20 @@ namespace BearLibTerminal
 		std::lock_guard<std::mutex> guard(m_lock);
 		m_state = kClosed;
 
-		//*
 		// Dispose of graphics
 		m_world.tiles.slots.clear();
 		m_world.tilesets.clear();
 		m_world.tiles.atlas.Dispose();
-		//*/
 
 		// Unblock possibly blocked client thread
 		m_input_condvar.notify_all();
 	}
 
-	void Terminal::OnWindowRedraw()
+	bool Terminal::OnWindowRedraw()
 	{
+		// Scene-based rendering function is used in asyncronous mode only
+		if (!m_asynchronous) return false;
+
 		std::unique_lock<std::mutex> guard(m_lock);
 
 		// Provide tile slots for newly added codes
@@ -1342,6 +1365,8 @@ namespace BearLibTerminal
 		glVertex2i(16+256, 16);
 		glEnd();
 		//*/
+
+		return true;
 	}
 
 	void Terminal::OnWindowInput(Keystroke keystroke)

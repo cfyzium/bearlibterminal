@@ -6,7 +6,14 @@
  */
 
 #include "BearLibTerminal.h"
+#if defined(_WIN32)
 #include <Windows.h>
+#endif
+#if defined(__linux)
+#include <unistd.h>
+inline void Sleep(int ms) {usleep(ms*1000);}
+#endif
+#include <GL/gl.h>
 
 TERMINAL_TAKE_CARE_OF_WINMAIN
 
@@ -94,13 +101,22 @@ int main()
 	terminal_read();
 
 	//terminal_set("");
-	terminal_set("font: UbuntuMono-R.ttf, size=12; output.synchronous=true");
-	for (int i=0; i<20; i++)
+	terminal_set("output.vsync=false");
+	terminal_set("window.cellsize=auto; font: UbuntuMono-R.ttf, size=12; output.asynchronous=false");
+	for (int i=0; i<25; i++)
 	{
 		terminal_clear();
 		terminal_put(1+i, 1, L'Ы');
+		terminal_custom(1);
+		glDisable(GL_TEXTURE_2D);
+		glBegin(GL_LINES);
+		glVertex2i(10, 48);
+		glVertex2i(10+i*8, 64);
+		glEnd();
+		glEnable(GL_TEXTURE_2D);
+		terminal_custom(0);
 		terminal_refresh();
-		Sleep(250);
+		Sleep(125);
 	}
 
 	terminal_close();

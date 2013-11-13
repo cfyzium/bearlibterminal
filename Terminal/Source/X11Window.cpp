@@ -47,6 +47,11 @@ namespace BearLibTerminal
 		GLXContext glx;
 		XIM im;
 		XIC ic;
+
+		typedef void (*PFN_GLXSWAPINTERVALEXT)(Display *dpy, GLXDrawable drawable, int interval);
+		typedef int (*PFN_GLXSWAPINTERVALMESA)(int interval);
+		PFN_GLXSWAPINTERVALEXT glXSwapIntervalEXT;
+		PFN_GLXSWAPINTERVALMESA glXSwapIntervalMESA;
 	};
 
 	X11Window::Private::Private():
@@ -56,7 +61,9 @@ namespace BearLibTerminal
 		visual(NULL),
 		glx(NULL),
 		im(NULL),
-		ic(NULL)
+		ic(NULL),
+		glXSwapIntervalEXT(nullptr),
+		glXSwapIntervalMESA(nullptr)
 	{ }
 
 	// XXX: Salvaged from somewhere, format it
@@ -214,9 +221,10 @@ namespace BearLibTerminal
 	{
 		try
 		{
-			if (m_on_redraw) m_on_redraw();
-			//glXSwapBuffers(m_private->display, m_private->window);
-			SwapBuffers();
+			if (m_on_redraw && m_on_redraw())
+			{
+				SwapBuffers();
+			}
 		}
 		catch (std::exception& e)
 		{
@@ -697,6 +705,21 @@ namespace BearLibTerminal
 		AcquireRC();
 		ProbeOpenGL();
 
+		// GLX-specific
+		std::string extensions = glXQueryExtensionsString(m_private->display, m_private->screen);
+		LOG(Trace, "OpenGL: " << extensions.c_str());
+		if (extensions.find("GLX_EXT_swap_control") != std::string::npos)
+		{
+			LOG(Trace, "OpenGL context has GLX_EXT_swap_control extension");
+			m_private->glXSwapIntervalEXT = (Private::PFN_GLXSWAPINTERVALEXT)glXGetProcAddressARB((GLubyte*)"glXSwapIntervalEXT");
+		}
+		else if (extensions.find("GLX_MESA_swap_control") != std::string::npos)
+		{
+			LOG(Trace, "OpenGL context has GLX_MESA_swap_control extension");
+			m_private->glXSwapIntervalMESA = (Private::PFN_GLXSWAPINTERVALMESA)glXGetProcAddressARB((GLubyte*)"glXSwapIntervalMESA");
+		}
+		SetVSync(true);
+
 		// Continue with input
 		if ( (m_private->im = XOpenIM(m_private->display, NULL, NULL, NULL)) == NULL )
 		{
@@ -793,6 +816,19 @@ namespace BearLibTerminal
 	void X11Window::SwapBuffers()
 	{
 		glXSwapBuffers(m_private->display, m_private->window);
+	}
+
+	void X11Window::SetVSync(bool enabled)
+	{
+		int interval = enabled? 1: 0;
+		if (m_private->glXSwapIntervalEXT)
+		{
+			m_private->glXSwapIntervalEXT(m_private->display, m_private->window, interval);
+		}
+		else if (m_private->glXSwapIntervalMESA)
+		{
+			m_private->glXSwapIntervalMESA(interval);
+		}
 	}
 
 	void X11Window::ReportInput(const Keystroke& keystroke)

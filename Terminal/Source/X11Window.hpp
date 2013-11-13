@@ -48,6 +48,7 @@ namespace BearLibTerminal
 		bool AcquireRC() override;
 		bool ReleaseRC() override;
 		void SwapBuffers() override;
+		void SetVSync(bool enabled) override;
 	protected:
 		void ThreadFunction() override;
 		bool Construct() override;

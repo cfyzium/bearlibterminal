@@ -40,7 +40,7 @@ namespace BearLibTerminal
 	Window::~Window()
 	{ }
 
-	void Window::SetOnRedraw(EventHandler callback)
+	void Window::SetOnRedraw(DrawEventHandler callback)
 	{
 		std::lock_guard<std::mutex> guard(m_lock);
 		m_on_redraw = callback;

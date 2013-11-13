@@ -52,6 +52,7 @@ namespace BearLibTerminal
 		bool AcquireRC() override;
 		bool ReleaseRC() override;
 		void SwapBuffers() override;
+		void SetVSync(bool enabled) override;
 	protected:
 		void ThreadFunction() override;
 		bool Construct() override;
@@ -72,6 +73,9 @@ namespace BearLibTerminal
 		HGLRC m_rendering_context;
 		Semaphore m_redraw_barrier;
 		int m_mouse_wheel;
+
+		typedef BOOL (*PFN_WGLSWAPINTERVALEXT)(int interval);
+		PFN_WGLSWAPINTERVALEXT m_wglSwapIntervalEXT;
 	};
 }
 

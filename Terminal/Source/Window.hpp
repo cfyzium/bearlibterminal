@@ -36,13 +36,14 @@
 namespace BearLibTerminal
 {
 	using EventHandler = std::function<void()>;
+	using DrawEventHandler = std::function<bool()>;
 	using InputEventHandler = std::function<void(Keystroke)>;
 
 	class Window
 	{
 	public:
 		virtual ~Window();
-		void SetOnRedraw(EventHandler callback);
+		void SetOnRedraw(DrawEventHandler callback);
 		void SetOnInput(InputEventHandler callback);
 		void SetOnDeactivate(EventHandler callback);
 		void SetOnActivate(EventHandler callback);
@@ -59,6 +60,7 @@ namespace BearLibTerminal
 		virtual bool AcquireRC() = 0;
 		virtual bool ReleaseRC() = 0;
 		virtual void SwapBuffers() = 0;
+		virtual void SetVSync(bool enabled) = 0;
 		static std::unique_ptr<Window> Create();
 	protected:
 		Window();
@@ -67,7 +69,7 @@ namespace BearLibTerminal
 		virtual void Destroy() = 0; // noexcept(true)
 		void Run();
 		void Stop();
-		EventHandler m_on_redraw;
+		DrawEventHandler m_on_redraw;
 		EventHandler m_on_deactivate;
 		EventHandler m_on_activate;
 		EventHandler m_on_destroy;

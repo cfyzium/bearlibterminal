@@ -328,14 +328,6 @@ namespace BearLibTerminal
 			return false;
 		}
 
-		/*
-		if ( wglMakeCurrent(m_device_context, m_rendering_context) == 0 )
-		{
-			LOG(Fatal, L"Failed to bind OpenGL context (" << GetLastErrorStr() << ")");
-			DestroyOpenGLContext();
-			return false;
-		}
-		*/
 		if (!AcquireRC())
 		{
 			LOG(Fatal, L"Failed to acquire rendering context");
@@ -344,11 +336,8 @@ namespace BearLibTerminal
 		}
 		ProbeOpenGL();
 
-		// FIXME: check availability, clean up the code
-		typedef BOOL (*PFNWGLSWAPINTERVALEXT)(int);
-		PFNWGLSWAPINTERVALEXT f = (PFNWGLSWAPINTERVALEXT)wglGetProcAddress("wglSwapIntervalEXT");
-		if ( f ) f(0);
-		else LOG(Trace, "No wglSwapIntervalEXT?");
+		m_wglSwapIntervalEXT = (PFN_WGLSWAPINTERVALEXT)wglGetProcAddress("wglSwapIntervalEXT");
+		SetVSync(true);
 
 		return true;
 	}
@@ -380,6 +369,12 @@ namespace BearLibTerminal
 		::SwapBuffers(m_device_context);
 	}
 
+	void WinApiWindow::SetVSync(bool enabled)
+	{
+		int interval = enabled? 1: 0;
+		if (m_wglSwapIntervalEXT) m_wglSwapIntervalEXT(interval);
+	}
+
 	void WinApiWindow::DestroyWindowObject()
 	{
 		if ( m_handle )
@@ -396,7 +391,6 @@ namespace BearLibTerminal
 	{
 		if ( m_rendering_context != nullptr )
 		{
-			//wglMakeCurrent(NULL, NULL);
 			ReleaseRC();
 			m_rendering_context = nullptr;
 		}
@@ -426,9 +420,10 @@ namespace BearLibTerminal
 		try
 		{
 			//*
-			if ( m_on_redraw ) m_on_redraw();
-			//SwapBuffers(m_device_context);
-			SwapBuffers();
+			if (m_on_redraw && m_on_redraw())
+			{
+				SwapBuffers();
+			}
 			/*/
 			uint64_t s = StartTiming();
 			if ( m_on_redraw ) m_on_redraw();

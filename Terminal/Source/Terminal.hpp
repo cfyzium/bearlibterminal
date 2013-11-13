@@ -78,10 +78,13 @@ namespace BearLibTerminal
 		int ReadStringInternalBlocking(int x, int y, wchar_t* buffer, int max);
 		int ReadStringInternalNonblocking(wchar_t* buffer, int max);
 		void OnWindowClose();
-		void OnWindowRedraw();
+		bool OnWindowRedraw();
 		void OnWindowInput(Keystroke keystroke);
 		void OnWindowActivate();
 		void InvokeOnRenderingThread(std::function<void()> func);
+		void SwitchRenderingThread(bool window);
+		void LeaveDrawingBlock();
+		void EnterDrawingBlock();
 	private:
 		enum state_t {kHidden, kVisible, kClosed} m_state;
 		mutable std::mutex m_lock;
@@ -95,6 +98,7 @@ namespace BearLibTerminal
 		std::list<uint16_t> m_fresh_codes;
 		std::atomic<bool> m_asynchronous;
 		uint64_t m_current_texture;
+		bool m_inside_drawing_block;
 	};
 }
 

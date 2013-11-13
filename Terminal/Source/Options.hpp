@@ -28,7 +28,8 @@ namespace BearLibTerminal
 
 		// Output
 		bool output_postformatting;
-		bool output_synchronous;
+		bool output_asynchronous;
+		bool output_vsync;
 
 		// Input
 		bool input_nonblocking;
