@@ -746,18 +746,24 @@ namespace BearLibTerminal
 		int x = x0, y = y0;
 		int printed = 0;
 		uint16_t base = 0;
-		Size bbox;
+		Encoding<char>* codepage = nullptr;
 
 		Color original_color = m_world.state.color;
 		Color original_bkcolor = m_world.state.bkcolor;
 
 		Size size = m_world.stage.size;
 
-		const auto put_and_increment = [&](wchar_t code)
+		const auto put_and_increment = [&](int code)
 		{
 			if (x >=0 && y >= 0 && x < size.width && y < size.height)
 			{
-				PutUnlocked(x, y, 0, 0, base+code, nullptr);
+				// Convert from unicode to tileset codepage
+				if (codepage) code = codepage->Convert((wchar_t)code);
+
+				// Offset tile index
+				code += base;
+
+				PutUnlocked(x, y, 0, 0, code, nullptr);
 				printed += 1;
 			}
 
@@ -783,12 +789,12 @@ namespace BearLibTerminal
 				else if (name == L"base")
 				{
 					base = 0;
+					codepage = nullptr;
 				}
 			}
 			else
 			{
 				// Set tag: [name] or [name=value]
-
 				std::wstring name, value;
 
 				size_t n_equals = s.find(L'=', begin);
@@ -814,12 +820,33 @@ namespace BearLibTerminal
 				}
 				else if (name == L"base")
 				{
-					try_parse(value, base);
-				}
-				else if (name == L"bbox")
-				{
-					try_parse(value, bbox);
-					// FIXME: NYI
+					// Optional codepage: "U+E100:1251"
+					size_t n_colon = value.find(L":");
+					if (n_colon != std::wstring::npos && n_colon > 0 && n_colon < value.length()-1)
+					{
+						std::wstring codepage_name = value.substr(n_colon+1);
+						value = value.substr(0, n_colon);
+
+						auto cached = m_codepage_cache.find(codepage_name);
+						if (cached != m_codepage_cache.end())
+						{
+							codepage = cached->second.get();
+						}
+						else
+						{
+							if (auto p = GetUnibyteEncoding(codepage_name))
+							{
+								codepage = p.get();
+								m_codepage_cache[codepage_name] = std::move(p);
+							}
+						}
+					}
+
+					if (!try_parse(value, base))
+					{
+						base = 0;
+						codepage = nullptr;
+					}
 				}
 				else if (name[0] == 'u' || name[0] == 'U')
 				{

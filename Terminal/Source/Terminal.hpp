@@ -99,6 +99,7 @@ namespace BearLibTerminal
 		std::atomic<bool> m_asynchronous;
 		uint64_t m_current_texture;
 		bool m_inside_drawing_block;
+		std::map<std::wstring, std::unique_ptr<Encoding<char>>> m_codepage_cache;
 	};
 }
 
