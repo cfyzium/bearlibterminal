@@ -1073,7 +1073,8 @@ namespace BearLibTerminal
 		}
 
 		// Garbage string protection
-		for (int i = max; i >= 0; i--) if (buffer[i] == 0) break; else buffer[i] = 0;
+		for (int i=0, f=0; i<max+1; i++) if (f) buffer[i] = 0; else f = !buffer[i];
+		buffer[max] = 0;
 		int cursor = std::wcslen(buffer);
 
 		auto put_buffer = [&](bool put_cursor)
@@ -1154,7 +1155,8 @@ namespace BearLibTerminal
 		}
 
 		// Garbage string protection
-		for (int i = max; i >= 0; i--) if (buffer[i] == 0) break; else buffer[i] = 0;
+		for (int i=0, f=0; i<max+1; i++) if (f) buffer[i] = 0; else f = !buffer[i];
+		buffer[max] = 0;
 		int cursor = std::wcslen(buffer);
 		int rc = 0;
 
