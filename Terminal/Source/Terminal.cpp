@@ -565,7 +565,7 @@ namespace BearLibTerminal
 		}
 		else
 		{
-			Size stage_size = m_world.stage.size; // TODO: utility clip function
+			Size stage_size = m_world.stage.size;
 			Size cell_size = m_world.state.cellsize;
 			if (x < 0) x = 0;
 			if (y < 0) y = 0;

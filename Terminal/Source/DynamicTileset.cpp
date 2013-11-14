@@ -99,7 +99,7 @@ namespace BearLibTerminal
 		int thickness = (int)std::floor(size.width/7.0f);
 		if (thickness == 0) thickness = 1;
 
-		//thickness = 1;
+		thickness = 1;
 
 		LOG(Trace, "thickness = " << thickness);
 
