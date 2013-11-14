@@ -565,7 +565,24 @@ namespace BearLibTerminal
 		}
 		else
 		{
-			// FIXME: NYI
+			Size stage_size = m_world.stage.size; // TODO: utility clip function
+			Size cell_size = m_world.state.cellsize;
+			if (x < 0) x = 0;
+			if (y < 0) y = 0;
+			if (x+w >= stage_size.width) w = stage_size.width-x;
+			if (y+h >= stage_size.height) h = stage_size.height-y;
+
+			LeaveDrawingBlock();
+			glEnable(GL_SCISSOR_TEST);
+			glScissor
+			(
+				x * cell_size.width,
+				(stage_size.height - (y+1)) * cell_size.height,
+				w * cell_size.width,
+				h * cell_size.height
+			);
+			glClear(GL_COLOR_BUFFER_BIT);
+			glDisable(GL_SCISSOR_TEST);
 		}
 	}
 
@@ -733,6 +750,9 @@ namespace BearLibTerminal
 		else
 		{
 			// Leave custom rendering, resume rendering block.
+			// Rebuild matrices and reapply blending modes.
+			ConfigureViewport();
+
 			// Texture must be reset so it can be properly reapplied later.
 			glEnable(GL_TEXTURE_2D);
 			m_current_texture = 0;
