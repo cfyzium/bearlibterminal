@@ -167,15 +167,64 @@ namespace BearLibTerminal
 			DrawBoxLine(result, cx, cb, cx, size.height-1, bottom, thickness);
 		}
 
-		if (top == 2 && right == 2)
+		if (top == 1 && bottom == 1) put_squares({0,1,0, 0,1,0, 0,1,0});
+		if (left == 1 && right == 1) put_squares({0,0,0, 1,1,1, 0,0,0});
+
+		if (left == 1 && top == 1) put_squares({0,1,0, 1,1,0, 0,0,0});
+		if (top == 1 && right == 1) put_squares({0,1,0, 0,1,1, 0,0,0});
+		if (right == 1 && bottom == 1) put_squares({0,0,0, 0,1,1, 0,1,0});
+		if (bottom == 1 && left == 1) put_squares({0,0,0, 1,1,0, 0,1,0});
+
+		if ((left == 2 && top == 2) ||
+			(top == 2 && right == 2) ||
+			(right == 2 && bottom == 2) ||
+			(bottom == 2 && left == 2) ||
+			(top == 2 && bottom == 2) ||
+			(left == 2 && right == 2))
 		{
 			put_squares({1,1,1, 1,1,1, 1,1,1});
 		}
 
-		if (left == 3 && bottom == 3)
+		if (left == 1 && top == 2) put_squares({1,1,1, 1,1,0, 0,0,0});
+		if (left == 2 && top == 1) put_squares({1,1,0, 1,1,0, 1,0,0});
+		if (top == 1 && right == 2) put_squares({0,1,1, 0,1,1, 0,0,1});
+		if (top == 2 && right == 1) put_squares({1,1,1, 0,1,1, 0,0,0});
+		if (right == 1 && bottom == 2) put_squares({0,0,0, 0,1,1, 1,1,1});
+		if (right == 2 && bottom == 1) put_squares({0,0,1, 0,1,1, 0,1,1});
+		if (bottom == 1 && left == 2) put_squares({1,0,0, 1,1,0, 1,1,0});
+		if (bottom == 2 && left == 1) put_squares({0,0,0, 1,1,0, 1,1,1});
+
+		if (left == 3 && top ==3 && right == 3 && bottom == 3)
 		{
-			put_squares({1,1,1, 0,0,1, 1,0,1});
+			put_squares({1,0,1, 0,0,0, 1,0,1});
 		}
+		else
+		{
+
+			if (left == 3 && right == 3) put_squares({1,1,1, 0,0,0, 1,1,1});
+			if (top == 3 && bottom == 3) put_squares({1,0,1, 1,0,1, 1,0,1});
+
+			if (left == 3 && top == 3) put_squares({1,0,1, 0,0,1, 1,1,1});
+			if (top == 3 && right == 3) put_squares({1,0,1, 1,0,0, 1,1,1});
+			if (right == 3 && bottom == 3) put_squares({1,1,1, 1,0,0, 1,0,1});
+			if (bottom == 3 && left == 3) put_squares({1,1,1, 0,0,1, 1,0,1});
+		}
+	}
+
+	Bitmap MakeNotACharacterTile(Size size)
+	{
+		Bitmap result(size, Color());
+		for (int x=1; x<size.width-1; x++)
+		{
+			result(x, 1) = Color(255, 255, 255, 255);
+			result(x, size.height-2) = Color(255, 255, 255, 255);
+		}
+		for (int y=1; y<size.height-1; y++)
+		{
+			result(1, y) = Color(255, 255, 255, 255);
+			result(size.width-2, y) = Color(255, 255, 255, 255);
+		}
+		return result;
 	}
 
 	bool DynamicTileset::Save()
@@ -185,18 +234,7 @@ namespace BearLibTerminal
 
 		// Add Unicode replacement character glyph (required)
 		uint16_t code = kUnicodeReplacementCharacter;
-		Bitmap canvas(m_tile_size, Color());
-		for (int x=1; x<m_tile_size.width-1; x++)
-		{
-			canvas(x, 1) = Color(255, 255, 255, 255);
-			canvas(x, m_tile_size.height-2) = Color(255, 255, 255, 255);
-		}
-		for (int y=1; y<m_tile_size.height-1; y++)
-		{
-			canvas(1, y) = Color(255, 255, 255, 255);
-			canvas(m_tile_size.width-2, y) = Color(255, 255, 255, 255);
-		}
-		auto tile_slot = m_container.atlas.Add(canvas, Rectangle(m_tile_size));
+		auto tile_slot = m_container.atlas.Add(MakeNotACharacterTile(m_tile_size), Rectangle(m_tile_size));
 		tile_slot->offset = Point(-w2, -h2);
 		tile_slot->alignment = TileSlot::Alignment::Center;
 		m_tiles[code] = tile_slot;
@@ -246,26 +284,320 @@ namespace BearLibTerminal
 
 		switch (code)
 		{
+		// Light and heavy solid lines
 		case 0x2500:
 			tile = MakeBoxLines(m_tile_size, 1, 0, 1, 0);
 			break;
 		case 0x2501:
-			tile = MakeBoxLines(m_tile_size, 0, 1, 0, 1);
+			tile = MakeBoxLines(m_tile_size, 2, 0, 2, 0);
 			break;
 		case 0x2502:
-			tile = MakeBoxLines(m_tile_size, 3, 0, 0, 3);
+			tile = MakeBoxLines(m_tile_size, 0, 1, 0, 1);
 			break;
 		case 0x2503:
+			tile = MakeBoxLines(m_tile_size, 0, 2, 0, 2);
+			break;
+		// Light and heavy dashed lines
+		// 0x2504..0x250B
+		// FIXME: NYI
+		// Light and heavy line box components
+		case 0x250C:
+			tile = MakeBoxLines(m_tile_size, 0, 0, 1, 1);
+			break;
+		case 0x250D:
+			tile = MakeBoxLines(m_tile_size, 0, 0, 2, 1);
+			break;
+		case 0x250E:
+			tile = MakeBoxLines(m_tile_size, 0, 0, 1, 2);
+			break;
+		case 0x250F:
+			tile = MakeBoxLines(m_tile_size, 0, 0, 2, 2);
+			break;
+		case 0x2510:
+			tile = MakeBoxLines(m_tile_size, 1, 0, 0, 1);
+			break;
+		case 0x2511:
+			tile = MakeBoxLines(m_tile_size, 2, 0, 0, 1);
+			break;
+		case 0x2512:
+			tile = MakeBoxLines(m_tile_size, 1, 0, 0, 2);
+			break;
+		case 0x2513:
+			tile = MakeBoxLines(m_tile_size, 2, 0, 0, 2);
+			break;
+		case 0x2514:
+			tile = MakeBoxLines(m_tile_size, 0, 1, 1, 0);
+			break;
+		case 0x2515:
+			tile = MakeBoxLines(m_tile_size, 0, 1, 2, 0);
+			break;
+		case 0x2516:
+			tile = MakeBoxLines(m_tile_size, 0, 2, 1, 0);
+			break;
+		case 0x2517:
 			tile = MakeBoxLines(m_tile_size, 0, 2, 2, 0);
 			break;
+		case 0x2518:
+			tile = MakeBoxLines(m_tile_size, 1, 1, 0, 0);
+			break;
+		case 0x2519:
+			tile = MakeBoxLines(m_tile_size, 2, 1, 0, 0);
+			break;
+		case 0x251A:
+			tile = MakeBoxLines(m_tile_size, 1, 2, 0, 0);
+			break;
+		case 0x251B:
+			tile = MakeBoxLines(m_tile_size, 2, 2, 0, 0);
+			break;
+		case 0x251C:
+			tile = MakeBoxLines(m_tile_size, 0, 1, 1, 1);
+			break;
+		case 0x251D:
+			tile = MakeBoxLines(m_tile_size, 0, 1, 2, 1);
+			break;
+		case 0x251E:
+			tile = MakeBoxLines(m_tile_size, 0, 2, 1, 1);
+			break;
+		case 0x251F:
+			tile = MakeBoxLines(m_tile_size, 0, 1, 1, 2);
+			break;
+		case 0x2520:
+			tile = MakeBoxLines(m_tile_size, 0, 2, 1, 2);
+			break;
+		case 0x2521:
+			tile = MakeBoxLines(m_tile_size, 0, 2, 2, 1);
+			break;
+		case 0x2522:
+			tile = MakeBoxLines(m_tile_size, 0, 1, 2, 2);
+			break;
+		case 0x2523:
+			tile = MakeBoxLines(m_tile_size, 0, 2, 2, 2);
+			break;
+		case 0x2524:
+			tile = MakeBoxLines(m_tile_size, 1, 1, 0, 1);
+			break;
+		case 0x2525:
+			tile = MakeBoxLines(m_tile_size, 2, 1, 0, 1);
+			break;
+		case 0x2526:
+			tile = MakeBoxLines(m_tile_size, 1, 2, 0, 1);
+			break;
+		case 0x2527:
+			tile = MakeBoxLines(m_tile_size, 1, 1, 0, 2);
+			break;
+		case 0x2528:
+			tile = MakeBoxLines(m_tile_size, 1, 2, 0, 2);
+			break;
+		case 0x2529:
+			tile = MakeBoxLines(m_tile_size, 2, 2, 0, 1);
+			break;
+		case 0x252A:
+			tile = MakeBoxLines(m_tile_size, 2, 1, 0, 2);
+			break;
+		case 0x252B:
+			tile = MakeBoxLines(m_tile_size, 2, 2, 0, 2);
+			break;
+		case 0x252C:
+			tile = MakeBoxLines(m_tile_size, 1, 0, 1, 1);
+			break;
+		case 0x252D:
+			tile = MakeBoxLines(m_tile_size, 2, 0, 1, 1);
+			break;
+		case 0x252E:
+			tile = MakeBoxLines(m_tile_size, 1, 0, 2, 1);
+			break;
+		case 0x252F:
+			tile = MakeBoxLines(m_tile_size, 2, 0, 2, 1);
+			break;
+		case 0x2530:
+			tile = MakeBoxLines(m_tile_size, 1, 0, 1, 2);
+			break;
+		case 0x2531:
+			tile = MakeBoxLines(m_tile_size, 2, 0, 1, 2);
+			break;
+		case 0x2532:
+			tile = MakeBoxLines(m_tile_size, 1, 0, 2, 2);
+			break;
+		case 0x2533:
+			tile = MakeBoxLines(m_tile_size, 2, 2, 0, 2);
+			break;
+		case 0x2534:
+			tile = MakeBoxLines(m_tile_size, 1, 1, 1, 0);
+			break;
+		case 0x2535:
+			tile = MakeBoxLines(m_tile_size, 2, 1, 1, 0);
+			break;
+		case 0x2536:
+			tile = MakeBoxLines(m_tile_size, 1, 1, 2, 0);
+			break;
+		case 0x2537:
+			tile = MakeBoxLines(m_tile_size, 2, 1, 2, 0);
+			break;
+		case 0x2538:
+			tile = MakeBoxLines(m_tile_size, 1, 2, 1, 0);
+			break;
+		case 0x2539:
+			tile = MakeBoxLines(m_tile_size, 2, 2, 1, 0);
+			break;
+		case 0x253A:
+			tile = MakeBoxLines(m_tile_size, 0, 2, 1, 2);
+			break;
+		case 0x253B:
+			tile = MakeBoxLines(m_tile_size, 2, 2, 0, 2);
+			break;
+		case 0x253C:
+			tile = MakeBoxLines(m_tile_size, 1, 1, 1, 1);
+			break;
+		case 0x253D:
+			tile = MakeBoxLines(m_tile_size, 2, 1, 1, 1);
+			break;
+		case 0x253E:
+			tile = MakeBoxLines(m_tile_size, 1, 1, 2, 1);
+			break;
+		case 0x253F:
+			tile = MakeBoxLines(m_tile_size, 2, 1, 2, 1);
+			break;
+		case 0x2540:
+			tile = MakeBoxLines(m_tile_size, 1, 2, 1, 1);
+			break;
+		case 0x2541:
+			tile = MakeBoxLines(m_tile_size, 1, 1, 1, 2);
+			break;
+		case 0x2542:
+			tile = MakeBoxLines(m_tile_size, 1, 2, 1, 2);
+			break;
+		case 0x2543:
+			tile = MakeBoxLines(m_tile_size, 2, 2, 1, 1);
+			break;
+		case 0x2544:
+			tile = MakeBoxLines(m_tile_size, 1, 2, 2, 1);
+			break;
+		case 0x2545:
+			tile = MakeBoxLines(m_tile_size, 2, 1, 1, 2);
+			break;
+		case 0x2546:
+			tile = MakeBoxLines(m_tile_size, 1, 1, 2, 2);
+			break;
+		case 0x2547:
+			tile = MakeBoxLines(m_tile_size, 2, 2, 2, 1);
+			break;
+		case 0x2548:
+			tile = MakeBoxLines(m_tile_size, 2, 1, 2, 2);
+			break;
+		case 0x2549:
+			tile = MakeBoxLines(m_tile_size, 2, 2, 1, 2);
+			break;
+		case 0x254A:
+			tile = MakeBoxLines(m_tile_size, 1, 2, 2, 2);
+			break;
+		case 0x254B:
+			tile = MakeBoxLines(m_tile_size, 2, 2, 2, 2);
+			break;
+		// Light and heavy dashed lines
+		// 0x254C..0x254F
+		// FIXME: NYI
+		// 0x254C: // BOX DRAWINGS LIGHT DOUBLE DASH HORIZONTAL
+		// 0x254D: // BOX DRAWINGS HEAVY DOUBLE DASH HORIZONTAL
+		// 0x254E: // BOX DRAWINGS LIGHT DOUBLE DASH VERTICAL
+		// 0x254F: // BOX DRAWINGS HEAVY DOUBLE DASH VERTICAL
+		// Double lines
+		case 0x2550:
+			tile = MakeBoxLines(m_tile_size, 3, 0, 3, 0);
+			break;
+		case 0x2551:
+			tile = MakeBoxLines(m_tile_size, 0, 3, 0, 3);
+			break;
+		// Light and double line box components
+		case 0x2552:
+			tile = MakeBoxLines(m_tile_size, 0, 0, 3, 1);
+			break;
+		case 0x2553:
+			tile = MakeBoxLines(m_tile_size, 0, 0, 1, 3);
+			break;
+		case 0x2554:
+			tile = MakeBoxLines(m_tile_size, 0, 0, 3, 3);
+			break;
+		case 0x2555:
+			tile = MakeBoxLines(m_tile_size, 3, 0, 0, 1);
+			break;
+		case 0x2556:
+			tile = MakeBoxLines(m_tile_size, 1, 0, 0, 3);
+			break;
+		case 0x2557:
+			tile = MakeBoxLines(m_tile_size, 3, 0, 0, 3);
+			break;
+		case 0x2558:
+			tile = MakeBoxLines(m_tile_size, 0, 1, 3, 0);
+			break;
+		case 0x2559:
+			tile = MakeBoxLines(m_tile_size, 0, 3, 1, 0);
+			break;
+		case 0x255A:
+			tile = MakeBoxLines(m_tile_size, 0, 3, 3, 0);
+			break;
+		case 0x255B:
+			tile = MakeBoxLines(m_tile_size, 3, 1, 0, 0);
+			break;
+		case 0x255C:
+			tile = MakeBoxLines(m_tile_size, 1, 3, 0, 0);
+			break;
+		case 0x255D:
+			tile = MakeBoxLines(m_tile_size, 3, 3, 0, 0);
+			break;
+		case 0x255E:
+			tile = MakeBoxLines(m_tile_size, 0, 1, 3, 1);
+			break;
+		case 0x255F:
+			tile = MakeBoxLines(m_tile_size, 0, 3, 1, 3);
+			break;
+		case 0x2560:
+			tile = MakeBoxLines(m_tile_size, 0, 3, 3, 3);
+			break;
+		case 0x2561:
+			tile = MakeBoxLines(m_tile_size, 3, 1, 0, 1);
+			break;
+		case 0x2562:
+			tile = MakeBoxLines(m_tile_size, 1, 3, 0, 3);
+			break;
+		case 0x2563:
+			tile = MakeBoxLines(m_tile_size, 3, 3, 0, 3);
+			break;
+		case 0x2564:
+			tile = MakeBoxLines(m_tile_size, 3, 0, 3, 1);
+			break;
+		case 0x2565:
+			tile = MakeBoxLines(m_tile_size, 1, 0, 1, 3);
+			break;
+		case 0x2566:
+			tile = MakeBoxLines(m_tile_size, 3, 0, 3, 3);
+			break;
+		case 0x2567:
+			tile = MakeBoxLines(m_tile_size, 3, 1, 3, 0);
+			break;
+		case 0x2568:
+			tile = MakeBoxLines(m_tile_size, 1, 3, 1, 0);
+			break;
+		case 0x2569:
+			tile = MakeBoxLines(m_tile_size, 3, 3, 3, 0);
+			break;
+		case 0x256A:
+			tile = MakeBoxLines(m_tile_size, 3, 1, 3, 1);
+			break;
+		case 0x256B:
+			tile = MakeBoxLines(m_tile_size, 1, 3, 1, 3);
+			break;
+		case 0x256C:
+			tile = MakeBoxLines(m_tile_size, 3, 3, 3, 3);
+			break;
 		default:
-			tile = MakeBoxLines(m_tile_size, 1, 2, 3, 1);
+			tile = MakeNotACharacterTile(m_tile_size);
+			break;
 		}
 
+		auto tile_slot = m_container.atlas.Add(tile, Rectangle(m_tile_size));
+		/*
 		int w2 = m_tile_size.width / 2;
 		int h2 = m_tile_size.height / 2;
-		auto tile_slot = m_container.atlas.Add(tile, Rectangle(m_tile_size));
-		//*
 		tile_slot->offset = Point(-w2, -h2);
 		tile_slot->alignment = TileSlot::Alignment::Center;
 		/*/

@@ -52,7 +52,8 @@ int main()
 	{
 		for (int x=0; x<16; x++)
 		{
-			terminal_put(6+x, 6+y, y*16+x);
+			//terminal_put(6+x, 6+y, y*16+x);
+			terminal_put(6+x, 6+y, 0x2500+y*16+x);
 		}
 	}
 
@@ -93,6 +94,8 @@ int main()
 
 	terminal_refresh();
 	terminal_read();
+
+	return 0;
 
 	wchar_t buffer[100] = {0};
 	terminal_read_wstr(2, 22, buffer, 16);
