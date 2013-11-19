@@ -211,6 +211,79 @@ namespace BearLibTerminal
 		}
 	}
 
+	Bitmap MakeBoxLines(Size size, std::vector<int> pattern)
+	{
+		Bitmap result(size, Color(0, 0, 0, 0));
+
+		int thickness = (int)std::floor(size.width/7.0f);
+		if (thickness == 0) thickness = 1;
+
+		thickness = 1;
+
+		int cx = (int)std::floor(size.width/2.0f-thickness/2.0f); // 8/2.0f = 4 (fifth pixel), 3/2.0 = 1[.5] (second pixel)
+		int cy = (int)std::floor(size.height/2.0f-thickness/2.0f);
+		int cl = cx - thickness;
+		int ct = cy - thickness;
+		int cw = thickness * 3;
+		int ch = thickness * 3;
+		int cr = cl + cw;
+		int cb = ct + ch;
+
+		auto put_rect = [&](int left, int top, int width, int height)
+		{
+			for (int x=left; x<left+width; x++)
+			{
+				for (int y=top; y<top+height; y++)
+				{
+					result(x, y) = Color(255, 255, 255, 255);
+				}
+			}
+		};
+
+		for (int dy=-1; dy<=1; dy++)
+		{
+			for (int dx=-1; dx<=1; dx++)
+			{
+				int i = (dy+2)*5+(dx+2);
+				if (pattern[i]) put_rect(cx+dx*thickness, cy+dy*thickness, thickness, thickness);
+			}
+		}
+
+		// Left and right
+		for (int dy=-1; dy<=1; dy++)
+		{
+			int i1 = (dy+2)*5;
+			if (pattern[i1])
+			{
+				for (int x=0; x<cl; x++) put_rect(x, cy+dy*thickness, 1, thickness);
+			}
+
+			int i2 = (dy+2)*5 + 4;
+			if (pattern[i2])
+			{
+				for (int x=cr; x<size.width; x++) put_rect(x, cy+dy*thickness, 1, thickness);
+			}
+		}
+
+		// Top and bottom
+		for (int dx=-1; dx<=1; dx++)
+		{
+			int i1 = dx+2;
+			if (pattern[i1])
+			{
+				for (int y=0; y<ct; y++) put_rect(cx+dx*thickness, y, thickness, 1);
+			}
+
+			int i2 = 4*5 + dx+2;
+			if (pattern[i2])
+			{
+				for (int y=cb; y<size.height; y++) put_rect(cx+dx*thickness, y, thickness, 1);
+			}
+		}
+
+		return result;
+	}
+
 	Bitmap MakeNotACharacterTile(Size size)
 	{
 		Bitmap result(size, Color());
@@ -502,20 +575,20 @@ namespace BearLibTerminal
 		// 0x254F: // BOX DRAWINGS HEAVY DOUBLE DASH VERTICAL
 		// Double lines
 		case 0x2550:
-			tile = MakeBoxLines(m_tile_size, 3, 0, 3, 0);
+			tile = MakeBoxLines(m_tile_size, {0,0,0,0,0, 1,1,1,1,1, 0,0,0,0,0, 1,1,1,1,1, 0,0,0,0,0}); // Horisontal double
 			break;
 		case 0x2551:
-			tile = MakeBoxLines(m_tile_size, 0, 3, 0, 3);
+			tile = MakeBoxLines(m_tile_size, {0,1,0,1,0, 0,1,0,1,0, 0,1,0,1,0, 0,1,0,1,0, 0,1,0,1,0}); // Vertical double
 			break;
 		// Light and double line box components
 		case 0x2552:
-			tile = MakeBoxLines(m_tile_size, 0, 0, 3, 1);
+			tile = MakeBoxLines(m_tile_size, {0,0,0,0,0, 0,0,1,1,1, 0,0,1,0,0, 0,0,1,1,1, 0,0,1,0,0}); // Double right, single bottom
 			break;
 		case 0x2553:
-			tile = MakeBoxLines(m_tile_size, 0, 0, 1, 3);
+			tile = MakeBoxLines(m_tile_size, {0,0,0,0,0, 0,0,0,0,0, 0,1,1,1,1, 0,1,0,1,0, 0,1,0,1,0}); // Single right, double bottom
 			break;
 		case 0x2554:
-			tile = MakeBoxLines(m_tile_size, 0, 0, 3, 3);
+			tile = MakeBoxLines(m_tile_size, {0,0,0,0,0, 0,1,1,1,1, 0,1,0,0,0, 0,1,0,1,1, 0,1,0,1,0}); // Double right and bottom
 			break;
 		case 0x2555:
 			tile = MakeBoxLines(m_tile_size, 3, 0, 0, 1);
@@ -536,7 +609,7 @@ namespace BearLibTerminal
 			tile = MakeBoxLines(m_tile_size, 0, 3, 3, 0);
 			break;
 		case 0x255B:
-			tile = MakeBoxLines(m_tile_size, 3, 1, 0, 0);
+			tile = MakeBoxLines(m_tile_size, {0,0,1,0,0, 1,1,1,0,0, 0,0,1,0,0, 1,1,1,0,0, 0,0,0,0,0}); // Double left, single up
 			break;
 		case 0x255C:
 			tile = MakeBoxLines(m_tile_size, 1, 3, 0, 0);
@@ -587,7 +660,7 @@ namespace BearLibTerminal
 			tile = MakeBoxLines(m_tile_size, 1, 3, 1, 3);
 			break;
 		case 0x256C:
-			tile = MakeBoxLines(m_tile_size, 3, 3, 3, 3);
+			tile = MakeBoxLines(m_tile_size, {0,1,0,1,0, 1,1,0,1,1, 0,0,0,0,0, 1,1,0,1,1, 0,1,0,1,0}); // Double horisontal and vertical
 			break;
 		default:
 			tile = MakeNotACharacterTile(m_tile_size);
