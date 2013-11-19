@@ -24,8 +24,8 @@ namespace BearLibTerminal
 	{
 		Leaf();
 		Color color[4];
-		uint16_t dx, dy;
-		uint16_t code;
+		int16_t dx, dy;
+		int16_t code;
 		uint8_t flags;
 		uint8_t reserved;
 		static const uint8_t CornerColored = 0x01;

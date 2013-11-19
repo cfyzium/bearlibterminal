@@ -48,6 +48,7 @@ int main()
 
 	terminal_color(0xFFFFFFFF);
 	//terminal_bkcolor(0xFFEE9000);
+	/*
 	for (int y=0; y<16; y++)
 	{
 		for (int x=0; x<16; x++)
@@ -56,6 +57,19 @@ int main()
 			terminal_put(6+x, 6+y, 0x2500+y*16+x);
 		}
 	}
+	/*/
+	terminal_composition(TK_COMPOSITION_ON);
+	int cw = terminal_state(TK_CELL_WIDTH);
+	int ch = terminal_state(TK_CELL_HEIGHT);
+	for (int y=0; y<16; y++)
+	{
+		for (int x=0; x<16; x++)
+		{
+			//terminal_put_ext(6, 6, x*(cw+1), y*(ch+1), 0x2500+y*16+x, NULL);
+			terminal_put_ext(6, 6, x*(cw+2), y*(ch+2), 0x2500+y*16+x, NULL);
+		}
+	}
+	//*/
 
 	terminal_color(0xFFFFFFFF);
 	terminal_put(28, 10, 0xE200);
@@ -95,6 +109,7 @@ int main()
 	terminal_refresh();
 	terminal_read();
 
+	terminal_close();
 	return 0;
 
 	wchar_t buffer[100] = {0};
