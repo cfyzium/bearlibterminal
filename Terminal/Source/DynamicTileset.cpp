@@ -40,177 +40,6 @@ namespace BearLibTerminal
 		}
 	}
 
-	void DrawBoxLine(Bitmap& bitmap, int x1, int y1, int x2, int y2, int type, int width)
-	{
-		Color white{255, 255, 255, 255};
-
-		if (x1 == x2)
-		{
-			// Vertical line
-			for (int y=y1; y<=y2; y++)
-			{
-				if (type == 1)
-				{
-					// One thin line
-					for (int x=x1; x<x1+width; x++) bitmap(x, y) = white;
-				}
-				else if (type == 2)
-				{
-					// One thick line
-					for (int x=x1-width; x<x1+width*2; x++) bitmap(x, y) = white;
-				}
-				else if (type == 3)
-				{
-					// Two thin lines
-					for (int x=x1-width; x<x1; x++) bitmap(x, y) = white;
-					for (int x=x1+width; x<x1+width*2; x++) bitmap(x, y) = white;
-				}
-			}
-		}
-		else
-		{
-			// Horisontal line
-			for (int x=x1; x<=x2; x++)
-			{
-				if (type == 1)
-				{
-					// One thin line
-					for (int y=y1; y<y1+width; y++) bitmap(x, y) = white;
-				}
-				else if (type == 2)
-				{
-					// One thick line
-					for (int y=y1-width; y<y1+width*2; y++) bitmap(x, y) = white;
-				}
-				else if (type == 3)
-				{
-					// Two thin lines
-					for (int y=y1-width; y<y1; y++) bitmap(x, y) = white;
-					for (int y=y1+width; y<y1+width*2; y++) bitmap(x, y) = white;
-				}
-			}
-		}
-	}
-
-	Bitmap MakeBoxLines(Size size, int left, int top, int right, int bottom)
-	{
-		Bitmap result(size, Color(0, 0, 0, 0));
-
-		int thickness = (int)std::floor(size.width/7.0f);
-		if (thickness == 0) thickness = 1;
-
-		thickness = 1;
-
-		LOG(Trace, "thickness = " << thickness);
-
-		int cx = (int)std::floor(size.width/2.0f-thickness/2.0f); // 8/2.0f = 4 (fifth pixel), 3/2.0 = 1[.5] (second pixel)
-		int cy = (int)std::floor(size.height/2.0f-thickness/2.0f);
-		int cl = cx - thickness;
-		int ct = cy - thickness;
-		int cw = thickness * 3;
-		int ch = thickness * 3;
-		int cr = cl + cw;
-		int cb = ct + ch;
-
-		auto put_square = [&](int dx, int dy)
-		{
-			int left = cx + dx*thickness;
-			int top = cy + dy*thickness;
-			int right = left + thickness;
-			int bottom = top + thickness;
-			for (int x=left; x<right; x++)
-			{
-				for (int y=top; y<bottom; y++)
-				{
-					result(x, y) = Color(255, 255, 255, 255);
-				}
-			}
-		};
-
-		auto put_squares = [&](std::vector<int> pattern)
-		{
-			for (int i=0; i<9; i++)
-			{
-				int dx = i%3;
-				int dy = (i-dx)/3;
-				if (pattern[i])
-				{
-					put_square(dx-1, dy-1);
-				}
-			}
-		};
-
-		LOG(Trace, "cx=" << cx << ", cy=" << cy << ", cl=" << cl << ", ct=" << ct << ", cw=" << cw << ", ch=" << ch << ", cr=" << cr << ", cb=" << cb);
-
-		// Nothing can be done for the extreme case.
-		if (cw > size.width || ch > size.height) return result;
-
-		if (left && cl > 0)
-		{
-			LOG(Trace, "left: " << 0 << "," << cy << "," << cl-1 << "," << cy);
-			DrawBoxLine(result, 0, cy, cl-1, cy, left, thickness);
-		}
-
-		if (top && ct > 0)
-		{
-			DrawBoxLine(result, cx, 0, cx, ct-1, top, thickness);
-		}
-
-		if (right && cr < size.width)
-		{
-			LOG(Trace, "right: " << cr << "," << cy << "," << size.width-1 << "," << cy);
-			DrawBoxLine(result, cr, cy, size.width-1, cy, right, thickness);
-		}
-
-		if (bottom && cb < size.height)
-		{
-			DrawBoxLine(result, cx, cb, cx, size.height-1, bottom, thickness);
-		}
-
-		if (top == 1 && bottom == 1) put_squares({0,1,0, 0,1,0, 0,1,0});
-		if (left == 1 && right == 1) put_squares({0,0,0, 1,1,1, 0,0,0});
-
-		if (left == 1 && top == 1) put_squares({0,1,0, 1,1,0, 0,0,0});
-		if (top == 1 && right == 1) put_squares({0,1,0, 0,1,1, 0,0,0});
-		if (right == 1 && bottom == 1) put_squares({0,0,0, 0,1,1, 0,1,0});
-		if (bottom == 1 && left == 1) put_squares({0,0,0, 1,1,0, 0,1,0});
-
-		if ((left == 2 && top == 2) ||
-			(top == 2 && right == 2) ||
-			(right == 2 && bottom == 2) ||
-			(bottom == 2 && left == 2) ||
-			(top == 2 && bottom == 2) ||
-			(left == 2 && right == 2))
-		{
-			put_squares({1,1,1, 1,1,1, 1,1,1});
-		}
-
-		if (left == 1 && top == 2) put_squares({1,1,1, 1,1,0, 0,0,0});
-		if (left == 2 && top == 1) put_squares({1,1,0, 1,1,0, 1,0,0});
-		if (top == 1 && right == 2) put_squares({0,1,1, 0,1,1, 0,0,1});
-		if (top == 2 && right == 1) put_squares({1,1,1, 0,1,1, 0,0,0});
-		if (right == 1 && bottom == 2) put_squares({0,0,0, 0,1,1, 1,1,1});
-		if (right == 2 && bottom == 1) put_squares({0,0,1, 0,1,1, 0,1,1});
-		if (bottom == 1 && left == 2) put_squares({1,0,0, 1,1,0, 1,1,0});
-		if (bottom == 2 && left == 1) put_squares({0,0,0, 1,1,0, 1,1,1});
-
-		if (left == 3 && top ==3 && right == 3 && bottom == 3)
-		{
-			put_squares({1,0,1, 0,0,0, 1,0,1});
-		}
-		else
-		{
-
-			if (left == 3 && right == 3) put_squares({1,1,1, 0,0,0, 1,1,1});
-			if (top == 3 && bottom == 3) put_squares({1,0,1, 1,0,1, 1,0,1});
-
-			if (left == 3 && top == 3) put_squares({1,0,1, 0,0,1, 1,1,1});
-			if (top == 3 && right == 3) put_squares({1,0,1, 1,0,0, 1,1,1});
-			if (right == 3 && bottom == 3) put_squares({1,1,1, 1,0,0, 1,0,1});
-			if (bottom == 3 && left == 3) put_squares({1,1,1, 0,0,1, 1,0,1});
-		}
-	}
-
 	Bitmap MakeBoxLines(Size size, std::vector<int> pattern)
 	{
 		Bitmap result(size, Color(0, 0, 0, 0));
@@ -285,6 +114,174 @@ namespace BearLibTerminal
 		return result;
 	}
 
+	Bitmap MakeDashLines(Size size, bool vertical, bool thick, int parts)
+	{
+		Bitmap result(size, Color(0, 0, 0, 0));
+
+		int thickness = (int)std::floor(size.width/7.0f);
+		if (thickness == 0) thickness = 1;
+
+		thickness = 1;
+
+		int cx = (int)std::floor(size.width/2.0f-thickness/2.0f); // 8/2.0f = 4 (fifth pixel), 3/2.0 = 1[.5] (second pixel)
+		int cy = (int)std::floor(size.height/2.0f-thickness/2.0f);
+		int cl = cx - thickness;
+		int ct = cy - thickness;
+		int cw = thickness * 3;
+		int ch = thickness * 3;
+		int cr = cl + cw;
+		int cb = ct + ch;
+
+		auto put_rect = [&](int left, int top, int width, int height, int alpha)
+		{
+			for (int x=left; x<left+width; x++)
+			{
+				for (int y=top; y<top+height; y++)
+				{
+					result(x, y) = Color(alpha, 255, 255, 255);
+				}
+			}
+		};
+
+		int length = vertical? size.height: size.width;
+		int n = (int)std::floor((length+1)/2.0f);
+		if (n > parts) n = parts;
+		float p0 = length / (float)n;
+		float p1 = p0 / 2.0f;
+		int gap = (int)std::floor(p1);
+		if (gap < 1) gap = 1;
+		int dash = (int)std::floor((length-gap*(n-1))/(float)n);
+		int total = dash*n + gap*(n-1);
+		int as = 0, ae = 0;
+		if (total < length)
+		{
+			float extra = (length-total)/2.0f;
+			as = (int)std::floor(extra);
+			ae = (int)std::ceil(extra);
+		}
+
+		if (vertical)
+		{
+			int t = thick? 3: 1;
+			int l = cx - (t-1)/2*thickness;
+			int w = t*thickness;
+
+			put_rect(l, 0, w, as, 255);
+			for (int i=0; i<n; i++)
+			{
+				put_rect(l, as+i*(dash+gap), w, dash, 255);
+			}
+			put_rect(l, length-ae, w, ae, 255);
+		}
+		else
+		{
+			int t = thick? 3: 1;
+			int p = cy - (t-1)/2*thickness;
+			int h = t*thickness;
+
+			put_rect(0, p, as, h, 255);
+			for (int i=0; i<n; i++)
+			{
+				put_rect(as+i*(dash+gap), p, dash, h, 255);
+			}
+			put_rect(length-ae, p, ae, h, 255);
+		}
+
+		return result;
+	}
+
+	Bitmap MakeVerticalSplit(Size size, float from, float to)
+	{
+		Bitmap result(size, Color(0, 0, 0, 0));
+
+		auto put_rect = [&](int left, int top, int width, int height, int alpha)
+		{
+			for (int x=left; x<left+width; x++)
+			{
+				for (int y=top; y<top+height; y++)
+				{
+					result(x, y) = Color(alpha, 255, 255, 255);
+				}
+			}
+		};
+
+		int tt = (int)std::floor(from*size.height);
+		int tb = (int)std::ceil(from*size.height);
+		int bt = (int)std::floor(to*size.height);
+		int bb = (int)std::ceil(to*size.height);
+
+		if (bt > tb) put_rect(0, tb, size.width, bt-tb, 255);
+		if (tt < tb) put_rect(0, tt, size.width, 1, (tb-from)*255);
+		if (bt < bb) put_rect(0, bt, size.width, 1, (to-bt)*255);
+
+		return result;
+	}
+
+	Bitmap MakeHorisontalSplit(Size size, float from, float to)
+	{
+		Bitmap result(size, Color(0, 0, 0, 0));
+
+		auto put_rect = [&](int left, int top, int width, int height, int alpha)
+		{
+			for (int x=left; x<left+width; x++)
+			{
+				for (int y=top; y<top+height; y++)
+				{
+					result(x, y) = Color(alpha, 255, 255, 255);
+				}
+			}
+		};
+
+		int ll = (int)std::floor(from*size.width);
+		int lr = (int)std::ceil(from*size.width);
+		int rl = (int)std::floor(to*size.width);
+		int rr = (int)std::ceil(to*size.width);
+
+		if (rl > lr) put_rect(lr, 0, rl-lr, size.height, 255);
+		if (ll < lr) put_rect(ll, 0, 1, size.height, (lr-from)*255);
+		if (rl < rr) put_rect(rr, 0, 1, size.height, (to-rl)*255);
+
+		return result;
+	}
+
+	Bitmap MakeQuadrandTile(Size size, bool top_left, bool top_right, bool bottom_left, bool bottom_right)
+	{
+		Bitmap result(size, Color(0,0,0,0));//255,255,255));
+
+		auto put_rect = [&](int left, int top, int width, int height, int alpha)
+		{
+			for (int x=left; x<left+width; x++)
+			{
+				for (int y=top; y<top+height; y++)
+				{
+					result(x, y) = Color(alpha, 255, 255, 255);
+					//result(x, y).a += alpha;
+				}
+			}
+		};
+
+		float cx = size.width / 2.0f;
+		float cy = size.height / 2.0f;
+
+		int l = (int)std::floor(cx);
+		int r = (int)std::ceil(cx);
+		int t = (int)std::floor(cy);
+		int b = (int)std::ceil(cy);
+
+		if (top_left) put_rect(0, 0, l, t, 255);
+		if (top_right) put_rect(r, 0, size.width-r, t, 255);
+		if (bottom_left) put_rect(0, b, l, size.height-b, 255);
+		if (bottom_right) put_rect(r, b, size.width-r, size.height-b, 255);
+
+		if (top_left || top_right)
+		{
+			int alpha = top_left && top_right? 255: 128;
+			put_rect(l+1, 0, 1, t, alpha);
+		}
+
+		return result;
+	}
+
 	Bitmap MakeNotACharacterTile(Size size)
 	{
 		Bitmap result(size, Color());
@@ -338,6 +335,7 @@ namespace BearLibTerminal
 
 		// Box drawing symbols
 		if (code >= 0x2500 && code <= 0x257F) return true;
+		if (code >= 0x2580 && code <= 0x259F) return true;
 
 		return false;
 	}
@@ -372,7 +370,30 @@ namespace BearLibTerminal
 			tile = MakeBoxLines(m_tile_size, {0,1,1,1,0, 0,1,1,1,0, 0,1,1,1,0, 0,1,1,1,0, 0,1,1,1,0}); // Wide vertical
 			break;
 		// Light and heavy dashed lines
-		// 0x2504..0x250B FIXME: NYI
+		case 0x2504:
+			tile = MakeDashLines(m_tile_size, false, false, 3); // Single triple horisontal dash
+			break;
+		case 0x2505:
+			tile = MakeDashLines(m_tile_size, false, true, 3); // Wide triple horisontal dash
+			break;
+		case 0x2506:
+			tile = MakeDashLines(m_tile_size, true, false, 3); // Single triple vertical dash
+			break;
+		case 0x2507:
+			tile = MakeDashLines(m_tile_size, true, true, 3); // Wide triple horisontal dash
+			break;
+		case 0x2508:
+			tile = MakeDashLines(m_tile_size, false, false, 4); // Singlee quadruple horisontal dash
+			break;
+		case 0x2509:
+			tile = MakeDashLines(m_tile_size, false, true, 4); // Wide quadruple horisontal dash
+			break;
+		case 0x250A:
+			tile = MakeDashLines(m_tile_size, true, false, 4); // Single quadruple vertical dash
+			break;
+		case 0x250B:
+			tile = MakeDashLines(m_tile_size, true, true, 4); // Wide quadruple vertical dash
+			break;
 		// Light and heavy line box components
 		case 0x250C:
 			tile = MakeBoxLines(m_tile_size, {0,0,0,0,0, 0,0,0,0,0, 0,0,1,1,1, 0,0,1,0,0, 0,0,1,0,0}); // Single right and bottom
@@ -567,12 +588,18 @@ namespace BearLibTerminal
 			tile = MakeBoxLines(m_tile_size, {0,1,1,1,0, 1,1,1,1,1, 1,1,1,1,1, 1,1,1,1,1, 0,1,1,1,0}); // Wide left, top, right and bottom
 			break;
 		// Light and heavy dashed lines
-		// 0x254C..0x254F
-		// FIXME: NYI
-		// 0x254C: // BOX DRAWINGS LIGHT DOUBLE DASH HORIZONTAL
-		// 0x254D: // BOX DRAWINGS HEAVY DOUBLE DASH HORIZONTAL
-		// 0x254E: // BOX DRAWINGS LIGHT DOUBLE DASH VERTICAL
-		// 0x254F: // BOX DRAWINGS HEAVY DOUBLE DASH VERTICAL
+		case 0x254C:
+			tile = MakeDashLines(m_tile_size, false, false, 2); // BOX DRAWINGS LIGHT DOUBLE DASH HORIZONTAL
+			break;
+		case 0x254D:
+			tile = MakeDashLines(m_tile_size, false, true, 2); // BOX DRAWINGS HEAVY DOUBLE DASH HORIZONTAL
+			break;
+		case 0x254E:
+			tile = MakeDashLines(m_tile_size, true, false, 2); // BOX DRAWINGS LIGHT DOUBLE DASH VERTICAL
+			break;
+		case 0x254F:
+			tile = MakeDashLines(m_tile_size, true, true, 2); // BOX DRAWINGS HEAVY DOUBLE DASH VERTICAL
+			break;
 		// Double lines
 		case 0x2550:
 			tile = MakeBoxLines(m_tile_size, {0,0,0,0,0, 1,1,1,1,1, 0,0,0,0,0, 1,1,1,1,1, 0,0,0,0,0}); // Horisontal double
@@ -662,20 +689,153 @@ namespace BearLibTerminal
 		case 0x256C:
 			tile = MakeBoxLines(m_tile_size, {0,1,0,1,0, 1,1,0,1,1, 0,0,0,0,0, 1,1,0,1,1, 0,1,0,1,0}); // Double horisontal and vertical
 			break;
+		// Light and heavy half lines
+		case 0x2574:
+			tile = MakeBoxLines(m_tile_size, {0,0,0,0,0, 0,0,0,0,0, 1,1,1,0,0, 0,0,0,0,0, 0,0,0,0,0}); // Single left
+			break;
+		case 0x2575:
+			tile = MakeBoxLines(m_tile_size, {0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,0,0,0, 0,0,0,0,0}); // Single up
+			break;
+		case 0x2576:
+			tile = MakeBoxLines(m_tile_size, {0,0,0,0,0, 0,0,0,0,0, 0,0,1,1,1, 0,0,0,0,0, 0,0,0,0,0}); // Single right
+			break;
+		case 0x2577:
+			tile = MakeBoxLines(m_tile_size, {0,0,0,0,0, 0,0,0,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0}); // Single down
+			break;
+		case 0x2578:
+			tile = MakeBoxLines(m_tile_size, {0,0,0,0,0, 1,1,1,0,0, 1,1,1,0,0, 1,1,1,0,0, 0,0,0,0,0}); // Wide left
+			break;
+		case 0x2579:
+			tile = MakeBoxLines(m_tile_size, {0,1,1,1,0, 0,1,1,1,0, 0,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0}); // Wide up
+			break;
+		case 0x257A:
+			tile = MakeBoxLines(m_tile_size, {0,0,0,0,0, 0,0,1,1,1, 0,0,1,1,1, 0,0,1,1,1, 0,0,0,0,0}); // Wide right
+			break;
+		case 0x257B:
+			tile = MakeBoxLines(m_tile_size, {0,0,0,0,0, 0,0,0,0,0, 0,1,1,1,0, 0,1,1,1,0, 0,1,1,1,0}); // Wide down
+			break;
+		// Mixed light and heavy lines
+		case 0x257C:
+			tile = MakeBoxLines(m_tile_size, {0,0,0,0,0, 0,0,1,1,1, 1,1,1,1,1, 0,0,1,1,1, 0,0,0,0,0}); // Single left and wide right
+			break;
+		case 0x257D:
+			tile = MakeBoxLines(m_tile_size, {0,0,1,0,0, 0,0,1,0,0, 0,1,1,1,0, 0,1,1,1,0, 0,1,1,1,0}); // Single up and wide down
+			break;
+		case 0x257E:
+			tile = MakeBoxLines(m_tile_size, {0,0,0,0,0, 1,1,1,0,0, 1,1,1,1,1, 1,1,1,0,0, 0,0,0,0,0}); // Wide left and single right
+			break;
+		case 0x257F:
+			tile = MakeBoxLines(m_tile_size, {0,1,1,1,0, 0,1,1,1,0, 0,1,1,1,0, 0,0,1,0,0, 0,0,1,0,0}); // Wide up and single down
+			break;
+		// Block elements
+		case 0x2580:
+			tile = MakeVerticalSplit(m_tile_size, 0.0f, 0.5f); // ▀ UPPER HALF BLOCK
+			break;
+		case 0x2581:
+			tile = MakeVerticalSplit(m_tile_size, 1.0f-0.125f, 1.0f); // ▁ LOWER ONE EIGHTH BLOCK
+			break;
+		case 0x2582:
+			tile = MakeVerticalSplit(m_tile_size, 0.75f, 1.0f); // ▂ LOWER ONE QUARTER BLOCK
+			break;
+		case 0x2583:
+			tile = MakeVerticalSplit(m_tile_size, 1.0f-3*0.125f, 1.0f); // ▃ LOWER THREE EIGHTHS BLOCK
+			break;
+		case 0x2584:
+			tile = MakeVerticalSplit(m_tile_size, 0.5f, 1.0f); // ▄ LOWER HALF BLOCK
+			break;
+		case 0x2585:
+			tile = MakeVerticalSplit(m_tile_size, 1.0f-5*0.125f, 1.0f); // ▅ LOWER FIVE EIGHTHS BLOCK
+			break;
+		case 0x2586:
+			tile = MakeVerticalSplit(m_tile_size, 0.25f, 1.0f); // ▆ LOWER THREE QUARTERS BLOCK
+			break;
+		case 0x2587:
+			tile = MakeVerticalSplit(m_tile_size, 0.125f, 1.0f); // ▇ LOWER SEVEN EIGHTHS BLOCK
+			break;
+		case 0x2588:
+			tile = MakeVerticalSplit(m_tile_size, 0.0f, 1.0f); // █ FULL BLOCK
+			break;
+		case 0x2589:
+			tile = MakeHorisontalSplit(m_tile_size, 0.0f, 7*0.125f); // ▉ LEFT SEVEN EIGHTHS BLOCK
+			break;
+		case 0x258A:
+			tile = MakeHorisontalSplit(m_tile_size, 0.0f, 0.75f); // ▊ LEFT THREE QUARTERS BLOCK
+			break;
+		case 0x258B:
+			tile = MakeHorisontalSplit(m_tile_size, 0.0f, 5*0.125f); // ▋ LEFT FIVE EIGHTHS BLOCK
+			break;
+		case 0x258C:
+			tile = MakeHorisontalSplit(m_tile_size, 0.0f, 0.5f); // ▌ LEFT HALF BLOCK
+			break;
+		case 0x258D:
+			tile = MakeHorisontalSplit(m_tile_size, 0.0f, 3*0.125f); // ▍ LEFT THREE EIGHTHS BLOCK
+			break;
+		case 0x258E:
+			tile = MakeHorisontalSplit(m_tile_size, 0.0f, 0.25f); // ▎ LEFT ONE QUARTER BLOCK
+			break;
+		case 0x258F:
+			tile = MakeHorisontalSplit(m_tile_size, 0.0f, 0.125f); // ▏ LEFT ONE EIGHTH BLOCK
+			break;
+		case 0x2590:
+			tile = MakeHorisontalSplit(m_tile_size, 0.0f, 0.5f); // ▐ RIGHT HALF BLOCK
+			break;
+		// Shade characters
+		case 0x2591:
+			tile = Bitmap(m_tile_size, Color(64, 255, 255, 255)); // ░ LIGHT SHADE
+			break;
+		case 0x2592:
+			tile = Bitmap(m_tile_size, Color(128, 255, 255, 255)); // ▒ MEDIUM SHADE
+			break;
+		case 0x2593:
+			tile = Bitmap(m_tile_size, Color(192, 255, 255, 255)); // ▓ DARK SHADE
+			break;
+		// Block elements
+		case 0x2594:
+			tile = MakeVerticalSplit(m_tile_size, 0.0f, 0.125f); // ▔ UPPER ONE EIGHTH BLOCK
+			break;
+		case 0x2595:
+			tile = MakeHorisontalSplit(m_tile_size, 1.0f-0.125f, 1.0f); // ▕ RIGHT ONE EIGHTH BLOCK
+			break;
+		// Terminal graphic characters
+		case 0x2596:
+			tile = MakeQuadrandTile(m_tile_size, false, false, true, false); // ▖ QUADRANT LOWER LEFT
+			break;
+		case 0x2597:
+			tile = MakeQuadrandTile(m_tile_size, false, false, false, true); // ▗ QUADRANT LOWER RIGHT
+			break;
+		case 0x2598:
+			tile = MakeQuadrandTile(m_tile_size, true, false, false, false); // ▘ QUADRANT UPPER LEFT
+			break;
+		case 0x2599:
+			tile = MakeQuadrandTile(m_tile_size, true, false, true, true); // ▙ QUADRANT UPPER LEFT AND LOWER LEFT AND LOWER RIGHT
+			break;
+		case 0x259A:
+			tile = MakeQuadrandTile(m_tile_size, true, false, false, true); // ▚ QUADRANT UPPER LEFT AND LOWER RIGHT
+			break;
+		case 0x259B:
+			tile = MakeQuadrandTile(m_tile_size, true, true, true, false); // ▛ QUADRANT UPPER LEFT AND UPPER RIGHT AND LOWER LEFT
+			break;
+		case 0x259C:
+			tile = MakeQuadrandTile(m_tile_size, true, true, false, true); // ▜ QUADRANT UPPER LEFT AND UPPER RIGHT AND LOWER RIGHT
+			break;
+		case 0x259D:
+			tile = MakeQuadrandTile(m_tile_size, false, true, false, false); // ▝ QUADRANT UPPER RIGHT
+			break;
+		case 0x259E:
+			tile = MakeQuadrandTile(m_tile_size, false, true, true, false); // ▞ QUADRANT UPPER RIGHT AND LOWER LEFT
+			break;
+		case 0x259F:
+			tile = MakeQuadrandTile(m_tile_size, false, true, true, true); // ▟ QUADRANT UPPER RIGHT AND LOWER LEFT AND LOWER RIGHT
+			break;
 		default:
 			tile = MakeNotACharacterTile(m_tile_size);
 			break;
 		}
 
+		if (tile.IsEmpty()) tile = MakeNotACharacterTile(m_tile_size);
+
 		auto tile_slot = m_container.atlas.Add(tile, Rectangle(m_tile_size));
-		/*
-		int w2 = m_tile_size.width / 2;
-		int h2 = m_tile_size.height / 2;
-		tile_slot->offset = Point(-w2, -h2);
-		tile_slot->alignment = TileSlot::Alignment::Center;
-		/*/
 		tile_slot->alignment = TileSlot::Alignment::TopLeft;
-		//*/
 		m_tiles[code] = tile_slot;
 		m_container.slots[code] = tile_slot;
 		LOG(Info, L"Added character tile for code " << code);
