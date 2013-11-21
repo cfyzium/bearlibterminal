@@ -239,7 +239,7 @@ namespace BearLibTerminal
 
 		if (rl > lr) put_rect(lr, 0, rl-lr, size.height, 255);
 		if (ll < lr) put_rect(ll, 0, 1, size.height, (lr-from)*255);
-		if (rl < rr) put_rect(rr, 0, 1, size.height, (to-rl)*255);
+		if (rl < rr) put_rect(rr-1, 0, 1, size.height, (to-rl)*255);
 
 		return result;
 	}
@@ -268,16 +268,14 @@ namespace BearLibTerminal
 		int t = (int)std::floor(cy);
 		int b = (int)std::ceil(cy);
 
+		// Round up to top-left corner
+		r = l;
+		b = t;
+
 		if (top_left) put_rect(0, 0, l, t, 255);
 		if (top_right) put_rect(r, 0, size.width-r, t, 255);
 		if (bottom_left) put_rect(0, b, l, size.height-b, 255);
 		if (bottom_right) put_rect(r, b, size.width-r, size.height-b, 255);
-
-		if (top_left || top_right)
-		{
-			int alpha = top_left && top_right? 255: 128;
-			put_rect(l+1, 0, 1, t, alpha);
-		}
 
 		return result;
 	}

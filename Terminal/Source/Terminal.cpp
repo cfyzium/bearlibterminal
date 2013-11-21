@@ -320,6 +320,9 @@ namespace BearLibTerminal
 			InvokeOnRenderingThread([=](){ConfigureViewport();});
 		}
 
+		// Briefly grab input lock so that input routines do not contend for m_options
+		std::lock_guard<std::mutex> input_guard(m_input_lock);
+
 		m_options = updated;
 	}
 
@@ -950,7 +953,7 @@ namespace BearLibTerminal
 
 	Keystroke Terminal::ReadKeystroke(int timeout)
 	{
-		std::unique_lock<std::mutex> lock(m_lock);
+		std::unique_lock<std::mutex> lock(m_input_lock);
 
 		// Sticky close cannot be undone once set
 		if (m_vars[TK_CLOSE] && m_options.input_sticky_close)
@@ -1008,7 +1011,7 @@ namespace BearLibTerminal
 			if (stroke.scancode == TK_CLOSE)
 			{
 				// Break on VK_CLOSE but push it back so subsequent Read could return it
-				std::unique_lock<std::mutex> lock(m_lock);
+				std::unique_lock<std::mutex> lock(m_input_lock);
 				m_input_queue.push_front(Keystroke(TK_CLOSE));
 				ConsumeIrrelevantInput();
 				return -1;
@@ -1420,7 +1423,7 @@ namespace BearLibTerminal
 
 	void Terminal::OnWindowInput(Keystroke keystroke)
 	{
-		std::lock_guard<std::mutex> guard(m_lock);
+		std::lock_guard<std::mutex> guard(m_input_lock);
 		m_input_queue.push_back(keystroke);
 		ConsumeIrrelevantInput();
 		if (!m_input_queue.empty())

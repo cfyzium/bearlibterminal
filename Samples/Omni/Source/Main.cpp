@@ -21,7 +21,7 @@ int main()
 {
 	terminal_open();
 	terminal_setf("window.title='%s'", "Test title");
-	terminal_set("window.cellsize=24x24");
+	terminal_set("window.cellsize=23x23");
 	terminal_set("0xE000: default.png, size=16x16");
 	terminal_set("0xE200: sample.jpeg");
 	terminal_set("0xE201: sample2.jpg");
@@ -109,8 +109,10 @@ int main()
 	terminal_refresh();
 	terminal_read();
 
+	/*
 	terminal_close();
 	return 0;
+	//*/
 
 	wchar_t buffer[100] = {0};
 	terminal_read_wstr(2, 22, buffer, 16);

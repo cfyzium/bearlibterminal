@@ -88,6 +88,7 @@ namespace BearLibTerminal
 	private:
 		enum state_t {kHidden, kVisible, kClosed} m_state;
 		mutable std::mutex m_lock;
+		mutable std::mutex m_input_lock;
 		std::unique_ptr<Window> m_window;
 		std::deque<Keystroke> m_input_queue;
 		std::condition_variable m_input_condvar;
