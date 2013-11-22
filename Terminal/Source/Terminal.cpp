@@ -770,6 +770,7 @@ namespace BearLibTerminal
 		int printed = 0;
 		uint16_t base = 0;
 		Encoding<char>* codepage = nullptr;
+		bool combine = false;
 
 		Color original_color = m_world.state.color;
 		Color original_bkcolor = m_world.state.bkcolor;
@@ -786,11 +787,26 @@ namespace BearLibTerminal
 				// Offset tile index
 				code += base;
 
-				PutUnlocked(x, y, 0, 0, code, nullptr);
+				if (combine)
+				{
+					if (x > x0)
+					{
+						int composition = m_world.state.composition;
+						m_world.state.composition = TK_COMPOSITION_ON;
+						PutUnlocked(--x, y, 0, 0, code, nullptr);
+						m_world.state.composition = composition;
+					}
+					combine = false;
+				}
+				else
+				{
+					PutUnlocked(x, y, 0, 0, code, nullptr);
+				}
+
+				x += 1;
+
 				printed += 1;
 			}
-
-			x += 1;
 		};
 
 		const auto apply_tag = [&](const std::wstring& s, size_t begin, size_t end)
@@ -871,7 +887,11 @@ namespace BearLibTerminal
 						codepage = nullptr;
 					}
 				}
-				else if (name[0] == 'u' || name[0] == 'U')
+				else if (name[0] == L'+')
+				{
+					combine = true;
+				}
+				else if (name[0] == L'u' || name[0] == L'U')
 				{
 					if (name.length() > 2)
 					{

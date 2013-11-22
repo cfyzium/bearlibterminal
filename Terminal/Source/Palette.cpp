@@ -29,6 +29,7 @@ namespace BearLibTerminal
 
 	Palette::Palette()
 	{
+		m_items[L"transparent"] = m_items[L"none"] = Color(0, 0, 0, 0);
 		m_items[L"black"] = Color(0, 0, 0);
 		m_items[L"white"] = Color(255,255,255);
 

@@ -245,7 +245,7 @@ TERMINAL_API color_t color_from_name32(const int32_t* name);
  * wchar_t has different sized depending on platform. Furthermore, it's size
  * can be changed for GCC compiler.
  */
-#if !defined(__GNUC__)
+#if !defined(__SIZEOF_WCHAR_T__)
 #  if defined(_WIN32)
 #    define __SIZEOF_WCHAR_T__ 2
 #  else
@@ -286,7 +286,7 @@ static inline int terminal_wprint(int x, int y, const wchar_t* s)
 	return TERMINAL_CAT(terminal_print, TERMINAL_WCHAR_SUFFIX)(x, y, (const TERMINAL_WCHAR_TYPE*)s);
 }
 
-static inline int terminal_read_str(int x, int y, wchar_t* buffer, int max)
+static inline int terminal_read_str(int x, int y, char* buffer, int max)
 {
 	return terminal_read_str8(x, y, (int8_t*)buffer, max);
 }
@@ -312,36 +312,109 @@ static inline color_t color_from_wname(const wchar_t* name)
  *
  * NOTE: inlining these is okay because
  * a) huge temporary buffer is static and won't mess the stack;
- * b) base functions are heavy by themselves.
+ * b) printing functions are heavy by themselves.
  *
  * NOTE: using static termporary buffer is okay because terminal API is not
  * required to be multiple-thread safe by design.
  */
 
-#define TERMINAL_DEFINE_FORMATTED(type, func, proto, impl)\
-	static inline int proto\
+#if !defined(TERMINAL_FORMAT_BUFFER_SIZE)
+#define TERMINAL_FORMAT_BUFFER_SIZE 1024
+#endif
+
+#define TERMINAL_FORMATTED_VA(type, name, sign, func, call_sign)\
+	static inline int terminal_v##name##f sign\
 	{\
-		const size_t buffer_size = 1024;\
-		static type buffer[buffer_size] = {0};\
-		va_list argptr;\
+		static type buffer[TERMINAL_FORMAT_BUFFER_SIZE] = {0};\
 		int rc = 0;\
 		if (s == NULL) return 0;\
-		va_start(argptr, s);\
-		rc = func(buffer, buffer_size-1, s, argptr);\
-		if (rc >= 0) rc = impl;\
-		va_end(argptr);\
+		rc = func(buffer, sizeof(buffer), s, args);\
+		if (rc > 0) rc = terminal_##name call_sign;\
 		return rc;\
 	}
 
-#define TERMINAL_DEFINE_FORMATTED_ANSI(proto, impl) TERMINAL_DEFINE_FORMATTED(char, vsnprintf, proto, impl)
-#define TERMINAL_DEFINE_FORMATTED_WIDE(proto, impl) TERMINAL_DEFINE_FORMATTED(wchar_t, vswprintf, proto, impl)
-TERMINAL_DEFINE_FORMATTED_ANSI(terminal_setf(const char* s, ...), terminal_set(buffer))
-TERMINAL_DEFINE_FORMATTED_ANSI(terminal_printf(int x, int y, const char* s, ...), terminal_print(x, y, buffer))
-TERMINAL_DEFINE_FORMATTED_WIDE(terminal_wsetf(const wchar_t* s, ...), terminal_wset(buffer))
-TERMINAL_DEFINE_FORMATTED_WIDE(terminal_wprintf(int x, int y, const wchar_t* s, ...), terminal_wprint(x, y, buffer))
+TERMINAL_FORMATTED_VA(char, set, (const char* s, va_list args), vsnprintf, (buffer))
+TERMINAL_FORMATTED_VA(wchar_t, wset, (const wchar_t* s, va_list args), vswprintf, (buffer))
+TERMINAL_FORMATTED_VA(char, print, (int x, int y, const char* s, va_list args), vsnprintf, (x, y, buffer))
+TERMINAL_FORMATTED_VA(wchar_t, wprint, (int x, int y, const wchar_t* s, va_list args), vswprintf, (x, y, buffer))
+
+#define TERMINAL_FORMATTED(outer, inner)\
+	static inline int terminal_##outer\
+	{\
+		va_list args;\
+		int rc = 0;\
+		va_start(args, s);\
+		rc = terminal_v##inner;\
+		va_end(args);\
+		return rc;\
+	}
+
+TERMINAL_FORMATTED(setf(const char* s, ...), setf(s, args))
+TERMINAL_FORMATTED(wsetf(const wchar_t* s, ...), wsetf(s, args))
+TERMINAL_FORMATTED(printf(int x, int y, const char* s, ...), printf(x, y, s, args))
+TERMINAL_FORMATTED(wprintf(int x, int y, const wchar_t* s, ...), wprintf(x, y, s, args))
+
+#ifdef __cplusplus
+/*
+ * C++ supports function overloading, should take advantage of it.
+ */
+
+static inline int terminal_set(const wchar_t* s)
+{
+	return terminal_wset(s);
+}
+
+static inline void terminal_color(const char* name)
+{
+	terminal_color(color_from_name(name));
+}
+
+static inline void terminal_color(const wchar_t* name)
+{
+	terminal_color(color_from_wname(name));
+}
+
+static inline void terminal_bkcolor(const char* name)
+{
+	terminal_bkcolor(color_from_name(name));
+}
+
+static inline void terminal_bkcolor(const wchar_t* name)
+{
+	terminal_bkcolor(color_from_wname(name));
+}
+
+TERMINAL_FORMATTED(setf(const wchar_t* s, ...), wsetf(s, args))
+
+static inline int terminal_print(int x, int y, const wchar_t* s)
+{
+	return terminal_wprint(x, y, s);
+}
+
+TERMINAL_FORMATTED(printf(int x, int y, const wchar_t* s, ...), wprintf(x, y, s, args))
+
+static inline int terminal_read_str(int x, int y, wchar_t* buffer, int max)
+{
+	return terminal_read_wstr(x, y, buffer, max);
+}
+
+static inline color_t color_from_name(const wchar_t* name)
+{
+	return color_from_wname(name);
+}
+#endif
+
+/*
+ * Color routines
+ */
+static inline color_t color_from_argb(uint8_t a, uint8_t r, uint8_t g, uint8_t b)
+{
+	return (a << 24) | (r << 16) | (g << 8) | b;
+}
 
 /*
  * WinMain entry point handling macro. This allows easier entry point definition.
+ * The macro will expand to proper WinMain stub regardless of header include order.
  */
 #if defined(_WIN32)
 

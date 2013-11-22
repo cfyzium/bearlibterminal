@@ -38,17 +38,18 @@ int main()
 	terminal_set("0xE700: UbuntuMono-R.ttf, size=24x24");
 	terminal_color(0xFF000000);
 	terminal_bkcolor(0xFFEE9000);
-	terminal_wprint(2, 2, L"Hello, [color=white]world[/color].[U+2250] \x1234 {абв} [base=0xE000]abc");
+	terminal_print(2, 2, L"Hello, [color=white]world[/color].[U+2250] \x1234 {абв} [base=0xE000]abc");
 
-	terminal_bkcolor(0);
+	terminal_bkcolor("black");
 	color_t corners[] = {0xFFFF0000, 0xFF00FF00, 0xFF6060FF, 0xFFFF00FF};
 	terminal_put_ext(2, 4, 0, 0, L'я', corners);
 	//terminal_bkcolor(0xFFFFFFFF);
 	terminal_put_ext(3, 5, 0, 0, 0x2593, corners);
 	terminal_put_ext(4, 4, 0, 0, 11*16+2, corners);
-	terminal_bkcolor(0);
+	terminal_bkcolor("black");
 
 	terminal_color(0xFFFFFFFF);
+	terminal_wprint(2, 3, L"a[+]ˆ, c[+][color=red]/[/color], d[+][color=orange][U+2044]");
 	//terminal_bkcolor(0xFFEE9000);
 	/*
 	for (int y=0; y<16; y++)
@@ -187,43 +188,16 @@ int main()
 
 namespace
 {
-	void AddSubrange(std::vector<std::pair<int, int> >& result, int start, int end)
-	{
-		result.push_back(std::pair<int, int>(std::floor(start/16.0)*16, std::ceil(end/16.0)*16-1));
-		std::cout << "  " << start << "-" << end << " -> " << result.back().first << "-" << result.back().second << "\n";
-	}
-
-	std::vector<std::pair<int, int> > SplitRange(std::set<int>& codes)
-	{
-		std::cout << "R:\n";
-
-		std::vector<std::pair<int, int> > result;
-
-		int start = 0, end = 0;
-		for (std::set<int>::iterator i=codes.begin(); i!=codes.end(); i++)
-		{
-			int code = *i;
-			if (start == 0) start = code;
-			if (end == 0) end = code;
-			if (code-end > 16)
-			{
-				AddSubrange(result, start, code);
-				start = code;
-			}
-			end = code;
-		}
-		if (start > 0) AddSubrange(result, start, end);
-
-		return result;
-	}
-
 	struct UnicodeRange
 	{
 		std::string name;
+		int start, end;
 		std::set<int> codes;
 
-		UnicodeRange(const std::string& name):
-			name(name)
+		UnicodeRange(const std::string& name, int start, int end):
+			name(name),
+			start(start),
+			end(end)
 		{ }
 
 		void Add(int code)
@@ -240,33 +214,33 @@ namespace
 	std::vector<UnicodeRange> FillRanges()
 	{
 		std::vector<UnicodeRange> ranges;
-		ranges.push_back(UnicodeRange("C0 Controls and Basic Latin"));
+		ranges.push_back(UnicodeRange("C0 Controls and Basic Latin", 0x0000, 0x007F));
 		ranges.back().Add(0x0020, 0x007F);
-		ranges.push_back(UnicodeRange("C1 Controls and Latin-1 Supplement"));
+		ranges.push_back(UnicodeRange("C1 Controls and Latin-1 Supplement", 0x0080, 0x00FF));
 		ranges.back().Add(0x00A0, 0x00FF);
-		ranges.push_back(UnicodeRange("Latin Extended-A"));
+		ranges.push_back(UnicodeRange("Latin Extended-A", 0x0100, 0x017F));
 		ranges.back().Add(0x0100, 0x017F);
-		ranges.push_back(UnicodeRange("Latin Extended-B"));
+		ranges.push_back(UnicodeRange("Latin Extended-B", 0x0180, 0x024F));
 		ranges.back().Add(0x0192);
 		ranges.back().Add(0x01FA, 0x01FF);
-		ranges.push_back(UnicodeRange("Spacing Modifier Letters"));
+		ranges.push_back(UnicodeRange("Spacing Modifier Letters", 0x02B0, 0x02FF));
 		ranges.back().Add(0x02C6);
 		ranges.back().Add(0x02C7);
 		ranges.back().Add(0x02C9);
 		ranges.back().Add(0x02D8, 0x02DD);
-		ranges.push_back(UnicodeRange("Greek"));
+		ranges.push_back(UnicodeRange("Greek and Coptic", 0x0370, 0x03FF));
 		ranges.back().Add(0x037E);
 		ranges.back().Add(0x0384, 0x038A);
 		ranges.back().Add(0x038C);
 		ranges.back().Add(0x038E, 0x03A1);
 		ranges.back().Add(0x03A3, 0x03CE);
-		ranges.push_back(UnicodeRange("Cyrillic"));
+		ranges.push_back(UnicodeRange("Cyrillic", 0x0400, 0x04FF));
 		ranges.back().Add(0x0400, 0x045F);
 		ranges.back().Add(0x0490, 0x0491);
-		ranges.push_back(UnicodeRange("Latin Extended Additional"));
+		ranges.push_back(UnicodeRange("Latin Extended Additional", 0x1E00, 0x1EFF));
 		ranges.back().Add(0x1E80, 0x1E85);
 		ranges.back().Add(0x1EF2, 0x1EF3);
-		ranges.push_back(UnicodeRange("General Punctuation"));
+		ranges.push_back(UnicodeRange("General Punctuation", 0x2000, 0x206F));
 		ranges.back().Add(0x2013, 0x2015);
 		ranges.back().Add(0x2017, 0x201E);
 		ranges.back().Add(0x2020, 0x2022);
@@ -277,25 +251,25 @@ namespace
 		ranges.back().Add(0x203C);
 		ranges.back().Add(0x203E);
 		ranges.back().Add(0x2044);
-		ranges.push_back(UnicodeRange("Super/subscript"));
+		ranges.push_back(UnicodeRange("Superscripts and Subscript", 0x2070, 0x209F));
 		ranges.back().Add(0x207F);
-		ranges.push_back(UnicodeRange("Currency symbols"));
+		ranges.push_back(UnicodeRange("Currency Symbols", 0x20A0, 0x20CF));
 		ranges.back().Add(0x20A3, 0x20A4);
 		ranges.back().Add(0x20A7);
 		ranges.back().Add(0x20AC);
-		ranges.push_back(UnicodeRange("Letterlike symbols"));
+		ranges.push_back(UnicodeRange("Letterlike Symbols", 0x2100, 0x214F));
 		ranges.back().Add(0x2105);
 		ranges.back().Add(0x2113);
 		ranges.back().Add(0x2116);
 		ranges.back().Add(0x2122);
 		ranges.back().Add(0x2126);
 		ranges.back().Add(0x212E);
-		ranges.push_back(UnicodeRange("Number forms"));
+		ranges.push_back(UnicodeRange("Number Forms", 0x2150, 0x218F));
 		ranges.back().Add(0x215B, 0x215E);
-		ranges.push_back(UnicodeRange("Arrows"));
+		ranges.push_back(UnicodeRange("Arrows", 0x2190, 0x21FF));
 		ranges.back().Add(0x2190, 0x2195);
 		ranges.back().Add(0x21A8);
-		ranges.push_back(UnicodeRange("Mathematical operators"));
+		ranges.push_back(UnicodeRange("Mathematical Operators", 0x2200, 0x22FF));
 		ranges.back().Add(0x2202);
 		ranges.back().Add(0x2206);
 		ranges.back().Add(0x220F);
@@ -308,15 +282,15 @@ namespace
 		ranges.back().Add(0x2248);
 		ranges.back().Add(0x2260, 0x2261);
 		ranges.back().Add(0x2264, 0x2265);
-		ranges.push_back(UnicodeRange("Miscellaneous technical"));
+		ranges.push_back(UnicodeRange("Miscellaneous Technical", 0x2300, 0x23FF));
 		ranges.back().Add(0x2302);
 		ranges.back().Add(0x2310);
 		ranges.back().Add(0x2320, 0x2321);
-		ranges.push_back(UnicodeRange("Box drawing symbols"));
+		ranges.push_back(UnicodeRange("Box Drawing", 0x2500, 0x257F));
 		ranges.back().Add(0x2500, 0x257F);
-		ranges.push_back(UnicodeRange("Block elements"));
+		ranges.push_back(UnicodeRange("Block Elements", 0x2580, 0x259F));
 		ranges.back().Add(0x2580, 0x259F);
-		ranges.push_back(UnicodeRange("Geometric shapes"));
+		ranges.push_back(UnicodeRange("Geometric Shapes", 0x25A0, 0x25FF));
 		ranges.back().Add(0x25A0, 0x25A1);
 		ranges.back().Add(0x25AA, 0x25AC);
 		ranges.back().Add(0x25B2);
@@ -327,7 +301,7 @@ namespace
 		ranges.back().Add(0x25CF);
 		ranges.back().Add(0x25D8, 0x25D9);
 		ranges.back().Add(0x25E6);
-		ranges.push_back(UnicodeRange("Miscellaneous shapes"));
+		ranges.push_back(UnicodeRange("Miscellaneous Symbols", 0x2600, 0x26FF));
 		ranges.back().Add(0x263A, 0x263C);
 		ranges.back().Add(0x2640);
 		ranges.back().Add(0x2642);
@@ -335,9 +309,9 @@ namespace
 		ranges.back().Add(0x2663);
 		ranges.back().Add(0x2665, 0x2666);
 		ranges.back().Add(0x266A, 0x266B);
-		ranges.push_back(UnicodeRange("Private Use Area"));
+		ranges.push_back(UnicodeRange("Private Use Area", 0xF000, 0xF00F));
 		ranges.back().Add(0xF001, 0xF002);
-		ranges.push_back(UnicodeRange("Alphabet presentation form"));
+		ranges.push_back(UnicodeRange("Alphabet presentation form", 0xFB00, 0xFB0F));
 		ranges.back().Add(0xFB01, 0xFB02);
 		return ranges;
 	}
@@ -355,7 +329,8 @@ void TestWGL4()
 	while (true)
 	{
 		terminal_clear();
-		terminal_wprint(1, 1, L"[color=darker green]TIP: Use ↑/↓ keys to select range:");
+		//terminal_wprint(1, 1, L"[color=darker green]TIP: Use ↑/↓ keys to select range:");
+		terminal_wprint(1, 1, L"[color=white]Select unicode character range:");
 
 		for (int i=0; i<ranges.size(); i++)
 		{
@@ -365,26 +340,21 @@ void TestWGL4()
 		}
 
 		UnicodeRange& range = ranges[current_range];
-
-		std::vector<std::pair<int, int> > subranges = SplitRange(range.codes);
-		for (int i=0, y=0; i<subranges.size(); i++)
+		for (int j=0; j<16; j++)
 		{
-			std::pair<int, int>& subrange = subranges[i];
-			for (int j=0; j<16; j++)
-			{
-				terminal_printf(hoffset+6+j*2, 1, "[color=orange]%X", j);
-			}
-			for (int code=subrange.first; code<=subrange.second; code++)
-			{
-				if (code%16 == 0) terminal_printf(hoffset, 2+y*1, "[color=orange]%04X:", code);
-
-				bool included = range.codes.count(code);
-				terminal_color(included? color_from_name("white"): color_from_name("dark gray"));
-				terminal_put(hoffset+6+(code%16)*2, 2+y*1, code);
-
-				if ((code+1)%16 == 0) y += 1;
-			}
+			terminal_printf(hoffset+6+j*2, 1, "[color=orange]%X", j);
 		}
+		for (int code=range.start, y=0; code<=range.end; code++)
+		{
+			if (code%16 == 0) terminal_printf(hoffset, 2+y*1, "[color=orange]%04X:", code);
+
+			bool included = range.codes.count(code);
+			terminal_color(included? color_from_name("white"): color_from_name("dark gray"));
+			terminal_put(hoffset+6+(code%16)*2, 2+y*1, code);
+
+			if ((code+1)%16 == 0) y += 1;
+		}
+
 		terminal_refresh();
 
 		bool exit = false;
