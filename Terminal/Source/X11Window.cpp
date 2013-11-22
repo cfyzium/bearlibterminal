@@ -189,6 +189,7 @@ namespace BearLibTerminal
 		int retries = 5;
 		do
 		{
+			m_redraw_barrier.SetValue(0);
 			XClearArea
 			(
 				m_private->display,
@@ -233,7 +234,7 @@ namespace BearLibTerminal
 		}
 
 		// Open barrier
-		m_redraw_barrier.Notify();
+		m_redraw_barrier.NotifyAtMost(1);
 	}
 
 	static int DEF_keymap[256];

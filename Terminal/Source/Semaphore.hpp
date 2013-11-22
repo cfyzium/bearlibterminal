@@ -33,23 +33,38 @@ namespace BearLibTerminal
 	class Semaphore
 	{
 	public:
-		inline Semaphore(): m_count(0)
+		Semaphore(): m_count(0)
 		{}
 
-		inline unsigned long GetValue() const
+		unsigned long GetValue() const
 		{
 			std::lock_guard<std::mutex> guard(m_mutex);
 			return m_count;
 		}
 
-		inline void Notify()
+		void SetValue(unsigned long value)
+		{
+			std::lock_guard<std::mutex> guard(m_mutex);
+			m_count = value;
+		}
+
+		void Notify()
 		{
 			std::lock_guard<std::mutex> guard(m_mutex);
 			m_count += 1;
 			m_condvar.notify_all();
 		}
 
-		inline void Wait()
+		// FIXME: just make binary semaphore
+		void NotifyAtMost(unsigned long limit)
+		{
+			std::lock_guard<std::mutex> guard(m_mutex);
+			m_count += 1;
+			if (m_count > limit) m_count = limit;
+			m_condvar.notify_all();
+		}
+
+		void Wait()
 		{
 			std::unique_lock<std::mutex> lock(m_mutex);
 			m_condvar.wait(lock, [&](){return m_count > 0;});
@@ -58,7 +73,7 @@ namespace BearLibTerminal
 
 		// TODO: use std::chrono for timeout interval
 		// FIXME: does not count timeout properly in case of spurious wakeups
-		inline bool WaitFor(int milliseconds)
+		bool WaitFor(int milliseconds)
 		{
 			std::unique_lock<std::mutex> lock(m_mutex);
 			while (m_count == 0)

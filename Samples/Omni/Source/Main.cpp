@@ -18,6 +18,7 @@ inline void Sleep(int ms) {usleep(ms*1000);}
 TERMINAL_TAKE_CARE_OF_WINMAIN
 
 void TestWGL4();
+void Menu();
 
 int main()
 {
@@ -113,17 +114,20 @@ int main()
 	terminal_read();
 
 	TestWGL4();
+	Menu();
 
 	//*
 	terminal_close();
 	return 0;
 	//*/
 
+	/*
 	wchar_t buffer[100] = {0};
 	terminal_read_wstr(2, 22, buffer, 16);
 	terminal_wprint(2, 23, buffer);
 	terminal_refresh();
 	terminal_read();
+	//*/
 
 	//terminal_set("");
 	terminal_set("output.vsync=false");
@@ -147,6 +151,46 @@ int main()
 	terminal_close();
 	return 0;
 }
+
+struct TestEntry
+{
+	const char* name;
+	void (*func)();
+};
+
+void Menu()
+{
+	terminal_set("window: size=80x25, cellsize=auto, title='Sample:Omni menu'; font=default");
+	terminal_set("output.vsync=true");
+
+	TestEntry entries[] =
+	{
+		{"Windows Glyph List 4", TestWGL4}
+	};
+
+	int counter = 0;
+
+	while (true)
+	{
+		terminal_clear();
+		terminal_printf(1, 1, "%s\n%d", entries[0].name, counter++);
+		terminal_refresh();
+
+		bool exit = false;
+		while (terminal_has_input())
+		{
+			int key = terminal_read();
+			if (key == TK_ESCAPE || key == TK_CLOSE)
+			{
+				exit = true;
+			}
+		}
+
+		if (exit) break;
+	}
+}
+
+
 
 // U+0020..U+007F: C0 Controls and Basic Latin
 // U+00A0..U+00FF: C1 Controls and Latin-1 Supplement
@@ -329,14 +373,13 @@ void TestWGL4()
 	while (true)
 	{
 		terminal_clear();
-		//terminal_wprint(1, 1, L"[color=darker green]TIP: Use ↑/↓ keys to select range:");
-		terminal_wprint(1, 1, L"[color=white]Select unicode character range:");
+		terminal_wprint(2, 1, L"[color=white]Select unicode character range:");
 
 		for (int i=0; i<ranges.size(); i++)
 		{
 			bool selected = i == current_range;
 			terminal_color(selected? color_from_name("orange"): color_from_name("light gray"));
-			terminal_printf(1, 2+i, "[U+2219] %s", ranges[i].name.c_str());
+			terminal_printf(2, 2+i, "[U+2219] %s", ranges[i].name.c_str());
 		}
 
 		UnicodeRange& range = ranges[current_range];
@@ -354,6 +397,10 @@ void TestWGL4()
 
 			if ((code+1)%16 == 0) y += 1;
 		}
+
+		terminal_color("white");
+		terminal_print(hoffset, 23, L"[color=orange]TIP:[/color] Use ↑/↓ keys to select range");
+		terminal_print(hoffset, 20, L"[color=orange]NOTE:[/color] Character code points printed in\ngray are not included in the WGL4 set.");
 
 		terminal_refresh();
 
