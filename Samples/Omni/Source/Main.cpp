@@ -355,7 +355,7 @@ void TestWGL4()
 	while (true)
 	{
 		terminal_clear();
-		terminal_wprint(1, 1, L"[color=darker green]Use ↑/↓ keys to select range:");
+		terminal_wprint(1, 1, L"[color=darker green]TIP: Use ↑/↓ keys to select range:");
 
 		for (int i=0; i<ranges.size(); i++)
 		{
@@ -376,11 +376,11 @@ void TestWGL4()
 			}
 			for (int code=subrange.first; code<=subrange.second; code++)
 			{
-				if (code%16 == 0) terminal_printf(hoffset, 3+y*2, "[color=orange]%04X:", code);
+				if (code%16 == 0) terminal_printf(hoffset, 2+y*1, "[color=orange]%04X:", code);
 
 				bool included = range.codes.count(code);
 				terminal_color(included? color_from_name("white"): color_from_name("dark gray"));
-				terminal_put(hoffset+6+(code%16)*2, 3+y*2, code);
+				terminal_put(hoffset+6+(code%16)*2, 2+y*1, code);
 
 				if ((code+1)%16 == 0) y += 1;
 			}
@@ -391,7 +391,7 @@ void TestWGL4()
 		do
 		{
 			int key = terminal_read();
-			if (key == TK_ESCAPE)
+			if (key == TK_ESCAPE || key == TK_CLOSE)
 			{
 				exit = true;
 				break;
