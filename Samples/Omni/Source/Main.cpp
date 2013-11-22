@@ -37,8 +37,8 @@ int main()
 	terminal_set("0xE500: Ubuntu-R.ttf, size=12");
 	terminal_set("0xE600: UbuntuMono-RI.ttf, size=12");
 	terminal_set("0xE700: UbuntuMono-R.ttf, size=24x24");
-	terminal_color(0xFF000000);
-	terminal_bkcolor(0xFFEE9000);
+	terminal_color("black");
+	terminal_bkcolor("orange");
 	terminal_print(2, 2, L"Hello, [color=white]world[/color].[U+2250] \x1234 {абв} [base=0xE000]abc");
 
 	terminal_bkcolor("black");
@@ -161,7 +161,6 @@ struct TestEntry
 void Menu()
 {
 	terminal_set("window: size=80x25, cellsize=auto, title='Sample:Omni menu'; font=default");
-	terminal_set("output.vsync=true");
 
 	TestEntry entries[] =
 	{
