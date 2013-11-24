@@ -17,7 +17,9 @@ inline void Sleep(int ms) {usleep(ms*1000);}
 
 TERMINAL_TAKE_CARE_OF_WINMAIN
 
+void TestOutput();
 void TestWGL4();
+void TestFontViewer();
 void Menu();
 
 int main()
@@ -36,7 +38,8 @@ int main()
 	terminal_set("0xE400: UbuntuMono-R.ttf, size=12");
 	terminal_set("0xE500: Ubuntu-R.ttf, size=12");
 	terminal_set("0xE600: UbuntuMono-RI.ttf, size=12");
-	terminal_set("0xE700: UbuntuMono-R.ttf, size=24x24");
+	//terminal_set("0xE700: UbuntuMono-R.ttf, size=24x24");
+	terminal_set("0xE700: Tigrex3drunes_16x16_437.PNG");
 	terminal_color("black");
 	terminal_bkcolor("orange");
 	terminal_print(2, 2, L"Hello, [color=white]world[/color].[U+2250] \x1234 {абв} [base=0xE000]abc");
@@ -49,8 +52,11 @@ int main()
 	terminal_put_ext(4, 4, 0, 0, 11*16+2, corners);
 	terminal_bkcolor("black");
 
-	terminal_color(0xFFFFFFFF);
+	terminal_color("white");
 	terminal_wprint(2, 3, L"a[+]ˆ, c[+][color=red]/[/color], d[+][color=orange][U+2044]");
+
+
+
 	//terminal_bkcolor(0xFFEE9000);
 	/*
 	for (int y=0; y<16; y++)
@@ -113,7 +119,10 @@ int main()
 	terminal_refresh();
 	terminal_read();
 
-	TestWGL4();
+
+	//terminal_set("window.icon=icon.ico");
+
+	//TestWGL4();
 	Menu();
 
 	//*
@@ -152,6 +161,8 @@ int main()
 	return 0;
 }
 
+#include <vector>
+
 struct TestEntry
 {
 	const char* name;
@@ -160,35 +171,115 @@ struct TestEntry
 
 void Menu()
 {
-	terminal_set("window: size=80x25, cellsize=auto, title='Sample:Omni menu'; font=default");
-
-	TestEntry entries[] =
+	auto reset = []()
 	{
-		{"Windows Glyph List 4", TestWGL4}
+		terminal_set("window: size=80x25, cellsize=auto, title='Omni: menu'; font=default");
 	};
 
-	int counter = 0;
+	std::vector<TestEntry> entries =
+	{
+		{"Basic output", TestOutput},
+		{"Default font: WGL4", TestWGL4},
+		{"Font viewer", TestFontViewer},
+		{"Tilesets", TestFontViewer},
+		{"Sprites", TestFontViewer},
+		{"Manual cellsize", TestFontViewer},
+		{"Auto-generated tileset", TestFontViewer},
+		{"Multiple fonts", TestFontViewer},
+		{"Layers", TestFontViewer},
+		{"Extended 1: basics", TestFontViewer},
+		{"Extended 2: inter-layer animation", TestFontViewer},
+		{"Extended 3: smooth scroll", TestFontViewer},
+		{"Dynamic sprites", TestFontViewer},
+		{"Synchronous rendering", TestFontViewer},
+		{"Custom rendering", TestFontViewer},
+		{"Input 1: keyboard", TestFontViewer},
+		{"Input 2: mouse", TestFontViewer},
+	};
 
-	while (true)
+	reset();
+
+	for (bool proceed=true; proceed;)
 	{
 		terminal_clear();
-		terminal_printf(1, 1, "%s\n%d", entries[0].name, counter++);
+		for (size_t i=0; i<entries.size(); i++)
+		{
+			char shortcut = i < 9? '1'+i: 'a'+(i-9);
+			terminal_printf(2, 1+i, "[color=orange]%c.[/color] %s", shortcut, entries[i].name);
+		}
+		terminal_printf(2, 23, "[color=orange]ESC.[/color] Exit");
 		terminal_refresh();
 
-		bool exit = false;
-		while (terminal_has_input())
+		do
 		{
 			int key = terminal_read();
+
 			if (key == TK_ESCAPE || key == TK_CLOSE)
 			{
-				exit = true;
+				proceed = false;
+			}
+			else if ((key >= TK_1 && key <= TK_9) || (key >= TK_A && key <= TK_Z))
+			{
+				int index = key >= TK_A? 9+(key-TK_A): (key-TK_1);
+				if (index >= 0 && index < entries.size())
+				{
+					entries[index].func();
+					reset();
+				}
 			}
 		}
-
-		if (exit) break;
+		while (proceed && terminal_has_input());
 	}
 }
 
+
+void TestOutput()
+{
+	terminal_set("window.title='Omni: basic output'");
+	terminal_clear();
+	terminal_color("white");
+
+	// Wide color range
+	int n = terminal_printf(2, 1, "[color=orange]1.[/color] Colors: ");
+	const char long_word[] = "Antidisestablishmentarianism";
+	const size_t long_word_length = sizeof(long_word)-1;
+	for (size_t i = 0; i < long_word_length; i++)
+	{
+		float factor = float(i)/long_word_length;
+		int red = (1.0f - factor) * 255;
+		int green = factor * 255;
+		terminal_color(color_from_argb(255, red, green, 0));
+		terminal_put(2+n+i, 1, long_word[i]);
+	}
+	terminal_color("white");
+
+	terminal_print(2, 3, "[color=orange]2.[/color] Backgrounds: [color=black][bkcolor=gray] grey [/bkcolor] [bkcolor=red] red ");
+
+	terminal_print(2, 5, L"[color=orange]3.[/color] Unicode examples: Кириллица Ελληνικά; a², 10±2, 25°");
+
+	terminal_print(2, 7, L"[color=orange]4.[/color] Tile composition: a + [color=red]/[/color] = a[+][color=red]/[/color], a vs. a[+][color=red]¨[/color]");
+
+	terminal_printf(2, 9, "[color=orange]5.[/color] Box drawing symbols:");
+	const wchar_t* box_lines[] =
+	{
+		L"       ┌──┬───┐      ╔═════╗ ",
+		L" ┌───┬─┘  │   ├──┐   ╟──┐  ║ ",
+		L" └─┐ └─┐  ├───┘  │   ║  └──╢ ",
+		L"   └───┴──┴──────┘   ╚═════╝ "
+	};
+	for ( size_t i = 0; i < sizeof(box_lines)/sizeof(box_lines[i]); i++ )
+	{
+		terminal_printf(2, 11+i, L"%s", box_lines[i]);
+	}
+
+	terminal_refresh();
+	for (int key=0; key!=TK_CLOSE && key!=TK_ESCAPE; key=terminal_read());
+}
+
+void TestFontViewer()
+{
+
+}
 
 
 // U+0020..U+007F: C0 Controls and Basic Latin
@@ -378,7 +469,7 @@ void TestWGL4()
 		{
 			bool selected = i == current_range;
 			terminal_color(selected? color_from_name("orange"): color_from_name("light gray"));
-			terminal_printf(2, 2+i, "[U+2219] %s", ranges[i].name.c_str());
+			terminal_printf(1, 2+i, "%s%s", selected? "[U+203A]": " ", ranges[i].name.c_str()); // 2219
 		}
 
 		UnicodeRange& range = ranges[current_range];
@@ -398,8 +489,8 @@ void TestWGL4()
 		}
 
 		terminal_color("white");
-		terminal_print(hoffset, 23, L"[color=orange]TIP:[/color] Use ↑/↓ keys to select range");
-		terminal_print(hoffset, 20, L"[color=orange]NOTE:[/color] Character code points printed in\ngray are not included in the WGL4 set.");
+		terminal_print(hoffset, 20, L"[color=orange]TIP:[/color] Use ↑/↓ keys to select range");
+		terminal_print(hoffset, 22, L"[color=orange]NOTE:[/color] Character code points printed in\ngray are not included in the WGL4 set.");
 
 		terminal_refresh();
 

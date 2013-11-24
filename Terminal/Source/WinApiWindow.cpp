@@ -24,11 +24,13 @@
 
 #include <map>
 #include <future>
+#include <algorithm>
 #include "WinApiWindow.hpp"
 #include "BearLibTerminal.h"
 #include "Point.hpp"
 #include "Log.hpp"
 #include "OpenGL.hpp"
+#include "Resource.hpp"
 
 #include <Mmsystem.h>
 
@@ -83,17 +85,43 @@ namespace BearLibTerminal
 		Stop();
 	}
 
+	// TODO: check if this works under Wine.
+	HMODULE GetCurrentModule()
+	{
+		// NB: XP+ solution!
+		HMODULE hModule = NULL;
+		GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCTSTR)GetCurrentModule,&hModule);
+		return hModule;
+	}
+
 	static HICON LoadIconFromFile(const std::wstring& filename, bool small)
 	{
-		HICON result = (HICON)LoadImageW
-		(
-			NULL,
-			filename.c_str(),
-			IMAGE_ICON,
-			GetSystemMetrics(small? SM_CXSMICON: SM_CXICON),
-			GetSystemMetrics(small? SM_CYSMICON: SM_CYICON),
-			LR_LOADFROMFILE
-		);
+		HICON result = NULL;
+
+		if (filename == L"default")
+		{
+			result = (HICON)LoadImageW
+			(
+				GetCurrentModule(),
+				MAKEINTRESOURCE(100), // FIXME: magic constant
+				IMAGE_ICON,
+				GetSystemMetrics(small? SM_CXSMICON: SM_CXICON),
+				GetSystemMetrics(small? SM_CYSMICON: SM_CYICON),
+				0
+			);
+		}
+		else
+		{
+			result = (HICON)LoadImageW
+			(
+				NULL,
+				filename.c_str(),
+				IMAGE_ICON,
+				GetSystemMetrics(small? SM_CXSMICON: SM_CXICON),
+				GetSystemMetrics(small? SM_CYSMICON: SM_CYICON),
+				LR_LOADFROMFILE
+			);
+		}
 
 		if ( result == NULL )
 		{
@@ -102,6 +130,18 @@ namespace BearLibTerminal
 
 		return result;
 	}
+
+	struct IconDirectoryEntry
+	{
+		uint8_t width;
+		uint8_t height;
+		uint8_t colors;
+		uint8_t reserved;
+		uint16_t planes;
+		uint16_t bpp;
+		uint32_t size;
+		uint32_t offset;
+	};
 
 	bool WinApiWindow::ValidateIcon(const std::wstring& filename)
 	{

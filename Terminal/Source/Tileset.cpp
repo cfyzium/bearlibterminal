@@ -47,7 +47,7 @@ namespace BearLibTerminal
 			options.attributes[L"codepage"] = L"tileset-default";
 		}
 
-		bool is_bitmap = std::set<std::wstring>{L"bmp", L"png", L"jpg", L"jpeg"}.count(file_extension(options.attributes[L"name"]));
+		bool is_bitmap = std::set<std::wstring>{L"bmp", L"png", L"jpg", L"jpeg"}.count(to_lower(file_extension(options.attributes[L"name"])));
 
 		if (is_bitmap || options.attributes[L"name"] == L"default")
 		{

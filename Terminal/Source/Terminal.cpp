@@ -31,7 +31,7 @@ namespace BearLibTerminal
 		m_window->SetOnActivate(std::bind(&Terminal::OnWindowActivate, this));
 
 		// Default parameters
-		SetOptionsInternal(L"window: size=40x25; font: default; terminal.encoding=utf8");
+		SetOptionsInternal(L"window: size=40x25, icon=default; font: default; terminal.encoding=utf8");
 	}
 
 	Terminal::~Terminal()

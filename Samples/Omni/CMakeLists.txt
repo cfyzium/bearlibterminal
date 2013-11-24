@@ -2,7 +2,7 @@ project(SampleOmni)
 
 set(CMAKE_SKIP_RPATH TRUE)
 
-set(CF "-O3 -g0")
+set(CF "-O3 -g0 -std=c++11")
 set(LF "-s")
 
 if(WIN32)

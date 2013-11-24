@@ -37,19 +37,58 @@ namespace BearLibTerminal
 			throw std::runtime_error("BitmapTileset: failed to parse 'size' attribute");
 		}
 
-		if (group.attributes.count(L"bbox") && !try_parse(group.attributes[L"bbox"], m_bbox_size))
-		{
-			throw std::runtime_error("BitmapTileset: failed to parse 'bbox' attribute");
-		}
-
 		if (group.attributes.count(L"codepage"))
 		{
 			// TODO: check for error
 			m_codepage = GetUnibyteEncoding(group.attributes[L"codepage"]);
 		}
-		else
+
+		if (!m_tile_size.Area() && !m_codepage)
+		{
+			// Try to guess from filename
+			std::wstring name = group.attributes[L"name"];
+			std::wstring l1, l2;
+
+			// Cut off extension
+			size_t n = name.find_last_of(L'.');
+			if (n != std::wstring::npos)
+			{
+				name = name.substr(0, n);
+			}
+
+			// Last part, codepage
+			n = name.find_last_of(L'_');
+			if (n != std::wstring::npos)
+			{
+				if (n < name.length()-1) l1 = name.substr(n+1);
+				name = name.substr(0, n);
+			}
+
+			// Last part, size
+			n = name.find_last_of(L'_');
+			if (n != std::wstring::npos)
+			{
+				if (n < name.length()-1) l2 = name.substr(n+1);
+			}
+
+			LOG(Debug, "\"" << group.attributes[L"name"] << "\" -> " << "\"" << l1 << "\", \"" << l2 << "\"");
+
+			Size temp_size;
+			if (try_parse(l2, temp_size))
+			{
+				m_tile_size = temp_size;
+				m_codepage = GetUnibyteEncoding(l1);
+			}
+		}
+
+		if (!m_codepage)
 		{
 			m_codepage = GetUnibyteEncoding(L"utf8");
+		}
+
+		if (group.attributes.count(L"bbox") && !try_parse(group.attributes[L"bbox"], m_bbox_size))
+		{
+			throw std::runtime_error("BitmapTileset: failed to parse 'bbox' attribute");
 		}
 
 		if (group.attributes.count(L"align") && !try_parse(group.attributes[L"align"], m_alignment))

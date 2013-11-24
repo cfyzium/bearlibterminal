@@ -11,6 +11,7 @@
 #include <string>
 #include <sstream>
 #include <mutex>
+#include <algorithm>
 
 namespace BearLibTerminal
 {
@@ -57,6 +58,12 @@ namespace BearLibTerminal
 	{
 		std::lock_guard<std::mutex> guard(lock);
 		return reference;
+	}
+
+	template<typename char_t> std::basic_string<char_t> to_lower(std::basic_string<char_t> s)
+	{
+		std::transform(s.begin(), s.end(), s.begin(), ::tolower);
+		return s;
 	}
 }
 
