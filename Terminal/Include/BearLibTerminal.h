@@ -328,7 +328,7 @@ static inline color_t color_from_wname(const wchar_t* name)
 		static type buffer[TERMINAL_FORMAT_BUFFER_SIZE] = {0};\
 		int rc = 0;\
 		if (s == NULL) return 0;\
-		rc = func(buffer, sizeof(buffer), s, args);\
+		rc = func(buffer, TERMINAL_FORMAT_BUFFER_SIZE-1, s, args);\
 		if (rc > 0) rc = terminal_##name call_sign;\
 		return rc;\
 	}

@@ -10,6 +10,7 @@
 #include "Geometry.hpp"
 #include "Resource.hpp"
 #include "Utility.hpp"
+#include "Palette.hpp"
 #include "Log.hpp"
 #include <stdexcept>
 #include <fstream>
@@ -93,10 +94,22 @@ namespace BearLibTerminal
 
 		if (group.attributes.count(L"align") && !try_parse(group.attributes[L"align"], m_alignment))
 		{
-			throw std::runtime_error("BitmapTileset: failed to parse 'alignemnt' attribute");
+			throw std::runtime_error("BitmapTileset: failed to parse 'alignment' attribute");
 		}
 
 		m_cache = LoadBitmap(*Resource::Open(group.attributes[L"name"], L"tileset-"));
+
+		if (!m_cache.GetSize().Area())
+		{
+			throw std::runtime_error("BitmapTileset: loaded image is empty (zero-sized)");
+		}
+
+		if (group.attributes.count(L"transparent"))
+		{
+			std::wstring& name = group.attributes[L"transparent"];
+			Color mask = name == L"auto"? m_cache(0, 0): Palette::Instance[name];
+			m_cache.MakeTransparent(mask);
+		}
 
 		if (m_tile_size.Area() == 0)
 		{
