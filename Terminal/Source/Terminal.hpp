@@ -78,7 +78,7 @@ namespace BearLibTerminal
 		int ReadStringInternalBlocking(int x, int y, wchar_t* buffer, int max);
 		int ReadStringInternalNonblocking(wchar_t* buffer, int max);
 		void OnWindowClose();
-		bool OnWindowRedraw();
+		int OnWindowRedraw();
 		void OnWindowInput(Keystroke keystroke);
 		void OnWindowActivate();
 		void InvokeOnRenderingThread(std::function<void()> func);

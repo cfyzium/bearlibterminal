@@ -171,6 +171,7 @@ namespace BearLibTerminal
 	void WinApiWindow::Redraw()
 	{
 		std::lock_guard<std::mutex> guard(m_lock);
+		m_redraw_barrier.SetValue(0);
 		if ( m_handle == nullptr ) return;
 		InvalidateRect(m_handle, NULL, FALSE);
 		m_redraw_barrier.Wait();
@@ -457,34 +458,24 @@ namespace BearLibTerminal
 
 	LRESULT WinApiWindow::HandleWmPaint(WPARAM wParam, LPARAM lParam)
 	{
+		int rc = 0;
+
 		try
 		{
-			//*
-			if (m_on_redraw && m_on_redraw())
+			if (m_on_redraw)
 			{
-				SwapBuffers();
-			}
-			/*/
-			uint64_t s = StartTiming();
-			if ( m_on_redraw ) m_on_redraw();
-			SwapBuffers(m_device_context);
-			uint64_t d = StopTiming(s);
-			tt_val += d;
-			tt_num += 1;
-			uint64_t las = timeGetTime();
-			if (las > tt_las + 1000)
-			{
-				float tt_avg = tt_val / (float)tt_num;
-				float tt_exp = 1000000.0f / tt_avg;
-				tt_val = 0;
-				tt_num = 0;
-				tt_las = las;
+				rc = m_on_redraw();
 
-				std::wostringstream ss;
-				ss << "average frame: " << tt_avg << " us, potential fps: " << tt_exp;
-				SetWindowTextW(m_handle, ss.str().c_str());
+				if (rc > 0)
+				{
+					SwapBuffers();
+				}
+				else if (rc < 0)
+				{
+					// Reschedule
+					PostMessageW(m_handle, WM_PAINT, 0, 0);
+				}
 			}
-			//*/
 		}
 		catch ( std::exception& e )
 		{
@@ -492,10 +483,13 @@ namespace BearLibTerminal
 			m_proceed = false;
 		}
 
-		// Mark window area as processed
-		RECT rect;
-		GetClientRect(m_handle, &rect); // TODO: May be cached
-		ValidateRect(m_handle, &rect);
+		if (rc >= 0)
+		{
+			// Mark window area as processed
+			RECT rect;
+			GetClientRect(m_handle, &rect); // TODO: May be cached
+			ValidateRect(m_handle, &rect);
+		}
 
 		// Open barrier
 		m_redraw_barrier.Notify();

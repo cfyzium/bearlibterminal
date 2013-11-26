@@ -92,6 +92,7 @@ namespace BearLibTerminal
 		void Refresh();
 		void Bind();
 		void Dispose();
+		Bitmap GetCanvasMap();
 
 	private:
 		bool TryGrow();
@@ -113,6 +114,7 @@ namespace BearLibTerminal
 		void Remove(std::shared_ptr<TileSlot> slot);
 		void Refresh();
 		void Dispose();
+		void Dump();
 
 	private:
 		std::list<AtlasTexture> m_textures;

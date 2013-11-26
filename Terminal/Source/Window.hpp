@@ -33,10 +33,13 @@
 #include <utility>
 #include <functional>
 
+// For internal usage
+#define TK_ALT 0x12
+
 namespace BearLibTerminal
 {
 	using EventHandler = std::function<void()>;
-	using DrawEventHandler = std::function<bool()>;
+	using DrawEventHandler = std::function<int()>;
 	using InputEventHandler = std::function<void(Keystroke)>;
 
 	class Window

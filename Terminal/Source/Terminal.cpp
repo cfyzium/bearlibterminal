@@ -1329,12 +1329,16 @@ namespace BearLibTerminal
 		m_input_condvar.notify_all();
 	}
 
-	bool Terminal::OnWindowRedraw()
+	int Terminal::OnWindowRedraw()
 	{
 		// Scene-based rendering function is used in asyncronous mode only
-		if (!m_asynchronous) return false;
+		if (!m_asynchronous) return 0;//false;
 
-		std::unique_lock<std::mutex> guard(m_lock);
+		// Rendering callback will try to acquire the lock. Failing to  do so
+		// will mean that Terminal is currently busy. Calling window implementation
+		// SHOULD be prepared to reschedule paiting to a later time.
+		std::unique_lock<std::mutex> guard(m_lock, std::try_to_lock);
+		if (!guard.owns_lock()) return -1; // TODO: enum
 
 		// Provide tile slots for newly added codes
 		if (!m_fresh_codes.empty())
@@ -1438,14 +1442,24 @@ namespace BearLibTerminal
 		glEnd();
 		//*/
 
-		return true;
+		return 1;//true;
 	}
 
 	void Terminal::OnWindowInput(Keystroke keystroke)
 	{
 		std::lock_guard<std::mutex> guard(m_input_lock);
+
+		if (keystroke.scancode == TK_F12 && !keystroke.released && m_vars[TK_SHIFT] && m_vars[TK_CONTROL])
+		{
+			LOG(Info, "Ctrl+Shift+F12 was caught, dumping texture atlas on disk");
+			std::lock_guard<std::mutex> guard(m_lock);
+			m_world.tiles.atlas.Dump();
+			return;
+		}
+
 		m_input_queue.push_back(keystroke);
 		ConsumeIrrelevantInput();
+
 		if (!m_input_queue.empty())
 		{
 			m_input_condvar.notify_all();

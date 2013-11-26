@@ -542,13 +542,16 @@ void TestFontViewer()
 		bool more = false;
 
 		selected = current_param == 0;
-		terminal_printf(1, 1, L"%s[color=%s]Face:[/color]  [color=gray]<[/color] default [color=orange]>[/color]", selected? ">": " ", selected? "orange": "white");
+		//terminal_printf(1, 1, "%s[color=%s]Face:[/color]  [color=gray]<[/color] default [color=orange]>[/color]", selected? ">": " ", selected? "orange": "white");
+		terminal_printf(1, 1, " [color=%s]Face:[/color]  [color=gray]<[/color] default [color=orange]>[/color]", selected? "orange": "white");
 
 		selected = current_param == 1;
-		terminal_printf(1, 2, L"%s[color=%s]Size:[/color]  [color=gray]< 8x16 >[/color]", selected? ">": " ", selected? "orange": "white");
+		//terminal_printf(1, 2, "%s[color=%s]Size:[/color]  [color=gray]< 8x16 >[/color]", selected? ">": " ", selected? "orange": "white");
+		terminal_printf(1, 2, " [color=%s]Size:[/color]  [color=gray]< 8x16 >[/color]", selected? "orange": "white");
 
 		selected = current_param == 2;
-		terminal_printf(1, 3, L"%s[color=%s]Mode:[/color]  [color=gray]< normal >[/color]", selected? ">": " ", selected? "orange": "white");
+		//terminal_printf(1, 3, "%s[color=%s]Mode:[/color]  [color=gray]< normal >[/color]", selected? ">": " ", selected? "orange": "white");
+		terminal_printf(1, 3, " [color=%s]Mode:[/color]  [color=gray]< normal >[/color]", selected? "orange": "white");
 
 		selected = current_param == 3;
 		less = current_range > 0;
@@ -556,17 +559,18 @@ void TestFontViewer()
 		terminal_printf
 		(
 			1, 4,
-			L"%s[color=%s]Range:[/color] [color=%s]<[/color] %d/%d [color=%s]>",
-			selected? ">": " ",
+			//"%s[color=%s]Range:[/color] [color=%s]<[/color] %d/%d [color=%s]>",
+			" [color=%s]Range:[/color] [color=%s]<[/color] %d/%d [color=%s]>",
+			//selected? ">": " ",
 			selected? "orange": "white",
 			less? "orange": "gray",
 			current_range+1,
 			g_wgl4_ranges.size(),
 			more? "orange": "gray"
 		);
-		terminal_printf(2, 6, L"[color=gray]%s", range.name.c_str());
+		terminal_printf(2, 6, "[color=gray]%s", range.name.c_str());
 
-		terminal_print(2, 23, L"[color=orange]TIP:[/color] Use arrow keys to change parameters");
+		terminal_print(2, 23, "[color=orange]TIP:[/color] Use arrow keys to change parameters");
 
 		for (int j=0; j<16; j++)
 		{
@@ -677,31 +681,37 @@ void TestManualCellsize()
 			{
 				cell_width -= 1;
 				setup_scene();
+				break;
 			}
 			else if (key == TK_RIGHT && cell_width < 24)
 			{
 				cell_width += 1;
 				setup_scene();
+				break;
 			}
 			else if (key == TK_DOWN && !terminal_state(TK_SHIFT) && cell_height < 24)
 			{
 				cell_height += 1;
 				setup_scene();
+				break;
 			}
 			else if (key == TK_UP && !terminal_state(TK_SHIFT) && cell_height > 4)
 			{
 				cell_height -= 1;
 				setup_scene();
+				break;
 			}
 			else if (key == TK_DOWN && terminal_state(TK_SHIFT) && font_size < 24)
 			{
 				font_size += 1;
 				setup_scene();
+				break;
 			}
 			else if (key == TK_UP && terminal_state(TK_SHIFT) && font_size > 4)
 			{
 				font_size -= 1;
 				setup_scene();
+				break;
 			}
 		}
 		while (proceed && terminal_has_input());

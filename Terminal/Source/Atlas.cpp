@@ -343,6 +343,11 @@ namespace BearLibTerminal
 		);
 	}
 
+	Bitmap AtlasTexture::GetCanvasMap()
+	{
+		return Bitmap(); // FIXME: NYI
+	}
+
 	// ------------------------------------------------------------------------
 
 	TileSlot::TileSlot():
@@ -515,5 +520,10 @@ namespace BearLibTerminal
 	{
 		for (auto& i: m_textures) i.Dispose();
 		m_textures.clear();
+	}
+
+	void Atlas::Dump()
+	{
+		// FIXME: NYI
 	}
 }
