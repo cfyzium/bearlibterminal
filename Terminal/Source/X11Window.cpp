@@ -220,11 +220,23 @@ namespace BearLibTerminal
 
 	void X11Window::HandleRepaint()
 	{
+		int rc = 0;
+
 		try
 		{
-			if (m_on_redraw && m_on_redraw())
+			if (m_on_redraw)
 			{
-				SwapBuffers();
+				rc = m_on_redraw();
+
+				if (rc > 0)
+				{
+					SwapBuffers();
+				}
+				else if (rc < 0)
+				{
+					// FIXME: reschedule painting to a later time
+					// XSendEvent or XClearArea or custom event
+				}
 			}
 		}
 		catch (std::exception& e)

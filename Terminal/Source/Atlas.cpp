@@ -11,6 +11,7 @@
 #include "OpenGL.hpp"
 #include "Geometry.hpp"
 #include <algorithm>
+#include <fstream>
 
 namespace BearLibTerminal
 {
@@ -252,8 +253,25 @@ namespace BearLibTerminal
 			throw std::runtime_error("AtlasTexture3::Remove(...): ownership mismatch");
 		}
 
+		// Remove slot
+		m_slots.erase(i);
+
 		// Give back used space
 		m_spaces.push_back(Rectangle(slot->texture_region.Location(), slot->space_size));
+
+		//*
+		// DEBUG
+		Rectangle area = Rectangle(slot->texture_region.Location(), slot->space_size);
+		for (int y=area.top; y<area.top+area.height; y++)
+		{
+			for (int x=area.left; x<area.left+area.width; x++)
+			{
+				m_canvas(x, y) = Color(255, 0, 0, 255);
+			}
+		}
+		m_is_dirty = true;
+		//*/
+
 		PostprocessSpaces();
 	}
 
@@ -345,7 +363,52 @@ namespace BearLibTerminal
 
 	Bitmap AtlasTexture::GetCanvasMap()
 	{
-		return Bitmap(); // FIXME: NYI
+		Bitmap result = m_canvas;
+		Color cs = Color(255, 255, 0, 0);
+		Color ct = Color(255, 0, 255, 0);
+
+		for (auto space: m_spaces)
+		{
+			int x1 = space.left;
+			int x2 = x1+space.width;
+			int y1 = space.top;
+			int y2 = y1+space.height;
+
+			for (int x=x1; x<x2; x++)
+			{
+				result(x, y1) = cs;
+				result(x, y2-1) = cs;
+			}
+
+			for (int y=y1; y<y2; y++)
+			{
+				result(x1, y) = cs;
+				result(x2-1, y) = cs;
+			}
+		}
+
+		for (auto slot: m_slots)
+		{
+			Rectangle region = slot->texture_region;
+			int x1 = region.left;
+			int x2 = x1+region.width;
+			int y1 = region.top;
+			int y2 = y1+region.height;
+
+			for (int x=x1; x<x2; x++)
+			{
+				result(x, y1) = ct;
+				result(x, y2-1) = ct;
+			}
+
+			for (int y=y1; y<y2; y++)
+			{
+				result(x1, y) = ct;
+				result(x2-1, y) = ct;
+			}
+		}
+
+		return result;
 	}
 
 	// ------------------------------------------------------------------------
@@ -522,8 +585,19 @@ namespace BearLibTerminal
 		m_textures.clear();
 	}
 
+	// Prototype
+	void SaveBMP(const Bitmap& bitmap, std::ostream& stream);
+
 	void Atlas::Dump()
 	{
-		// FIXME: NYI
+		int counter = 0;
+
+		for (auto& texture: m_textures)
+		{
+			std::ostringstream ss;
+			ss << "terminal.atlas." << counter++ << ".bmp";
+			std::ofstream file(ss.str(), std::ios_base::out|std::ios_base::binary);
+			SaveBMP(texture.GetCanvasMap(), file);
+		}
 	}
 }

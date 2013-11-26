@@ -37,7 +37,11 @@ namespace BearLibTerminal
 			{
 				m_container.slots.erase(i.first);
 			}
+
+			m_container.atlas.Remove(i.second);
 		}
+
+		m_tiles.clear();
 	}
 
 	Bitmap MakeBoxLines(Size size, std::vector<int> pattern)

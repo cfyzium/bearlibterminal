@@ -260,6 +260,8 @@ namespace BearLibTerminal
 
 			m_container.atlas.Remove(i.second);
 		}
+
+		m_tiles.clear();
 	}
 
 	bool TrueTypeTileset::Save()
@@ -310,15 +312,25 @@ namespace BearLibTerminal
 
 	void TrueTypeTileset::Prepare(uint16_t code)
 	{
+		/*
+		if (m_tiles.count(code))
+		{
+			m_container.slots[code] = std::dynamic_pointer_cast<Slot>(m_tiles[code]);
+			return;
+		}
+		//*/
+
 		PrepareBitmap(code);
 	}
 
 	Bitmap TrueTypeTileset::PrepareBitmap(uint16_t code)
 	{
+		/*
 		if (m_tiles.count(code))
 		{
 			m_container.slots[code] = std::dynamic_pointer_cast<Slot>(m_tiles[code]);
 		}
+		*/
 
 		if (code < m_base_code)
 		{
