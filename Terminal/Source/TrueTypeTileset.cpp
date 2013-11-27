@@ -140,6 +140,13 @@ namespace BearLibTerminal
 			return m_font_face->glyph->metrics;
 		};
 
+		uint16_t reference_code = m_codepage->Convert((int)'@');
+		if (reference_code == kUnicodeReplacementCharacter)
+		{
+			// Use first character for size reference if font has custom codepage w/o 0x40 code point
+			reference_code = m_codepage->Convert(0);
+		}
+
 		if (m_tile_size.width == 0)
 		{
 			// Only height was specified, e. g. size=12
@@ -150,7 +157,7 @@ namespace BearLibTerminal
 			}
 
 			int dot_width = (int)std::ceil(get_metrics('.').horiAdvance/64.0f/64.0f);
-			int at_width = (int)std::ceil(get_metrics('@').horiAdvance/64.0f/64.0f);
+			int at_width = (int)std::ceil(get_metrics(reference_code).horiAdvance/64.0f/64.0f);
 			m_monospace = dot_width == at_width;
 
 			int height = m_font_face->size->metrics.height >> 6;
@@ -172,7 +179,7 @@ namespace BearLibTerminal
 					throw std::runtime_error("TrueTypeTileset: can't setup font size");
 				}
 
-				int w = (int)std::ceil(get_metrics('@').horiAdvance/64.0f/64.0f);
+				int w = (int)std::ceil(get_metrics(reference_code).horiAdvance/64.0f/64.0f);
 				int h = m_font_face->size->metrics.height >> 6;
 
 				return Size(w, h);
@@ -212,7 +219,7 @@ namespace BearLibTerminal
 			}
 
 			int dot_width = (int)std::ceil(get_metrics('.').horiAdvance/64.0f/64.0f);
-			int at_width = (int)std::ceil(get_metrics('@').horiAdvance/64.0f/64.0f);
+			int at_width = (int)std::ceil(get_metrics(reference_code).horiAdvance/64.0f/64.0f);
 			m_monospace = dot_width == at_width;
 
 			int height = m_font_face->size->metrics.height >> 6;

@@ -13,6 +13,7 @@
 #include "Palette.hpp"
 #include "BearLibTerminal.h"
 #include <cmath>
+#include <future>
 
 namespace BearLibTerminal
 {
@@ -21,7 +22,8 @@ namespace BearLibTerminal
 		m_vars{},
 		m_asynchronous{true},
 		m_current_texture(0),
-		m_inside_drawing_block(false)
+		m_inside_drawing_block(false),
+		m_show_grid(false)
 	{
 		// Try to create window
 		m_window = Window::Create();
@@ -1275,9 +1277,9 @@ namespace BearLibTerminal
 			{
 				if (is_dynamic)
 				{
-					// While searching for dynamic character provider, skip (at leaft for now):
+					// While searching for dynamic character provider, skip:
 					// * dynamic tileset at 0xFFFD base code
-					// * basic tileset at 0x0000 code (only if it is of TrueType type)
+					// * truetype basic tileset at 0x0000 code
 
 					bool unsuitable =
 						(i->first == kUnicodeReplacementCharacter) ||
@@ -1427,22 +1429,32 @@ namespace BearLibTerminal
 		}
 		glEnd();
 
-		/*
-		// Ghost
-		glBegin(GL_QUADS);
-		glColor4f(1, 1, 1, 0.25f);
-		glTexCoord2f(0, 0);
-		glVertex2i(16, 16);
-		glTexCoord2f(0, 1);
-		glVertex2i(16, 16+256);
-		glTexCoord2f(1, 1);
-		glVertex2i(16+256, 16+256);
-		glTexCoord2f(1, 0);
-		glVertex2i(16+256, 16);
-		glEnd();
-		//*/
+		if (m_show_grid)
+		{
+			int width = m_world.stage.size.width * m_world.state.cellsize.width;
+			int height = m_world.stage.size.height * m_world.state.cellsize.height;
+			glColor4f(1, 1, 1, 0.5f);
+			glDisable(GL_TEXTURE_2D);
+			glBlendFunc(GL_ONE_MINUS_DST_COLOR, GL_ZERO);
+			glBegin(GL_LINES);
+			for (int i=0; i<m_world.stage.size.width; i++)
+			{
+				int x = i*m_world.state.cellsize.width;
+				glVertex2i(x, 0);
+				glVertex2i(x, height);
+			}
+			for (int i=0; i<m_world.stage.size.height; i++)
+			{
+				int y = i*m_world.state.cellsize.height;
+				glVertex2i(0, y);
+				glVertex2i(width, y);
+			}
+			glEnd();
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			glEnable(GL_TEXTURE_2D);
+		}
 
-		return 1;//true;
+		return 1;
 	}
 
 	void Terminal::OnWindowInput(Keystroke keystroke)
@@ -1454,6 +1466,17 @@ namespace BearLibTerminal
 			LOG(Info, "Ctrl+Shift+F12 was caught, dumping texture atlas on disk");
 			std::lock_guard<std::mutex> guard(m_lock);
 			m_world.tiles.atlas.Dump();
+			return;
+		}
+		else if (keystroke.scancode == TK_F11 && !keystroke.released && m_vars[TK_SHIFT] && m_vars[TK_CONTROL])
+		{
+			LOG(Info, "Ctrl+Shift+F11 was caught, toggling grid");
+			m_show_grid = !m_show_grid;
+
+			// Redraw must be called from separate thread since calling it
+			// from user thread is impossible and calling from window thread
+			// will deadblock.
+			std::thread([=]{m_window->Redraw();}).detach();
 			return;
 		}
 

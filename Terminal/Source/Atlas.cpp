@@ -260,7 +260,7 @@ namespace BearLibTerminal
 		m_spaces.push_back(Rectangle(slot->texture_region.Location(), slot->space_size));
 
 		//*
-		// DEBUG
+		// DEBUG: clear freed area with some color
 		Rectangle area = Rectangle(slot->texture_region.Location(), slot->space_size);
 		for (int y=area.top; y<area.top+area.height; y++)
 		{
@@ -523,12 +523,19 @@ namespace BearLibTerminal
 		AtlasTexture::Type type = AtlasTexture::Type::Tile;
 		if (size.width >= 64 || size.height >= 64)
 		{
-			float aspect = size.width / (float)size.height;
-			const float aspect_treshold = 1.5f;
-			if (aspect >= 1/aspect_treshold && aspect <= aspect_treshold)
+			// The image might be too bulky to be considered tile
+			if (size.width > 64 && size.height > 64)
 			{
-				// The image is too bulky to be considered tile
 				type = AtlasTexture::Type::Sprite;
+			}
+			else
+			{
+				float aspect = size.width / (float)size.height;
+				const float aspect_treshold = 4.0f;
+				if (aspect >= 1/aspect_treshold && aspect <= aspect_treshold)
+				{
+					type = AtlasTexture::Type::Sprite;
+				}
 			}
 		}
 

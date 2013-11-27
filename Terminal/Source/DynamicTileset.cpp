@@ -779,7 +779,7 @@ namespace BearLibTerminal
 			tile = MakeHorisontalSplit(m_tile_size, 0.0f, 0.125f); // ▏ LEFT ONE EIGHTH BLOCK
 			break;
 		case 0x2590:
-			tile = MakeHorisontalSplit(m_tile_size, 0.0f, 0.5f); // ▐ RIGHT HALF BLOCK
+			tile = MakeHorisontalSplit(m_tile_size, 0.5f, 1.0f); // ▐ RIGHT HALF BLOCK
 			break;
 		// Shade characters
 		case 0x2591:
