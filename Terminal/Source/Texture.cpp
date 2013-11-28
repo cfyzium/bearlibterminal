@@ -78,7 +78,7 @@ namespace BearLibTerminal
 	{
 		// This class implements POTD texture only
 		Size bitmap_size = bitmap.GetSize();
-		if (!IsPowerOfTwo(bitmap_size.width) || !IsPowerOfTwo(bitmap_size.height))
+		if ((!IsPowerOfTwo(bitmap_size.width) || !IsPowerOfTwo(bitmap_size.height)) && !g_has_texture_npot)
 		{
 			LOG(Error, L"[Texture::Update] supplied bitmap is NPOTD");
 			throw std::runtime_error("invalid bitmap");

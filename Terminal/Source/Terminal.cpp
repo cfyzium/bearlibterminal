@@ -1405,6 +1405,7 @@ namespace BearLibTerminal
 							auto& slot = *(j->second);
 							if (slot.texture_id != current_texture_id)
 							{
+								LOG(Debug, "Drawing " << (char)leaf.code <<  ": texture id " << current_texture_id << " != " << slot.texture_id);
 								glEnd();
 								slot.BindTexture();
 								current_texture_id = slot.texture_id;
