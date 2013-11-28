@@ -310,6 +310,8 @@ namespace BearLibTerminal
 		{
 			// Update window size: resize the stage
 			m_world.stage.Resize(updated.window_size);
+			m_vars[TK_WIDTH] = m_world.stage.size.width;
+			m_vars[TK_HEIGHT] = m_world.stage.size.height;
 			viewport_size_changed = true;
 			LOG(Debug, L"SetOptions: new window size is " << updated.window_size);
 		}
@@ -559,11 +561,11 @@ namespace BearLibTerminal
 			{
 				for (int j=y; j<y+h; j++)
 				{
-					int i = stage_size.width*j+i;
-					layer.cells[i].leafs.clear();
+					int k = stage_size.width*j+i;
+					layer.cells[k].leafs.clear();
 					if (m_world.state.layer == 0)
 					{
-						m_world.stage.backbuffer.background[i] = m_world.state.bkcolor;
+						m_world.stage.backbuffer.background[k] = m_world.state.bkcolor;
 					}
 				}
 			}
@@ -597,6 +599,7 @@ namespace BearLibTerminal
 		if (layer_index < 0) layer_index = 0;
 		if (layer_index > 255) layer_index = 255;
 		m_world.state.layer = layer_index;
+		m_vars[TK_LAYER] = layer_index;
 
 		std::lock_guard<std::mutex> guard(m_lock);
 		while (m_world.stage.backbuffer.layers.size() <= m_world.state.layer)

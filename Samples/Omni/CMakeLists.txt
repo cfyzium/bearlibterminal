@@ -38,6 +38,7 @@ set(SOURCE_FILES ./Source/Main.cpp
                  ./Source/MultipleFonts.cpp
                  ./Source/FontViewer.cpp
                  ./Source/ExtendedBasics.cpp
+                 ./Source/ExtendedInterlayer.cpp
                  ./Source/Keyboard.cpp)
 
 include_directories(${CMAKE_SOURCE_DIR}/Terminal/Include)

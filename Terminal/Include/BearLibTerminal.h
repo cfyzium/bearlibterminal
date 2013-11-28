@@ -158,11 +158,12 @@
 #define TK_MOUSE_WHEEL      0xD2 /* Mouse wheel counter (absolute value) */
 #define TK_CELL_WIDTH       0xD7 /* Character cell size in pixels */
 #define TK_CELL_HEIGHT      0xD8
-#define TK_WINDOW_WIDTH     0xD9 /* Terminal window size in cells */
-#define TK_WINDOW_HEIGHT    0xDA
+#define TK_WIDTH            0xD9 /* Terminal window size in cells */
+#define TK_HEIGHT           0xDA
 #define TK_COMPOSITION      0xC1 /* Current composition state */
 #define TK_COLOR			0xC2 /* Current foregroung color */
 #define TK_BKCOLOR			0xC3 /* Current background color */
+#define TK_LAYER			0xC4 /* Current layer */
 
 /*
  * Composition option. If turned on it allows for placing several tiles in one cell.

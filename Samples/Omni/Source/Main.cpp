@@ -190,7 +190,7 @@ void Menu()
 		{"Font viewer", TestFontViewer}, // NYI
 		{"Layers", TestFontViewer}, // NYI
 		{"Extended 1: basics", TestExtendedBasics}, // NYI
-		{"Extended 2: inter-layer animation", TestFontViewer}, // NYI
+		{"Extended 2: inter-layer animation", TestExtendedInterlayer}, // NYI
 		{"Extended 3: smooth scroll", TestFontViewer}, // NYI
 		{"Dynamic sprites", TestFontViewer}, // NYI
 		{"Synchronous rendering", TestFontViewer}, // NYI
