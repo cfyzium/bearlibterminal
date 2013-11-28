@@ -165,7 +165,6 @@ namespace BearLibTerminal
 		if (acceptable_space == m_spaces.end())
 		{
 			// Couldn't find space to fit this even after enlarging to the limits
-			LOG(Debug, "Couldn't find any place in " << m_canvas.GetSize() << " textute to fit " << tile_size << " slot");
 			return std::shared_ptr<TileSlot>();
 		}
 
@@ -310,7 +309,6 @@ namespace BearLibTerminal
 		(new_size.height <= new_size.width? new_size.height: new_size.width) *= 2;
 		if (new_size.width > g_max_texture_size || new_size.height > g_max_texture_size)
 		{
-			LOG(Debug, "Maximum texture size reached (" << new_size << "), cannot grow texture");
 			return false;
 		}
 
@@ -522,31 +520,16 @@ namespace BearLibTerminal
 		Size size = region.Size();
 
 		AtlasTexture::Type type = AtlasTexture::Type::Tile;
-		if (size.width >= 64 || size.height >= 64)
+		if ((size.width > 64 || size.height > 64) && size.Area() > 64*64) // TODO: optional threshold parameter
 		{
-			// The image might be too bulky to be considered tile
-			if (size.width > 64 && size.height > 64)
-			{
-				LOG(Debug, "New slot is a sprite because of its size: " << size);
-				type = AtlasTexture::Type::Sprite;
-			}
-			else
-			{
-				float aspect = size.width / (float)size.height;
-				const float aspect_treshold = 4.0f;
-				if (aspect >= 1/aspect_treshold && aspect <= aspect_treshold)
-				{
-					LOG(Debug, "New slot is a sprite because of aspect ratio: " << aspect);
-					type = AtlasTexture::Type::Sprite;
-				}
-			}
+			LOG(Debug, "New slot is a sprite because of its size: " << size);
+			type = AtlasTexture::Type::Sprite;
 		}
 
 		if (type == AtlasTexture::Type::Sprite)
 		{
 			// Allocate whole texture for this image
-			LOG(Debug, "Allocating a new texture for a sprite " << size << " (WTF)");
-			m_textures.emplace_back(type, size);
+			m_textures.emplace_back(type, Size(RoundUpTo(size.width, 4), RoundUpTo(size.height,4)));
 			return m_textures.back().Add(bitmap, region);
 		}
 		else
@@ -558,12 +541,10 @@ namespace BearLibTerminal
 				if (i.GetType() != type) continue;
 				result = i.Add(bitmap, region);
 				if (result) break;
-				LOG(Debug, "Tile slot " << region.Size() << " didn't fit into texture, will try next one");
 			}
 
 			if (!result)
 			{
-				LOG(Debug, "Tile slot " << region.Size() << " didn't fit into any texture (" << m_textures.size() << " of them), will allocate new one");
 				m_textures.emplace_back(type, Size(256, 256));
 				result = m_textures.back().Add(bitmap, region);
 			}

@@ -319,26 +319,6 @@ namespace BearLibTerminal
 
 	void TrueTypeTileset::Prepare(uint16_t code)
 	{
-		/*
-		if (m_tiles.count(code))
-		{
-			m_container.slots[code] = std::dynamic_pointer_cast<Slot>(m_tiles[code]);
-			return;
-		}
-		//*/
-
-		PrepareBitmap(code);
-	}
-
-	Bitmap TrueTypeTileset::PrepareBitmap(uint16_t code)
-	{
-		/*
-		if (m_tiles.count(code))
-		{
-			m_container.slots[code] = std::dynamic_pointer_cast<Slot>(m_tiles[code]);
-		}
-		*/
-
 		if (code < m_base_code)
 		{
 			throw std::runtime_error("TrueTypeTileset: request for a tile that is not provided by the tileset");
@@ -441,7 +421,5 @@ namespace BearLibTerminal
 		tile_slot->bounds = m_bbox_size;
 		m_tiles[code] = tile_slot;
 		m_container.slots[code] = tile_slot;
-
-		return glyph;
 	}
 }

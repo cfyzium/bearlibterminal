@@ -30,7 +30,6 @@ namespace BearLibTerminal
 		bool Provides(uint16_t code) override;
 		void Prepare(uint16_t code) override;
 	private:
-		Bitmap PrepareBitmap(uint16_t code);
 		uint16_t m_base_code;
 		Size m_tile_size;
 		Size m_bbox_size;

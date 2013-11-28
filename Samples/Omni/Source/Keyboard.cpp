@@ -274,7 +274,7 @@ void TestKeyboard()
 		terminal_color(normal_text);
 		terminal_printf(6, 1+15, "[color=orange]NOTE:[/color] keys printed in dark gray color are not available by design.");
 		terminal_printf(6, 1+17, "[color=orange]NOTE:[/color] for demonstration purposes Escape will not close this demo;");
-		terminal_printf(6+6, 1+18, "use Shift+Escape combination.");
+		terminal_printf(6, 1+18, "use Shift+Escape combination to exit.");
 
 		terminal_refresh();
 

@@ -12,9 +12,16 @@
 #include <unordered_map>
 #include <stdint.h>
 #include <istream>
-
-#include <iostream>
+//#include <iostream>
 #include <fstream>
+
+#if !defined(__SIZEOF_WCHAR_T__)
+#  if defined(_WIN32)
+#    define __SIZEOF_WCHAR_T__ 2
+#  else
+#    define __SIZEOF_WCHAR_T__ 4
+#  endif
+#endif
 
 namespace BearLibTerminal
 {
@@ -224,16 +231,24 @@ namespace BearLibTerminal
 
 	std::wstring UCS2Encoding::Convert(const std::u16string& value) const
 	{
+#if __SIZEOF_WCHAR_T__ == 2
+		return std::wstring((const wchar_t*)value.data(), value.size());
+#else
 		std::wstring result;
 		for (auto c: value) result += (wchar_t)c;
 		return result;
+#endif
 	}
 
 	std::u16string UCS2Encoding::Convert(const std::wstring& value) const
 	{
+#if __SIZEOF_WCHAR_T__ == 2
+		return std::u16string((const char16_t*)value.data(), value.size());
+#else
 		std::u16string result;
 		for (auto c: value) result += (char16_t)c;
 		return result;
+#endif
 	}
 
 	std::wstring UCS2Encoding::GetName() const
@@ -266,16 +281,24 @@ namespace BearLibTerminal
 
 	std::wstring UCS4Encoding::Convert(const std::u32string& value) const
 	{
+#if __SIZEOF_WCHAR_T__ == 4
+		return std::wstring((const wchar_t*)value.data(), value.size());
+#else
 		std::wstring result;
 		for (auto c: value) result += (wchar_t)c;
 		return result;
+#endif
 	}
 
 	std::u32string UCS4Encoding::Convert(const std::wstring& value) const
 	{
+#if __SIZEOF_WCHAR_T__ == 4
+		return std::u32string((const char32_t*)value.data(), value.size());
+#else
 		std::u32string result;
 		for (auto c: value) result += (char32_t)c;
 		return result;
+#endif
 	}
 
 	std::wstring UCS4Encoding::GetName() const
