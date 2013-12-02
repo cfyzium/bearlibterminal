@@ -76,7 +76,7 @@ namespace BearLibTerminal
 			{
 				if (is_color)
 				{
-					result(x, y) = Color(0xFF, data[2], data[1], data[0]);
+					result(x, y) = Color(0xFF, data[0], data[1], data[2]);
 					data += 3;
 				}
 				else

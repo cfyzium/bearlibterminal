@@ -192,7 +192,7 @@ void Menu()
 		{"Extended 1: basics", TestExtendedBasics}, // NYI
 		{"Extended 2: inter-layer animation", TestExtendedInterlayer}, // NYI
 		{"Extended 3: smooth scroll", TestFontViewer}, // NYI
-		{"Dynamic sprites", TestFontViewer}, // NYI
+		{"Dynamic sprites", TestDynamicSprites}, // NYI
 		{"Synchronous rendering", TestFontViewer}, // NYI
 		{"Custom rendering", TestFontViewer}, // NYI
 		{"Input 1: keyboard", TestKeyboard},

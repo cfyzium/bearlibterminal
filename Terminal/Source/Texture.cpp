@@ -28,6 +28,8 @@
 
 namespace BearLibTerminal
 {
+	static const GLenum color_format = GL_BGRA;
+
 	Texture::handle_t Texture::m_currently_bound_handle = 0;
 
 	static bool IsPowerOfTwo(int value)
@@ -99,7 +101,7 @@ namespace BearLibTerminal
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, m_size.width, m_size.height, 0, /*GL_BGRA*/GL_RGBA, GL_UNSIGNED_BYTE, (uint8_t*)bitmap.GetData());
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, m_size.width, m_size.height, 0, color_format, GL_UNSIGNED_BYTE, (uint8_t*)bitmap.GetData());
 		}
 		else
 		{
@@ -108,13 +110,13 @@ namespace BearLibTerminal
 			if (bitmap_size == m_size)
 			{
 				// Texture may be updated in-place
-				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, m_size.width, m_size.height, /*GL_BGRA*/GL_RGBA, GL_UNSIGNED_BYTE, (uint8_t*)bitmap.GetData());
+				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, m_size.width, m_size.height, color_format, GL_UNSIGNED_BYTE, (uint8_t*)bitmap.GetData());
 			}
 			else
 			{
 				// Texture must be reallocated with new size (done by driver)
 				m_size = bitmap_size;
-				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, m_size.width, m_size.height, 0, /*GL_BGRA*/GL_RGBA, GL_UNSIGNED_BYTE, (uint8_t*)bitmap.GetData());
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, m_size.width, m_size.height, 0, color_format, GL_UNSIGNED_BYTE, (uint8_t*)bitmap.GetData());
 			}
 		}
 
@@ -146,7 +148,7 @@ namespace BearLibTerminal
 		}
 
 		Bind();
-		glTexSubImage2D(GL_TEXTURE_2D, 0, area.left, area.top, area.width, area.height, /*GL_BGRA*/GL_RGBA, GL_UNSIGNED_BYTE, (uint8_t*)bitmap.GetData());
+		glTexSubImage2D(GL_TEXTURE_2D, 0, area.left, area.top, area.width, area.height, color_format, GL_UNSIGNED_BYTE, (uint8_t*)bitmap.GetData());
 	}
 
 	Size Texture::GetSize() const

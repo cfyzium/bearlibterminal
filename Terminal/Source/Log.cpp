@@ -9,10 +9,45 @@
 #include "Encoding.hpp"
 
 #include <fstream>
+#include <time.h>
+#include <sys/time.h>
 
 namespace BearLibTerminal
 {
 	Logger g_log;
+
+	static std::string FormatTime()
+	{
+		const size_t buffer_size = 13;
+		char buffer[buffer_size] = {0};
+
+		struct timeval tv;
+		struct tm tm = {0};
+#if defined(_WIN32)
+		struct tm *temp_tm = 0;
+#endif
+
+		gettimeofday(&tv, NULL);
+#if defined(_WIN32)
+		temp_tm = localtime(&tv.tv_sec);
+		if (temp_tm) tm = *temp_tm;
+#else
+		localtime_r(&tv.tv_sec, &tm);
+#endif
+
+		snprintf
+		(
+			buffer,
+			buffer_size,
+			"%02d:%02d:%02d.%03d", /* hh:mm:ss.ttt */
+			tm.tm_hour,
+			tm.tm_min,
+			tm.tm_sec,
+			(int)(tv.tv_usec/1000)
+		);
+
+		return buffer;
+	}
 
 	Logger::Logger():
 		m_level(Level::Trace),
@@ -43,7 +78,9 @@ namespace BearLibTerminal
 		// (as well it shouldn't, there is no such overload in standard)
 		stream.open(UTF8->Convert(m_filename), flags);
 #endif
-		stream << UTF8->Convert(what) << "\n";
+		std::wostringstream ss;
+		ss << FormatTime().c_str() << " [" << level << "] " << what;
+		stream << UTF8->Convert(ss.str()) << "\n";
 	}
 
 	void Logger::SetLevel(Level level)
@@ -86,25 +123,25 @@ namespace BearLibTerminal
 		switch (value)
 		{
 		case Logger::Level::None:
-			s << L"none";
+			s << L"None";
 			break;
 		case Logger::Level::Fatal:
-			s << L"fatal";
+			s << L"Fatal";
 			break;
 		case Logger::Level::Error:
-			s << L"error";
+			s << L"Error";
 			break;
 		case Logger::Level::Warning:
-			s << L"warning";
+			s << L"Warning";
 			break;
 		case Logger::Level::Info:
-			s << L"info";
+			s << L"Info";
 			break;
 		case Logger::Level::Debug:
-			s << L"debug";
+			s << L"Debug";
 			break;
 		case Logger::Level::Trace:
-			s << L"trace";
+			s << L"Trace";
 			break;
 		default:
 			s << L"n/a";

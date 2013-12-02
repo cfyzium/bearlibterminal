@@ -194,4 +194,94 @@ namespace BearLibTerminal
 	{
 		for (Color& pixel: m_data) if (pixel == color) pixel.a = 0;
 	}
+
+	Bitmap Bitmap::Resize(Size size)
+	{
+		auto bicubic_kernel = [](double x) -> double
+		{
+			if (x > 2.0) return 0.0;
+
+			double a, b, c, d;
+			double xm1 = x - 1.0;
+			double xp1 = x + 1.0;
+			double xp2 = x + 2.0;
+
+			a = (xp2 <= 0.0)? 0.0: xp2 * xp2 * xp2;
+			b = (xp1 <= 0.0)? 0.0: xp1 * xp1 * xp1;
+			c = (x   <= 0.0)? 0.0: x * x * x;
+			d = (xm1 <= 0.0)? 0.0: xm1 * xm1 * xm1;
+
+			return (0.16666666666666666667 * (a - (4.0 * b) + (6.0 * c) - (4.0 * d)));
+		};
+
+		Bitmap result(size, Color());
+
+		double xFactor = (double)m_size.width / size.width;
+		double yFactor = (double)m_size.height / size.height;
+
+		// coordinates of source points and coefficients
+		double ox, oy, dx, dy, k1, k2;
+		int ox1, oy1, ox2, oy2;
+
+		// destination pixel values
+		double p_g[4];
+
+		int ymax = m_size.height-1;
+		int xmax = m_size.width-1;
+
+		for (int y=0; y<size.height; y++)
+		{
+			// Y coordinates
+			oy  = (double)y * yFactor - 0.5;
+			oy1 = (int)oy;
+			dy  = oy - (double) oy1;
+
+			uint8_t* lined = (uint8_t*)&result(0, y);
+
+			for (int x=0; x<size.width; x++)
+			{
+				// X coordinates
+				ox  = (double)x * xFactor - 0.5f;
+				ox1 = (int)ox;
+				dx  = ox - (double) ox1;
+
+				// initial pixel value
+				memset(p_g, 0, sizeof(p_g));
+
+				for (int n=-1; n<3; n++)
+				{
+					// get Y coefficient
+					k1 = bicubic_kernel(dy - (double)n);
+
+					oy2 = oy1 + n;
+					if (oy2 < 0) oy2 = 0;
+					if (oy2 > ymax) oy2 = ymax;
+
+					uint8_t* linek = (uint8_t*)&((*this)(0, oy2));
+
+					for (int m=-1; m<3; m++)
+					{
+						// get X coefficient
+						k2 = k1 * bicubic_kernel((double)m - dx);
+
+						ox2 = ox1 + m;
+						if (ox2 < 0) ox2 = 0;
+						if (ox2 > xmax) ox2 = xmax;
+
+						for (int d = 0; d<4; d++)
+						{
+							p_g[d] += k2 * linek[ox2*4 + d];
+						}
+					}
+				}
+
+				for (int d=0; d<4; d++)
+				{
+					lined[x*4 + d] = (uint8_t)p_g[d];
+				}
+			}
+		}
+
+		return result;
+	}
 }

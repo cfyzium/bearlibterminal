@@ -67,7 +67,7 @@ namespace BearLibTerminal
 		if (BearLibTerminal::Logger::Level::level <= BearLibTerminal::g_log.GetLevel())\
 		{\
 			std::wostringstream wss_;\
-			wss_ << L"[" << BearLibTerminal::Logger::Level::level << "] " << what;\
+			wss_ << what;\
 			BearLibTerminal::g_log.Write(BearLibTerminal::Logger::Level::level, wss_.str());\
 		}\
 	}\

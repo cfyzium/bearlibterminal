@@ -187,14 +187,11 @@ namespace BearLibTerminal
 		// Validate options
 		for (auto& group: groups)
 		{
-			//*
-			// DEBUG: dump parsed options to file
-			LOG(Info, L"Group \"" << group.name << "\":");
+			LOG(Debug, L"Group \"" << group.name << "\":");
 			for (auto attribute: group.attributes)
 			{
-				LOG(Info, L"  \"" << attribute.first << "\" = \"" << attribute.second << "\"");
+				LOG(Debug, L"* \"" << attribute.first << "\" = \"" << attribute.second << "\"");
 			}
-			//*/
 
 			if (group.name == L"window")
 			{

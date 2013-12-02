@@ -22,6 +22,7 @@ void TestMultipleFonts();
 void TestFontViewer();
 void TestExtendedBasics();
 void TestExtendedInterlayer();
+void TestDynamicSprites();
 void TestKeyboard();
 
 #endif /* COMMON_HPP_ */

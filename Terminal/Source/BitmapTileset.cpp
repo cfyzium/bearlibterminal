@@ -38,6 +38,12 @@ namespace BearLibTerminal
 			throw std::runtime_error("BitmapTileset: failed to parse 'size' attribute");
 		}
 
+		Size resize_to;
+		if (group.attributes.count(L"resize") && !try_parse(group.attributes[L"resize"], resize_to))
+		{
+			throw std::runtime_error("BitmapTileset: failed to parse 'resize' attribute");
+		}
+
 		if (group.attributes.count(L"codepage"))
 		{
 			// TODO: check for error
@@ -97,11 +103,44 @@ namespace BearLibTerminal
 			throw std::runtime_error("BitmapTileset: failed to parse 'alignment' attribute");
 		}
 
-		m_cache = LoadBitmap(*Resource::Open(group.attributes[L"name"], L"tileset-"));
+		std::wstring name = group.attributes[L"name"];
+		uint64_t address = 0;
+		if (name.find(L".") == std::wstring::npos && try_parse(name, address))
+		{
+			LOG(Debug, "Bitmap tileset name \"" << name << "\" is a memory address");
+
+			Size raw_size;
+			if (group.attributes.count(L"raw-size") && !try_parse(group.attributes[L"raw-size"], raw_size))
+			{
+				throw std::runtime_error("BitmapTileset: failed to parse 'raw-size' attribute");
+			}
+
+			if (!raw_size.Area() && m_tile_size.Area())
+			{
+				raw_size = m_tile_size;
+			}
+
+			if (!raw_size.Area())
+			{
+				throw std::runtime_error("BitmapTileset: cannot guess bitmap dimensions for raw bitmap resource");
+			}
+
+			const Color* pixels = (const Color*)address;
+			m_cache = Bitmap(raw_size, pixels);
+		}
+		else
+		{
+			m_cache = LoadBitmap(*Resource::Open(name, L"tileset-"));
+		}
 
 		if (!m_cache.GetSize().Area())
 		{
 			throw std::runtime_error("BitmapTileset: loaded image is empty (zero-sized)");
+		}
+
+		if (resize_to.Area())
+		{
+			m_cache = m_cache.Resize(resize_to);
 		}
 
 		if (group.attributes.count(L"transparent"))
@@ -111,7 +150,7 @@ namespace BearLibTerminal
 			m_cache.MakeTransparent(mask);
 		}
 
-		if (m_tile_size.Area() == 0)
+		if (!m_tile_size.Area())
 		{
 			m_tile_size = m_cache.GetSize();
 		}
@@ -123,6 +162,15 @@ namespace BearLibTerminal
 		if (m_bbox_size.width < 1 || m_bbox_size.height < 1)
 		{
 			m_bbox_size = Size(1, 1);
+		}
+
+		// Adjust tile size accordingly
+		if (resize_to.Area())
+		{
+			float hf = resize_to.width/(float)m_tile_size.width;
+			float vf = resize_to.height/(float)m_tile_size.height;
+			m_tile_size.width *= hf;
+			m_tile_size.height *= vf;
 		}
 
 		Size image_size = m_cache.GetSize();

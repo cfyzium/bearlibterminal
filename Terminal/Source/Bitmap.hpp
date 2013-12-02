@@ -55,6 +55,7 @@ namespace BearLibTerminal
 		const Color* GetData() const;
 		bool HasAlpha() const;
 		void MakeTransparent(Color color);
+		Bitmap Resize(Size size);
 
 	protected:
 		Size m_size;
