@@ -35,6 +35,8 @@
 #include "Utility.hpp"
 #include "Log.hpp"
 
+#include <sys/time.h>
+
 namespace BearLibTerminal
 {
 #ifdef USE_LIBPNG
@@ -127,10 +129,15 @@ namespace BearLibTerminal
 		std::vector<unsigned char> out_buffer;
 		unsigned long width, height;
 
+		timeval t1, t2;
+		gettimeofday(&t1, NULL);
 		if ( decodePNG(out_buffer, width, height, (const unsigned char*)in_buffer.c_str(), in_buffer.size()) )
 		{
 			throw std::runtime_error("PNG decode failed");
 		}
+		gettimeofday(&t2, NULL);
+		uint64_t delay = (t2.tv_sec-t1.tv_sec)*1000000+(t2.tv_usec-t1.tv_usec);
+		LOG(Trace, "Loading " << width << "x" << height << " image took " << delay << " us");
 
 		LOG(Trace, L"Loaded PNG image, " << width << L"x" << height);
 

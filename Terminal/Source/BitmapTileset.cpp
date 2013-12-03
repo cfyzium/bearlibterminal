@@ -16,6 +16,8 @@
 #include <fstream>
 #include <cmath>
 
+#include <sys/time.h>
+
 namespace BearLibTerminal
 {
 	BitmapTileset::BitmapTileset(TileContainer& container, OptionGroup& group):
@@ -140,7 +142,13 @@ namespace BearLibTerminal
 
 		if (resize_to.Area())
 		{
+			timeval t1, t2;
+			gettimeofday(&t1, NULL);
+			Size prev = m_cache.GetSize();
 			m_cache = m_cache.Resize(resize_to);
+			gettimeofday(&t2, NULL);
+			uint64_t delay = (t2.tv_sec-t1.tv_sec)*1000000+(t2.tv_usec-t1.tv_usec);
+			LOG(Trace, "Resizing " << prev << " -> " << resize_to << " took " << delay << " us");
 		}
 
 		if (group.attributes.count(L"transparent"))

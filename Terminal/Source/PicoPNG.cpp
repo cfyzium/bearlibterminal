@@ -468,6 +468,7 @@ int decodePNG(std::vector<unsigned char>& out_image, unsigned long& image_width,
       else if(info.colorType >= 4) return (info.colorType - 2) * info.bitDepth;
       else return info.bitDepth;
     }
+#define A
     int convert(std::vector<unsigned char>& out, const unsigned char* in, Info& infoIn, unsigned long w, unsigned long h)
     { //converts from any color type to 32-bit. return value = LodePNG error code
       size_t numpixels = w * h, bp = 0;
@@ -476,60 +477,125 @@ int decodePNG(std::vector<unsigned char>& out_image, unsigned long& image_width,
       if(infoIn.bitDepth == 8 && infoIn.colorType == 0) //greyscale
       for(size_t i = 0; i < numpixels; i++)
       {
+#if !defined(A)
         out_[4 * i + 0] = out_[4 * i + 1] = out_[4 * i + 2] = in[i];
         out_[4 * i + 3] = (infoIn.key_defined && in[i] == infoIn.key_r) ? 0 : 255;
+#else
+    	out_[4 * i + 0] = out_[4 * i + 1] = out_[4 * i + 2] = in[i];
+    	out_[4 * i + 3] = (infoIn.key_defined && in[i] == infoIn.key_r) ? 0 : 255;
+#endif
       }
       else if(infoIn.bitDepth == 8 && infoIn.colorType == 2) //RGB color
       for(size_t i = 0; i < numpixels; i++)
       {
+#if !defined(A)
         for(size_t c = 0; c < 3; c++) out_[4 * i + c] = in[3 * i + c];
+    	out_[4 * i + 3] = (infoIn.key_defined == 1 && in[3 * i + 0] == infoIn.key_r && in[3 * i + 1] == infoIn.key_g && in[3 * i + 2] == infoIn.key_b) ? 0 : 255;
+#else
+    	for(size_t c = 0; c < 3; c++) out_[4 * i + 2 - c] = in[3 * i + c];
         out_[4 * i + 3] = (infoIn.key_defined == 1 && in[3 * i + 0] == infoIn.key_r && in[3 * i + 1] == infoIn.key_g && in[3 * i + 2] == infoIn.key_b) ? 0 : 255;
+#endif
       }
       else if(infoIn.bitDepth == 8 && infoIn.colorType == 3) //indexed color (palette)
       for(size_t i = 0; i < numpixels; i++)
       {
+#if !defined(A)
         if(4U * in[i] >= infoIn.palette.size()) return 46;
         for(size_t c = 0; c < 4; c++) out_[4 * i + c] = infoIn.palette[4 * in[i] + c]; //get rgb colors from the palette
+#else
+    	if(4U * in[i] >= infoIn.palette.size()) return 46;
+    	for(size_t c = 0; c < 3; c++) out_[4 * i + 2 - c] = infoIn.palette[4 * in[i] + c]; //get rgb colors from the palette
+    	out_[4 * i + 3] = infoIn.palette[4 * in[i] + 3];
+#endif
       }
       else if(infoIn.bitDepth == 8 && infoIn.colorType == 4) //greyscale with alpha
       for(size_t i = 0; i < numpixels; i++)
       {
+#if !defined(A)
         out_[4 * i + 0] = out_[4 * i + 1] = out_[4 * i + 2] = in[2 * i + 0];
         out_[4 * i + 3] = in[2 * i + 1];
+#else
+        out_[4 * i + 0] = out_[4 * i + 1] = out_[4 * i + 2] = in[2 * i + 0];
+        out_[4 * i + 3] = in[2 * i + 1];
+#endif
       }
-      else if(infoIn.bitDepth == 8 && infoIn.colorType == 6) for(size_t i = 0; i < numpixels; i++) for(size_t c = 0; c < 4; c++) out_[4 * i + c] = in[4 * i + c]; //RGB with alpha
+      else if(infoIn.bitDepth == 8 && infoIn.colorType == 6)
+#if !defined(A)
+      for(size_t i = 0; i < numpixels; i++) for(size_t c = 0; c < 4; c++) out_[4 * i + c] = in[4 * i + c]; //RGB with alpha
+#else
+      for(size_t i = 0; i < numpixels; i++)
+      {
+    	  for(size_t c = 0; c < 3; c++) out_[4 * i + 2 - c] = in[4 * i + c]; //RGB with alpha
+    	  out_[4 * i + 3] = in[4 * i + 3];
+      }
+#endif
       else if(infoIn.bitDepth == 16 && infoIn.colorType == 0) //greyscale
       for(size_t i = 0; i < numpixels; i++)
       {
+#if !defined(A)
         out_[4 * i + 0] = out_[4 * i + 1] = out_[4 * i + 2] = in[2 * i];
         out_[4 * i + 3] = (infoIn.key_defined && 256U * in[i] + in[i + 1] == infoIn.key_r) ? 0 : 255;
+#else
+    	out_[4 * i + 0] = out_[4 * i + 1] = out_[4 * i + 2] = in[2 * i];
+    	out_[4 * i + 3] = (infoIn.key_defined && 256U * in[i] + in[i + 1] == infoIn.key_r) ? 0 : 255;
+#endif
       }
       else if(infoIn.bitDepth == 16 && infoIn.colorType == 2) //RGB color
       for(size_t i = 0; i < numpixels; i++)
       {
+#if !defined(A)
         for(size_t c = 0; c < 3; c++) out_[4 * i + c] = in[6 * i + 2 * c];
         out_[4 * i + 3] = (infoIn.key_defined && 256U*in[6*i+0]+in[6*i+1] == infoIn.key_r && 256U*in[6*i+2]+in[6*i+3] == infoIn.key_g && 256U*in[6*i+4]+in[6*i+5] == infoIn.key_b) ? 0 : 255;
+#else
+        for(size_t c = 0; c < 3; c++) out_[4 * i + 2 - c] = in[6 * i + 2 * c];
+        out_[4 * i + 3] = (infoIn.key_defined && 256U*in[6*i+0]+in[6*i+1] == infoIn.key_r && 256U*in[6*i+2]+in[6*i+3] == infoIn.key_g && 256U*in[6*i+4]+in[6*i+5] == infoIn.key_b) ? 0 : 255;
+#endif
       }
       else if(infoIn.bitDepth == 16 && infoIn.colorType == 4) //greyscale with alpha
       for(size_t i = 0; i < numpixels; i++)
       {
+#if !defined(A)
         out_[4 * i + 0] = out_[4 * i + 1] = out_[4 * i + 2] = in[4 * i]; //most significant byte
         out_[4 * i + 3] = in[4 * i + 2];
+#else
+    	out_[4 * i + 0] = out_[4 * i + 1] = out_[4 * i + 2] = in[4 * i]; //most significant byte
+    	out_[4 * i + 3] = in[4 * i + 2];
+#endif
       }
-      else if(infoIn.bitDepth == 16 && infoIn.colorType == 6) for(size_t i = 0; i < numpixels; i++) for(size_t c = 0; c < 4; c++) out_[4 * i + c] = in[8 * i + 2 * c]; //RGB with alpha
+      else if(infoIn.bitDepth == 16 && infoIn.colorType == 6)
+#if !defined(A)
+      for(size_t i = 0; i < numpixels; i++) for(size_t c = 0; c < 4; c++) out_[4 * i + c] = in[8 * i + 2 * c]; //RGB with alpha
+#else
+      for(size_t i = 0; i < numpixels; i++)
+      {
+    	  for(size_t c = 0; c < 3; c++) out_[4 * i + 2 - c] = in[8 * i + 2 * c]; //RGB with alpha
+    	  out_[4 * i + 3] = in[8 * i + 2 * 3];
+      }
+#endif
       else if(infoIn.bitDepth < 8 && infoIn.colorType == 0) //greyscale
       for(size_t i = 0; i < numpixels; i++)
       {
         unsigned long value = (readBitsFromReversedStream(bp, in, infoIn.bitDepth) * 255) / ((1 << infoIn.bitDepth) - 1); //scale value from 0 to 255
+#if !defined(A)
         out_[4 * i + 0] = out_[4 * i + 1] = out_[4 * i + 2] = (unsigned char)(value);
         out_[4 * i + 3] = (infoIn.key_defined && value && ((1U << infoIn.bitDepth) - 1U) == infoIn.key_r && ((1U << infoIn.bitDepth) - 1U)) ? 0 : 255;
+#else
+        out_[4 * i + 0] = out_[4 * i + 1] = out_[4 * i + 2] = (unsigned char)(value);
+        out_[4 * i + 3] = (infoIn.key_defined && value && ((1U << infoIn.bitDepth) - 1U) == infoIn.key_r && ((1U << infoIn.bitDepth) - 1U)) ? 0 : 255;
+#endif
       }
       else if(infoIn.bitDepth < 8 && infoIn.colorType == 3) //palette
       for(size_t i = 0; i < numpixels; i++)
       {
         unsigned long value = readBitsFromReversedStream(bp, in, infoIn.bitDepth);
+#if !defined(A)
         if(4 * value >= infoIn.palette.size()) return 47;
         for(size_t c = 0; c < 4; c++) out_[4 * i + c] = infoIn.palette[4 * value + c]; //get rgb colors from the palette
+#else
+        if(4 * value >= infoIn.palette.size()) return 47;
+        for(size_t c = 0; c < 3; c++) out_[4 * i + 2 - c] = infoIn.palette[4 * value + c]; //get rgb colors from the palette
+        out_[4 * i + 3] = infoIn.palette[4 * value + 3];
+#endif
       }
       return 0;
     }

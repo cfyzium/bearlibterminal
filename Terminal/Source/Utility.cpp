@@ -32,7 +32,7 @@ namespace BearLibTerminal
 	{
 		if (s.empty()) return false;
 
-		if (s.length() > 2 && ((s[0] == L'0' && s[1] == 'x') || (s[0] == 'U' && s[1] == '+')))
+		if (s.length() > 2 && ((s[0] == L'0' && (s[1] == L'x' || s[1] == L'X')) || (s[0] == L'U' && s[1] == L'+')))
 		{
 			std::wistringstream stream(s.substr(2));
 			stream >> std::hex;
@@ -51,7 +51,7 @@ namespace BearLibTerminal
 	{
 		if (s.empty()) return false; // Hard to find anything less than 32-bit now
 
-		if (s.length() > 2 && s[0] == '0' && s[1] == 'x')
+		if (s.length() > 2 && s[0] == L'0' && (s[1] == L'x' || s[1] == L'X'))
 		{
 			std::wistringstream stream(s.substr(2));
 			stream >> std::hex;
