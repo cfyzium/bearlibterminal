@@ -190,13 +190,13 @@ void Menu()
 		{"Font viewer", TestFontViewer}, // NYI
 		{"Layers", TestFontViewer}, // NYI
 		{"Extended 1: basics", TestExtendedBasics}, // NYI
-		{"Extended 2: inter-layer animation", TestExtendedInterlayer}, // NYI
-		{"Extended 3: smooth scroll", TestFontViewer}, // NYI
+		{"Extended 2: inter-layer animation", TestExtendedInterlayer},
+		{"Extended 3: smooth scroll", TestExtendedSmoothScroll}, // NYI
 		{"Dynamic sprites", TestDynamicSprites}, // NYI
 		{"Synchronous rendering", TestFontViewer}, // NYI
 		{"Custom rendering", TestFontViewer}, // NYI
 		{"Input 1: keyboard", TestKeyboard},
-		{"Input 2: mouse", TestFontViewer}, // NYI
+		{"Input 2: mouse", TestMouse},
 		{"Input 3: text input", TestFontViewer} // NYI
 	};
 

@@ -12,6 +12,8 @@ const float g_pi = 3.141592654f;
 
 void TestExtendedBasics()
 {
+	// TODO: dx, dy, corner colors
+
 	// Setup
 	terminal_set("window.title='Omni: extended output / basics'");
 	terminal_composition(TK_COMPOSITION_ON);

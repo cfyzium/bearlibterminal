@@ -400,7 +400,7 @@ namespace BearLibTerminal
 			throw std::runtime_error("input.nonblocking cannot be parsed");
 		}
 
-		if (group.attributes.count(L"precise_mouse") && !try_parse(group.attributes[L"precise_mouse"], options.input_precise_mouse))
+		if (group.attributes.count(L"precise_mousemove") && !try_parse(group.attributes[L"precise_mousemove"], options.input_precise_mouse))
 		{
 			throw std::runtime_error("input.precise_mouse cannot be parsed");
 		}
@@ -961,7 +961,7 @@ namespace BearLibTerminal
 
 	int Terminal::HasInput()
 	{
-		std::lock_guard<std::mutex> guard(m_lock);
+		std::lock_guard<std::mutex> guard(m_input_lock);
 		if (m_state == kClosed) return 1;
 		if (m_vars[TK_CLOSE] && m_options.input_sticky_close) return 1; // sticky VK_CLOSE, once set, can't be undone
 		return !m_input_queue.empty();

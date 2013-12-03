@@ -35,26 +35,12 @@ namespace BearLibTerminal
 			throw std::runtime_error("BitmapTileset: missing or empty 'name' attribute");
 		}
 
-		if (group.attributes.count(L"size") && !try_parse(group.attributes[L"size"], m_tile_size))
-		{
-			throw std::runtime_error("BitmapTileset: failed to parse 'size' attribute");
-		}
+		std::wstring name = group.attributes[L"name"];
 
-		Size resize_to;
-		if (group.attributes.count(L"resize") && !try_parse(group.attributes[L"resize"], resize_to))
-		{
-			throw std::runtime_error("BitmapTileset: failed to parse 'resize' attribute");
-		}
-
-		if (group.attributes.count(L"codepage"))
-		{
-			// TODO: check for error
-			m_codepage = GetUnibyteEncoding(group.attributes[L"codepage"]);
-		}
-
-		if (!m_tile_size.Area() && !m_codepage)
+		// Try to guess anyway, rewrite if supplied
 		{
 			// Try to guess from filename
+			// Note name copy is intentional, it will be modified
 			std::wstring name = group.attributes[L"name"];
 			std::wstring l1, l2;
 
@@ -90,6 +76,23 @@ namespace BearLibTerminal
 			}
 		}
 
+		if (group.attributes.count(L"size") && !try_parse(group.attributes[L"size"], m_tile_size))
+		{
+			throw std::runtime_error("BitmapTileset: failed to parse 'size' attribute");
+		}
+
+		Size resize_to;
+		if (group.attributes.count(L"resize") && !try_parse(group.attributes[L"resize"], resize_to))
+		{
+			throw std::runtime_error("BitmapTileset: failed to parse 'resize' attribute");
+		}
+
+		if (group.attributes.count(L"codepage"))
+		{
+			// TODO: check for error
+			m_codepage = GetUnibyteEncoding(group.attributes[L"codepage"]);
+		}
+
 		if (!m_codepage)
 		{
 			m_codepage = GetUnibyteEncoding(L"utf8");
@@ -105,7 +108,6 @@ namespace BearLibTerminal
 			throw std::runtime_error("BitmapTileset: failed to parse 'alignment' attribute");
 		}
 
-		std::wstring name = group.attributes[L"name"];
 		uint64_t address = 0;
 		if (name.find(L".") == std::wstring::npos && try_parse(name, address))
 		{

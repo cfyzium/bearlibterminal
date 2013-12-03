@@ -39,8 +39,10 @@ set(SOURCE_FILES ./Source/Main.cpp
                  ./Source/FontViewer.cpp
                  ./Source/ExtendedBasics.cpp
                  ./Source/ExtendedInterlayer.cpp
+                 ./Source/ExtendedSmoothScroll.cpp
                  ./Source/DynamicSprites.cpp
-                 ./Source/Keyboard.cpp)
+                 ./Source/Keyboard.cpp
+                 ./Source/Mouse.cpp)
 
 include_directories(${CMAKE_SOURCE_DIR}/Terminal/Include)
 add_executable(SampleOmni ${SOURCE_FILES})

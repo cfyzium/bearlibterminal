@@ -184,12 +184,12 @@ namespace BearLibTerminal
 
 	void X11Window::Redraw()
 	{
-		std::lock_guard<std::mutex> guard(m_lock);
+		std::unique_lock<std::mutex> guard(m_lock);
 
 		int retries = 5;
+		m_redraw_barrier.SetValue(0);
 		do
 		{
-			m_redraw_barrier.SetValue(0);
 			XClearArea
 			(
 				m_private->display,
@@ -201,7 +201,12 @@ namespace BearLibTerminal
 				True
 			);
 
-			if (m_redraw_barrier.WaitFor(50)) break;
+			guard.unlock();
+			if (m_redraw_barrier.WaitFor(50))
+			{
+				break;
+			}
+			guard.lock();
 		}
 		while (retries --> 0);
 	}
@@ -236,6 +241,7 @@ namespace BearLibTerminal
 				{
 					// FIXME: reschedule painting to a later time
 					// XSendEvent or XClearArea or custom event
+					LOG(Debug, "Redraw later?");
 				}
 			}
 		}

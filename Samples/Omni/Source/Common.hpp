@@ -22,7 +22,9 @@ void TestMultipleFonts();
 void TestFontViewer();
 void TestExtendedBasics();
 void TestExtendedInterlayer();
+void TestExtendedSmoothScroll();
 void TestDynamicSprites();
 void TestKeyboard();
+void TestMouse();
 
 #endif /* COMMON_HPP_ */
