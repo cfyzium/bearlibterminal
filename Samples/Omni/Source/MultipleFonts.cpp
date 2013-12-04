@@ -12,9 +12,15 @@ void TestMultipleFonts()
 	terminal_set("window.title='Omni: multiple fonts in scene'");
 
 	// Load several fonts
+	/*
 	terminal_set("font: UbuntuMono-R.ttf, size=12");
 	terminal_set("U+E100: UbuntuMono-RI.ttf, size=12, codepage=437");
 	terminal_set("U+E200: UbuntuMono-B.ttf, size=12, codepage=437");
+	/*/
+	terminal_set("font: ./Fonts/VeraMono.ttf, size=8x16");
+	terminal_set("U+E100: ./Fonts/VeraMoIt.ttf, size=8x16, codepage=437");
+	terminal_set("U+E200: ./Fonts/VeraMoBd.ttf, size=8x16, codepage=437");
+	//*/
 
 	terminal_clear();
 	terminal_color("white");

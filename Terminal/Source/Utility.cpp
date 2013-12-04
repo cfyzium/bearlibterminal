@@ -39,6 +39,11 @@ namespace BearLibTerminal
 			stream >> out;
 			return !(stream.fail() || stream.bad());
 		}
+		else if (s.length() == 3 && s[0] == L'\'' && s[2] == L'\'')
+		{
+			out = (uint16_t)s[1];
+			return true;
+		}
 		else
 		{
 			std::wistringstream stream(s);

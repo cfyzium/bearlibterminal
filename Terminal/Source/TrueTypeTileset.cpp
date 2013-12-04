@@ -146,6 +146,10 @@ namespace BearLibTerminal
 			// Use first character for size reference if font has custom codepage w/o 0x40 code point
 			reference_code = m_codepage->Convert(0);
 		}
+		if (group.attributes.count(L"size-reference") && !try_parse(group.attributes[L"size-reference"], reference_code))
+		{
+			throw std::runtime_error("TrueTypeTileset: can't parse 'size-reference' attribute");
+		}
 
 		if (m_tile_size.width == 0)
 		{
@@ -225,7 +229,7 @@ namespace BearLibTerminal
 			int height = m_font_face->size->metrics.height >> 6;
 			int width = at_width;
 
-			m_tile_size = Size(width, height);
+			//m_tile_size = Size(width, height);
 
 			LOG(Trace, "Font tile size is " << m_tile_size << ", font is " << (m_monospace? "monospace": "not monospace"));
 		}

@@ -76,7 +76,7 @@ void TestDynamicSprites()
 				}
 			}
 		}
-		terminal_setf("U+E001: %#p, size=%dx%d, resize=%dx%d", minimap.data(), map_width, map_height, resize_to_width, resize_to_height);
+		terminal_setf("U+E001: %#p, size=%dx%d, resize=%dx%d, resize-filter=nearest", minimap.data(), map_width, map_height, resize_to_width, resize_to_height);
 		terminal_put(map_width+1, 1, 0xE001);
 
 		terminal_refresh();

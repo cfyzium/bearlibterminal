@@ -23,9 +23,51 @@
 #include "Bitmap.hpp"
 #include <stdexcept>
 #include <cstring>
+#include <cmath>
 
 namespace BearLibTerminal
 {
+	std::wostream& operator<<(std::wostream& s, const ResizeFilter& value)
+	{
+		switch (value)
+		{
+		case ResizeFilter::Nearest:
+			s << "nearest";
+			break;
+		case ResizeFilter::Bilinear:
+			s << "bilinear";
+			break;
+		case ResizeFilter::Bicubic:
+			s << "bicubic";
+			break;
+		default:
+			s << "n/a";
+			break;
+		}
+
+		return s;
+	}
+
+	std::wistream& operator>>(std::wistream& s, ResizeFilter& value)
+	{
+		std::wstring temp;
+		s >> temp;
+		if (temp == L"bilinear")
+		{
+			value = ResizeFilter::Bilinear;
+		}
+		else if (temp == L"bicubic")
+		{
+			value = ResizeFilter::Bicubic;
+		}
+		else
+		{
+			value = ResizeFilter::Nearest;
+		}
+
+		return s;
+	}
+
 	Bitmap::Bitmap()
 	{ }
 
@@ -195,7 +237,86 @@ namespace BearLibTerminal
 		for (Color& pixel: m_data) if (pixel == color) pixel.a = 0;
 	}
 
-	Bitmap Bitmap::Resize(Size size)
+	Bitmap ResizeNearest(Bitmap& original, Size size)
+	{
+		/*
+		float scaleFactor = 3.0f;
+
+		for (int y=0; y < scaledImageHeight; y++)
+		  for (int x=0; x < scaledImageWidth; x++) {
+		    int sourceImageX = (int)std::max(x * 1.0f / scaleFactor, (float)(sourceImageWidth - 1));
+		    int sourceImageY = (int)std::max(y * 1.0f / scaleFactor, (float)(sourceImageHeight - 1));
+		    scaledImage[y * scaledImageWidth + x] = sourceImage[sourceImageY * sourceImageWidth + sourceImageX];
+		  }
+		*/
+
+		Bitmap result(size, Color());
+
+		Size original_size = original.GetSize();
+		float hfactor = size.width / (float)original_size.width;
+		float vfactor = size.height / (float)original_size.height;
+
+		for (int y=0; y<size.height; y++)
+		{
+			int original_y = (int)std::floor(y / vfactor);
+			for (int x=0; x<size.width; x++)
+			{
+				int original_x = (int)std::floor(x / hfactor);
+				result(x, y) = original(original_x, original_y);
+			}
+		}
+
+		return result;
+	}
+
+	Bitmap ResizeBilinear(Bitmap& original, Size size)
+	{
+		Bitmap result(size, Color());
+
+		auto filter = [&](int x, int y, float ox, float oy)
+		{
+			int x1 = std::floor(ox);
+			int y1 = std::floor(oy);
+
+			float dx1 = ox-x1, dx2 = (x1+1)-ox;
+			float dy1 = oy-y1, dy2 = (y1+1)-oy;
+
+			float w1 = dx2*dy2;
+			float w2 = dx1*dy2;
+			float w3 = dx2*dy1;
+			float w4 = dx1*dy1;
+
+			Color q11 = original(x1+0, y1+0);
+			Color q12 = original(x1+0, y1+1);
+			Color q21 = original(x1+1, y1+0);
+			Color q22 = original(x1+1, y1+1);
+
+			int r = q11.r*w1 + q21.r*w2 + q12.r*w3 + q22.r*w4;
+			int g = q11.g*w1 + q21.g*w2 + q12.g*w3 + q22.g*w4;
+			int b = q11.b*w1 + q21.b*w2 + q12.b*w3 + q22.b*w4;
+			int a = q11.a*w1 + q21.a*w2 + q12.a*w3 + q22.a*w4;
+
+			return Color(a, r, g, b);
+		};
+
+		Size original_size = original.GetSize();
+		float hfactor = size.width / (float)original_size.width;
+		float vfactor = size.height / (float)original_size.height;
+
+		for (int y=0; y<size.height; y++)
+		{
+			float original_y = y / vfactor;
+			for (int x=0; x<size.width; x++)
+			{
+				float original_x = x / hfactor;
+				result(x, y) = filter(x, y, original_x, original_y);
+			}
+		}
+
+		return result;
+	}
+
+	Bitmap ResizeBicubic(Bitmap& original, Size size)
 	{
 		auto bicubic_kernel = [](double x) -> double
 		{
@@ -216,8 +337,9 @@ namespace BearLibTerminal
 
 		Bitmap result(size, Color());
 
-		double xFactor = (double)m_size.width / size.width;
-		double yFactor = (double)m_size.height / size.height;
+		Size original_size = original.GetSize();
+		double xFactor = (double)original_size.width / size.width;
+		double yFactor = (double)original_size.height / size.height;
 
 		// coordinates of source points and coefficients
 		double ox, oy, dx, dy, k1, k2;
@@ -226,8 +348,8 @@ namespace BearLibTerminal
 		// destination pixel values
 		double p_g[4];
 
-		int ymax = m_size.height-1;
-		int xmax = m_size.width-1;
+		int ymax = original_size.height-1;
+		int xmax = original_size.width-1;
 
 		for (int y=0; y<size.height; y++)
 		{
@@ -257,7 +379,7 @@ namespace BearLibTerminal
 					if (oy2 < 0) oy2 = 0;
 					if (oy2 > ymax) oy2 = ymax;
 
-					uint8_t* linek = (uint8_t*)&((*this)(0, oy2));
+					uint8_t* linek = (uint8_t*)&original(0, oy2);
 
 					for (int m=-1; m<3; m++)
 					{
@@ -283,5 +405,20 @@ namespace BearLibTerminal
 		}
 
 		return result;
+	}
+
+	Bitmap Bitmap::Resize(Size size, ResizeFilter filter)
+	{
+		switch (filter)
+		{
+		case ResizeFilter::Nearest:
+			return ResizeNearest(*this, size);
+		case ResizeFilter::Bilinear:
+			return ResizeBilinear(*this, size);
+		case ResizeFilter::Bicubic:
+			return ResizeBicubic(*this, size);
+		default:
+			throw std::runtime_error("Bitmap::Resize: unknown resize filter");
+		}
 	}
 }

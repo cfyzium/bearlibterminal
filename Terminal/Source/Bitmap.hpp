@@ -24,6 +24,8 @@
 #define BEARLIBTERMINAL_BITMAP_HPP
 
 #include <vector>
+#include <istream>
+#include <ostream>
 #include <stddef.h>
 #include "Point.hpp"
 #include "Size.hpp"
@@ -32,6 +34,16 @@
 
 namespace BearLibTerminal
 {
+	enum class ResizeFilter
+	{
+		Nearest,
+		Bilinear,
+		Bicubic
+	};
+
+	std::wostream& operator<<(std::wostream& s, const ResizeFilter& value);
+	std::wistream& operator>>(std::wistream& s, ResizeFilter& value);
+
 	class Bitmap
 	{
 	public:
@@ -55,7 +67,7 @@ namespace BearLibTerminal
 		const Color* GetData() const;
 		bool HasAlpha() const;
 		void MakeTransparent(Color color);
-		Bitmap Resize(Size size);
+		Bitmap Resize(Size size, ResizeFilter filter);
 
 	protected:
 		Size m_size;

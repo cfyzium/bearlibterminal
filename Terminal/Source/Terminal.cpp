@@ -400,14 +400,14 @@ namespace BearLibTerminal
 			throw std::runtime_error("input.nonblocking cannot be parsed");
 		}
 
-		if (group.attributes.count(L"precise_mousemove") && !try_parse(group.attributes[L"precise_mousemove"], options.input_precise_mouse))
+		if (group.attributes.count(L"precise-mousemove") && !try_parse(group.attributes[L"precise-mousemove"], options.input_precise_mouse))
 		{
-			throw std::runtime_error("input.precise_mouse cannot be parsed");
+			throw std::runtime_error("input.precise-mouse cannot be parsed");
 		}
 
-		if (group.attributes.count(L"sticky_close") && !try_parse(group.attributes[L"sticky_close"], options.input_sticky_close))
+		if (group.attributes.count(L"sticky-close") && !try_parse(group.attributes[L"sticky-close"], options.input_sticky_close))
 		{
-			throw std::runtime_error("input.sticky_close cannot be parsed");
+			throw std::runtime_error("input.sticky-close cannot be parsed");
 		}
 
 		if (group.attributes.count(L"events"))
@@ -437,14 +437,14 @@ namespace BearLibTerminal
 			options.input_events = result;
 		}
 
-		if (group.attributes.count(L"cursor_symbol") && !try_parse(group.attributes[L"cursor_symbol"], options.input_cursor_symbol))
+		if (group.attributes.count(L"cursor-symbol") && !try_parse(group.attributes[L"cursor-symbol"], options.input_cursor_symbol))
 		{
-			throw std::runtime_error("input.cursor_symbol cannot be parsed");
+			throw std::runtime_error("input.cursor-symbol cannot be parsed");
 		}
 
-		if (group.attributes.count(L"cursor_blink_rate") && !try_parse(group.attributes[L"cursor_blink_rate"], options.input_cursor_blink_rate))
+		if (group.attributes.count(L"cursor-blink-rate") && !try_parse(group.attributes[L"cursor-blink-rate"], options.input_cursor_blink_rate))
 		{
-			throw std::runtime_error("input.cursor_blink_rate cannot be parsed");
+			throw std::runtime_error("input.cursor-blink-rate cannot be parsed");
 		}
 
 		if (options.input_cursor_blink_rate <= 0) options.input_cursor_blink_rate = 1;
