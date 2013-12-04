@@ -55,6 +55,7 @@ void TestMouse()
 
 		terminal_color("white");
 		terminal_printf(1, 1, "Modify input events filter by setting/clearing following flags:");
+		/*
 		terminal_color("gray");
 		terminal_printf(1, 2, "[[*]] Key press");
 		terminal_color("white");
@@ -70,6 +71,21 @@ void TestMouse()
 		if (mousemove) terminal_put(2, 4, '*');
 		if (mousescroll) terminal_put(2, 5, '*');
 		if (precise_mouse) terminal_put(2, 8, '*');
+		/*/
+		terminal_color("orange");
+		terminal_put(2, 2, 0x25CF);
+		if (keyrelease) terminal_put(2, 3, 0x25CF);
+		if (mousemove) terminal_put(2, 4, 0x25CF);
+		if (mousescroll) terminal_put(2, 5, 0x25CF);
+		if (precise_mouse) terminal_put(2, 6, 0x25CF);
+
+		terminal_color("white");
+		terminal_printf(1, 2, " [U+25CB] [color=gray]Key press");
+		terminal_printf(1, 3, " [U+25CB] Key release");
+		terminal_printf(1, 4, " [U+25CB] Mouse movement");
+		terminal_printf(1, 5, " [U+25CB] Mouse scroll");
+		terminal_printf(1, 6, " [U+25CB] Precise mouse movement");
+		//*/
 
 		terminal_color("white");
 		terminal_printf(1, 10, "Received [color=orange]%d[/color] %s", counter, counter == 1? "event": "events");
@@ -100,9 +116,15 @@ void TestMouse()
 
 		if (mousemove)
 		{
+			//*
 			terminal_color(0x80FFFFFF);
 			for ( int x = 0; x < 80; x++ ) terminal_put(x, my, 0x2588);
 			for ( int y = 0; y < 25; y++ ) if ( y != my ) terminal_put(mx, y, 0x2588);
+			/*/
+			terminal_color(0x80FFFFFF);
+			for ( int x = 0; x < 80; x++ ) terminal_put(x, my, L'─');
+			for ( int y = 0; y < 25; y++ ) terminal_put(mx, y, L'│');
+			//*/
 		}
 
 		terminal_color(0x8000FF00);
@@ -134,12 +156,12 @@ void TestMouse()
 				mx = terminal_state(TK_MOUSE_X);
 				my = terminal_state(TK_MOUSE_Y);
 
-				if (mx >= 1 && mx <= 3 && ((my >= 3 && my <= 7) || my == 8))
+				if (mx >= 1 && mx <= 3 && (my >= 3 && my <= 6))
 				{
 					if (my == 3) keyrelease = !keyrelease;
 					if (my == 4) mousemove = !mousemove;
 					if (my == 5) mousescroll = !mousescroll;
-					if (my == 8) precise_mouse = !precise_mouse;
+					if (my == 6) precise_mouse = !precise_mouse;
 					UpdateInputFilter(keypress, keyrelease, mousemove, mousescroll);
 					UpdatePreciseMovement(precise_mouse);
 				}

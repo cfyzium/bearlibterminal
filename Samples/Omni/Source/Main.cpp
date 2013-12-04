@@ -191,7 +191,7 @@ void Menu()
 		{"Layers", TestFontViewer}, // NYI
 		{"Extended 1: basics", TestExtendedBasics}, // NYI
 		{"Extended 2: inter-layer animation", TestExtendedInterlayer},
-		{"Extended 3: smooth scroll", TestExtendedSmoothScroll}, // NYI
+		{"Extended 3: smooth scroll", TestExtendedSmoothScroll},
 		{"Dynamic sprites", TestDynamicSprites}, // NYI
 		{"Synchronous rendering", TestFontViewer}, // NYI
 		{"Custom rendering", TestFontViewer}, // NYI

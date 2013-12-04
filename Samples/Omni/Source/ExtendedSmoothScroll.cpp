@@ -11,7 +11,7 @@
 #include <ctime>
 #include <vector>
 
-const int fps = 25;
+const int fps = 40;
 const int speed_cap = 25;
 const int map_size = 64;
 const int tile_size = 32;
@@ -29,19 +29,20 @@ void TestExtendedSmoothScroll()
 	terminal_composition(TK_COMPOSITION_ON);
 
 	// Load resources
-	// terminal_set("U+E000: terrain.png, size=32x32, alignment=top-left");
+	terminal_set("U+E000: dg_grounds32.png, size=32x32, alignment=top-left");
 
 	int screen_width = terminal_state(TK_WIDTH)*terminal_state(TK_CELL_WIDTH);
 	int screen_height = terminal_state(TK_HEIGHT)*terminal_state(TK_CELL_HEIGHT);
 	int hspeed = 0, vspeed = 0;
 	int hoffset = 0, voffset = 0;
-	std::vector<int> map(map_size*map_size, '.');
 
+	std::vector<int> tiles = {9, 54, 57, 60, 117, 120, 141, 168};
+	std::vector<int> map(map_size*map_size, tiles[0]);
 	for (int i=0; i<map_size*map_size/10; i++)
 	{
 		int x = std::rand()%map_size;
 		int y = std::rand()%map_size;
-		map[y*map_size+x] = 'A' + std::rand()%26;
+		map[y*map_size+x] = tiles[std::rand()%tiles.size()];
 	}
 
 	for (bool proceed=true; proceed;)
@@ -50,7 +51,6 @@ void TestExtendedSmoothScroll()
 		voffset -= vspeed;
 
 		terminal_clear();
-		terminal_printf(2, 1, "hspeed: %d\nvspeed: %d", hspeed, vspeed);
 
 		int tx = hoffset%tile_size, ty = voffset%tile_size;
 		int ix = (hoffset-tx)/tile_size, iy = (voffset-ty)/tile_size;
@@ -59,7 +59,8 @@ void TestExtendedSmoothScroll()
 		int hc = std::ceil((screen_width+tile_size-tx)/(float)tile_size);
 		int vc = std::ceil((screen_height+tile_size-ty)/(float)tile_size);
 
-		terminal_printf(2, 3, "ix: %d/%d, iy: %d/%d", ix, jx, iy, jy);
+		terminal_printf(2, 1, "speed: %d, %d", hspeed, vspeed);
+		terminal_printf(2, 2, "offset: %d/%d, %d/%d", ix, jx, iy, jy);
 
 		for (int y=0; y<=vc; y++)
 		{
@@ -68,7 +69,7 @@ void TestExtendedSmoothScroll()
 				int mx = (jx+x)%map_size;
 				int my = (jy+y)%map_size;
 				int c = map[my*map_size+mx];
-				terminal_put_ext(0, 0, (x-1)*tile_size+tx, (y-1)*tile_size+ty, c, nullptr);
+				terminal_put_ext(0, 0, (x-1)*tile_size+tx, (y-1)*tile_size+ty, 0xE000+c, nullptr);
 			}
 		}
 
@@ -112,5 +113,6 @@ void TestExtendedSmoothScroll()
 		delay(1000/fps);
 	}
 
+	terminal_set("U+E000: none");
 	terminal_composition(TK_COMPOSITION_OFF);
 }

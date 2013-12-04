@@ -697,7 +697,7 @@ namespace BearLibTerminal
 		{
 			Keystroke stroke;
 			stroke.scancode = TK_RBUTTON;
-			stroke.released = uMsg == WM_LBUTTONUP;
+			stroke.released = uMsg == WM_RBUTTONUP;
 			ReportInput(stroke);
 
 			return 0;
@@ -706,7 +706,7 @@ namespace BearLibTerminal
 		{
 			Keystroke stroke;
 			stroke.scancode = TK_MBUTTON;
-			stroke.released = uMsg == WM_LBUTTONUP;
+			stroke.released = uMsg == WM_MBUTTONUP;
 			ReportInput(stroke);
 
 			return 0;
