@@ -238,6 +238,11 @@ namespace BearLibTerminal
 		{
 			FT_Library_SetLcdFilter(m_font_library, FT_LCD_FILTER_DEFAULT);
 		}
+
+		if (m_alignment == Tile::Alignment::Unknown)
+		{
+			m_alignment = Tile::Alignment::Center;
+		}
 	}
 
 	TrueTypeTileset::~TrueTypeTileset()
@@ -408,20 +413,34 @@ namespace BearLibTerminal
 		int descender2 = m_font_face->size->metrics.descender >> 6;
 		int dy = -((by-descender2) - m_tile_size.height/2);
 		Point offset;
-		if (m_monospace)
+		if (m_alignment == Tile::Alignment::Center)
 		{
-			offset = Point(-m_tile_size.width/2+bx, dy);
+			if (m_monospace)
+			{
+				offset = Point(-m_tile_size.width/2+bx, dy);
+			}
+			else
+			{
+				offset = Point(-(columns+bx)/2, dy);
+			}
 		}
 		else
 		{
-			offset = Point(-(columns+bx)/2, dy);
+			if (m_monospace)
+			{
+				offset = Point(bx, m_tile_size.height/2+dy);
+			}
+			else
+			{
+				offset = Point(m_tile_size.width/2-(columns+bx)/2, m_tile_size.height/2+dy);
+			}
 		}
 
 		//LOG(Trace, L"Rasterized glyph for code " << (int)code << L" (unicode " << (int)unicode << L"), size = " << glyph.GetSize() << ", bx=" << bx << ", by=" << by << L", offset = " << offset);
 
 		auto tile_slot = m_container.atlas.Add(glyph, Rectangle(glyph.GetSize()));
 		tile_slot->offset = offset;
-		tile_slot->alignment = Tile::Alignment::Center;
+		tile_slot->alignment = m_alignment;
 		tile_slot->bounds = m_bbox_size;
 		m_tiles[code] = tile_slot;
 		m_container.slots[code] = tile_slot;

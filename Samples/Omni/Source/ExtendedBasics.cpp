@@ -15,7 +15,7 @@ void TestExtendedBasics()
 {
 	// Setup
 	terminal_set("window.title='Omni: extended output / basics'");
-	terminal_set("0xE000: dg_grounds32.png, size=32x32");
+	terminal_set("0xE000: tiles.png, size=32x32");
 	terminal_composition(TK_COMPOSITION_ON);
 
 	int cx = 15, cy = 11;
@@ -54,13 +54,13 @@ void TestExtendedBasics()
 			"vertical gradients only."
 		);
 
-		terminal_put_ext(80-cx-5-17, cy+2, 0, 0, 0xE000+9, nullptr);
+		terminal_put_ext(80-cx-5-17, cy+2, 0, 0, 0xE000, nullptr);
 		terminal_put(80-cx-5-13, cy+2, 0x2192);
 
 		color_t c1[] = {opaque, opaque, transparent, transparent};
 		color_t c2[] = {transparent, opaque, opaque, transparent};
-		terminal_put_ext(80-cx-5-9, cy+2, 0, 0, 0xE000+9, c1);
-		terminal_put_ext(80-cx-5-4, cy+2, 0, 0, 0xE000+9, c2);
+		terminal_put_ext(80-cx-5-9, cy+2, 0, 0, 0xE000, c1);
+		terminal_put_ext(80-cx-5-4, cy+2, 0, 0, 0xE000, c2);
 
 		terminal_refresh();
 

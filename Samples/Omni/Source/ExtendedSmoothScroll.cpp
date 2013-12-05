@@ -29,20 +29,19 @@ void TestExtendedSmoothScroll()
 	terminal_composition(TK_COMPOSITION_ON);
 
 	// Load resources
-	terminal_set("U+E000: dg_grounds32.png, size=32x32, alignment=top-left");
+	terminal_set("U+E000: tiles.png, size=32x32, alignment=top-left");
 
 	int screen_width = terminal_state(TK_WIDTH)*terminal_state(TK_CELL_WIDTH);
 	int screen_height = terminal_state(TK_HEIGHT)*terminal_state(TK_CELL_HEIGHT);
 	int hspeed = 0, vspeed = 0;
 	int hoffset = 0, voffset = 0;
 
-	std::vector<int> tiles = {9, 54, 57, 60, 117, 120, 141, 168};
-	std::vector<int> map(map_size*map_size, tiles[0]);
+	std::vector<int> map(map_size*map_size, 0);
 	for (int i=0; i<map_size*map_size/10; i++)
 	{
 		int x = std::rand()%map_size;
 		int y = std::rand()%map_size;
-		map[y*map_size+x] = tiles[std::rand()%tiles.size()];
+		map[y*map_size+x] = std::rand()%8;
 	}
 
 	for (bool proceed=true; proceed;)
