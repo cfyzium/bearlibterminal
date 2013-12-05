@@ -465,6 +465,8 @@ namespace BearLibTerminal
 
 		if (leaf.flags & Leaf::CornerColored)
 		{
+			/*
+			// Single-quad version (incorrect interpolation)
 			// Top-left
 			glColor4ub(leaf.color[0].r, leaf.color[0].g, leaf.color[0].b, leaf.color[0].a);
 			glTexCoord2f(texture_coords.tu1, texture_coords.tv1);
@@ -484,6 +486,57 @@ namespace BearLibTerminal
 			glColor4ub(leaf.color[3].r, leaf.color[3].g, leaf.color[3].b, leaf.color[3].a);
 			glTexCoord2f(texture_coords.tu2, texture_coords.tv1);
 			glVertex2i(right, top);
+			/*/
+
+			// 2-quad version
+			// Center color
+			int cr = (leaf.color[0].r + leaf.color[1].r + leaf.color[2].r + leaf.color[3].r)/4;
+			int cg = (leaf.color[0].g + leaf.color[1].g + leaf.color[2].g + leaf.color[3].g)/4;
+			int cb = (leaf.color[0].b + leaf.color[1].b + leaf.color[2].b + leaf.color[3].b)/4;
+			int ca = (leaf.color[0].a + leaf.color[1].a + leaf.color[2].a + leaf.color[3].a)/4;
+			// Center texture coords
+			float cu = (texture_coords.tu1 + texture_coords.tu2)/2.0f;
+			float cv = (texture_coords.tv1 + texture_coords.tv2)/2.0f;
+			// Center coordinate
+			float cx = (left + right)/2.0f;
+			float cy = (top + bottom)/2.0f;
+
+			// First quad
+			// Top-left
+			glColor4ub(leaf.color[0].r, leaf.color[0].g, leaf.color[0].b, leaf.color[0].a);
+			glTexCoord2f(texture_coords.tu1, texture_coords.tv1);
+			glVertex2i(left, top);
+			// Bottom-left
+			glColor4ub(leaf.color[1].r, leaf.color[1].g, leaf.color[1].b, leaf.color[1].a);
+			glTexCoord2f(texture_coords.tu1, texture_coords.tv2);
+			glVertex2i(left, bottom);
+			// Center
+			glColor4ub(cr, cg, cb, ca);
+			glTexCoord2f(cu, cv);
+			glVertex2i(cx, cy);
+			// Top-right
+			glColor4ub(leaf.color[3].r, leaf.color[3].g, leaf.color[3].b, leaf.color[3].a);
+			glTexCoord2f(texture_coords.tu2, texture_coords.tv1);
+			glVertex2i(right, top);
+
+			// Second squad
+			// Bottom-right
+			glColor4ub(leaf.color[2].r, leaf.color[2].g, leaf.color[2].b, leaf.color[2].a);
+			glTexCoord2f(texture_coords.tu2, texture_coords.tv2);
+			glVertex2i(right, bottom);
+			// Top-right
+			glColor4ub(leaf.color[3].r, leaf.color[3].g, leaf.color[3].b, leaf.color[3].a);
+			glTexCoord2f(texture_coords.tu2, texture_coords.tv1);
+			glVertex2i(right, top);
+			// Center
+			glColor4ub(cr, cg, cb, ca);
+			glTexCoord2f(cu, cv);
+			glVertex2i(cx, cy);
+			// Bottom-left
+			glColor4ub(leaf.color[1].r, leaf.color[1].g, leaf.color[1].b, leaf.color[1].a);
+			glTexCoord2f(texture_coords.tu1, texture_coords.tv2);
+			glVertex2i(left, bottom);
+			//*/
 		}
 		else
 		{

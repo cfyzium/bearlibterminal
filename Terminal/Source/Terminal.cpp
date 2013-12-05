@@ -773,6 +773,7 @@ namespace BearLibTerminal
 		uint16_t base = 0;
 		Encoding<char>* codepage = nullptr;
 		bool combine = false;
+		Size spacing{1, 1};
 
 		Color original_color = m_world.state.color;
 		Color original_bkcolor = m_world.state.bkcolor;
@@ -791,11 +792,12 @@ namespace BearLibTerminal
 
 				if (combine)
 				{
-					if (x > x0)
+					if (x >= x0+spacing.width)
 					{
 						int composition = m_world.state.composition;
 						m_world.state.composition = TK_COMPOSITION_ON;
-						PutUnlocked(--x, y, 0, 0, code, nullptr);
+						x -= spacing.width;
+						PutUnlocked(x, y, 0, 0, code, nullptr);
 						m_world.state.composition = composition;
 					}
 					combine = false;
@@ -805,8 +807,7 @@ namespace BearLibTerminal
 					PutUnlocked(x, y, 0, 0, code, nullptr);
 				}
 
-				x += 1;
-
+				x += spacing.width;
 				printed += 1;
 			}
 		};
@@ -831,6 +832,10 @@ namespace BearLibTerminal
 				{
 					base = 0;
 					codepage = nullptr;
+				}
+				else if (name == L"spacing")
+				{
+					spacing = Size{1, 1};
 				}
 			}
 			else
@@ -889,6 +894,22 @@ namespace BearLibTerminal
 						codepage = nullptr;
 					}
 				}
+				else if (name == L"spacing")
+				{
+					if (value.find(L"x") != std::wstring::npos)
+					{
+						if (!try_parse(value, spacing)) spacing = Size{1, 1};
+					}
+					else
+					{
+						if (!try_parse(value, spacing.width)) spacing = Size{1, 1};
+					}
+
+					if (spacing.width <= 0 || spacing.height <= 0)
+					{
+						spacing = Size{1, 1};
+					}
+				}
 				else if (name[0] == L'+')
 				{
 					combine = true;
@@ -944,7 +965,7 @@ namespace BearLibTerminal
 			else if (c == '\n')
 			{
 				x = x0;
-				y += 1;
+				y += spacing.height;
 			}
 			else
 			{

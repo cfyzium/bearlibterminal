@@ -77,7 +77,11 @@ namespace BearLibTerminal
 			for (int x=0; x<bitmap_size.width; x++)
 			{
 				Color c = bitmap(x, y);
-				if (c.a == 0) c = Color();
+				if (c.a < 255)
+				{
+					float factor = c.a/255.0f;
+					c = Color(c.r*factor, c.g*factor, c.b*factor);
+				}
 				uint8_t pixel[] = {c.b, c.g, c.r};
 				stream.write((const char*)pixel, 3);
 			}

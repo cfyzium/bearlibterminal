@@ -189,7 +189,7 @@ void Menu()
 		{"Multiple fonts", TestMultipleFonts},
 		{"Font viewer", nullptr}, // NYI
 		{"Layers", nullptr}, // NYI
-		{"Extended 1: basics", TestExtendedBasics}, // NYI
+		{"Extended 1: basics", TestExtendedBasics},
 		{"Extended 2: inter-layer animation", TestExtendedInterlayer},
 		{"Extended 3: smooth scroll", TestExtendedSmoothScroll},
 		{"Dynamic sprites", TestDynamicSprites}, // NYI
