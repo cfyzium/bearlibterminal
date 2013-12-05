@@ -774,6 +774,7 @@ namespace BearLibTerminal
 		Encoding<char>* codepage = nullptr;
 		bool combine = false;
 		Size spacing{1, 1};
+		Point offset{0, 0};
 
 		Color original_color = m_world.state.color;
 		Color original_bkcolor = m_world.state.bkcolor;
@@ -797,14 +798,14 @@ namespace BearLibTerminal
 						int composition = m_world.state.composition;
 						m_world.state.composition = TK_COMPOSITION_ON;
 						x -= spacing.width;
-						PutUnlocked(x, y, 0, 0, code, nullptr);
+						PutUnlocked(x, y, offset.x, offset.y, code, nullptr);
 						m_world.state.composition = composition;
 					}
 					combine = false;
 				}
 				else
 				{
-					PutUnlocked(x, y, 0, 0, code, nullptr);
+					PutUnlocked(x, y, offset.x, offset.y, code, nullptr);
 				}
 
 				x += spacing.width;
@@ -836,6 +837,10 @@ namespace BearLibTerminal
 				else if (name == L"spacing")
 				{
 					spacing = Size{1, 1};
+				}
+				else if (name == L"offset")
+				{
+					offset = Point{0, 0};
 				}
 			}
 			else
@@ -909,6 +914,10 @@ namespace BearLibTerminal
 					{
 						spacing = Size{1, 1};
 					}
+				}
+				else if (name == L"offset")
+				{
+					if (!try_parse(value, offset)) offset = Point{0, 0};
 				}
 				else if (name[0] == L'+')
 				{
