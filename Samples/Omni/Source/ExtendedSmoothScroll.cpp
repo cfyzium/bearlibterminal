@@ -29,7 +29,7 @@ void TestExtendedSmoothScroll()
 	terminal_composition(TK_COMPOSITION_ON);
 
 	// Load resources
-	terminal_set("U+E000: tiles.png, size=32x32, alignment=top-left");
+	terminal_set("U+E000: ./Media/Tiles.png, size=32x32, alignment=top-left");
 
 	int screen_width = terminal_state(TK_WIDTH)*terminal_state(TK_CELL_WIDTH);
 	int screen_height = terminal_state(TK_HEIGHT)*terminal_state(TK_CELL_HEIGHT);

@@ -17,10 +17,10 @@ void TestSprites()
 	int screen_width = terminal_state(TK_WIDTH)*terminal_state(TK_CELL_WIDTH);
 	int screen_height = terminal_state(TK_HEIGHT)*terminal_state(TK_CELL_HEIGHT);
 	//terminal_setf("U+E000: Fallen_bg.png, resize=%dx%d", screen_width, screen_height);
-	terminal_setf("U+E000: Fallen_bg.jpg, resize=%dx%d", screen_width, screen_height);
-	terminal_set("U+E001: tile_01.png, resize=96x96, resize-filter=nearest");
-	terminal_set("U+E002: tile_01.png, resize=48x48, resize-filter=nearest");
-	terminal_set("U+E004: tile_01.png, resize=128x128, resize-filter=bilinear");
+	terminal_setf("U+E000: ./Media/Background.jpg, resize=%dx%d", screen_width, screen_height);
+	//terminal_set("U+E001: tile_01.png, resize=96x96, resize-filter=nearest");
+	//terminal_set("U+E002: tile_01.png, resize=48x48, resize-filter=nearest");
+	//terminal_set("U+E004: tile_01.png, resize=128x128, resize-filter=bilinear");
 
 	//color_t c = color_from_argb(128, 64, 128, 192);
 	//terminal_setf("U+E003: %#p, size=1x1, resize=64x64", &c);
@@ -43,7 +43,12 @@ void TestSprites()
 	terminal_put(8, 4, 0xE003);
 	terminal_layer(0);
 	terminal_refresh();
-	terminal_read();
+
+	for (bool proceed=true; proceed;)
+	{
+		int key = terminal_read();
+		if (key == TK_CLOSE || key == TK_ESCAPE) proceed = false;
+	}
 
 	terminal_set("U+E000: none");
 }

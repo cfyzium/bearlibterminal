@@ -1274,6 +1274,8 @@ namespace BearLibTerminal
 	{
 		Size viewport_size = m_world.stage.size * m_world.state.cellsize;
 
+		glDisable(GL_DEPTH_TEST);
+
 		glClearColor(0, 0, 0, 1);
 		glViewport(0, 0, viewport_size.width, viewport_size.height);
 
@@ -1483,6 +1485,8 @@ namespace BearLibTerminal
 			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 			glEnable(GL_TEXTURE_2D);
 		}
+
+		m_world.tiles.atlas.Refresh();
 
 		return 1;
 	}

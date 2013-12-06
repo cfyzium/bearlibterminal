@@ -287,6 +287,8 @@ namespace BearLibTerminal
 			m_texture.Update(m_canvas);
 			m_is_dirty = false;
 		}
+
+		Bind();
 	}
 
 	void AtlasTexture::Bind()
@@ -623,7 +625,35 @@ namespace BearLibTerminal
 
 	void Atlas::Refresh()
 	{
+		/*
 		for (auto& i: m_textures) i.Refresh();
+		/*/
+		int j = 0;
+		for (auto& i: m_textures)
+		{
+			i.Refresh();
+			glEnable(GL_TEXTURE_2D);
+			int x = 640-(j+1)*74;
+			int y = 400-74;
+			glBegin(GL_QUADS);
+			// Single-colored version
+			glColor4ub(255, 255, 255, 255);
+			// Top-left
+			glTexCoord2f(0.0f, 0.0f);
+			glVertex2i(x, y);
+			// Bottom-left
+			glTexCoord2f(0.0f, 0.2f);
+			glVertex2i(x, y+64);
+			// Bottom-right
+			glTexCoord2f(0.2f, 0.2f);
+			glVertex2i(x+64, y+64);
+			// Top-right
+			glTexCoord2f(0.2f, 0.0f);
+			glVertex2i(x+64, y);
+			glEnd();
+			j++;
+		}
+		//*/
 	}
 
 	void Atlas::Dispose()

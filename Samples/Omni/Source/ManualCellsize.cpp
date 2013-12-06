@@ -11,7 +11,7 @@ void TestManualCellsize()
 {
 	terminal_set("window.title='Omni: manual cellsize'");
 
-	const char* font_name = "UbuntuMono-R.ttf";
+	const char* font_name = "./Media/VeraMono.ttf";//UbuntuMono-R.ttf";
 	int font_size = 12;
 	int cell_width = 8;
 	int cell_height = 16;
@@ -67,13 +67,13 @@ void TestManualCellsize()
 				setup_cellsize();
 				break;
 			}
-			else if (key == TK_DOWN && terminal_state(TK_SHIFT) && font_size < 64)
+			else if (key == TK_UP && terminal_state(TK_SHIFT) && font_size < 64)
 			{
 				font_size += 1;
 				setup_font();
 				break;
 			}
-			else if (key == TK_UP && terminal_state(TK_SHIFT) && font_size > 4)
+			else if (key == TK_DOWN && terminal_state(TK_SHIFT) && font_size > 4)
 			{
 				font_size -= 1;
 				setup_font();

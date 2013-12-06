@@ -2,10 +2,11 @@ project(SampleOmni)
 
 set(CMAKE_SKIP_RPATH TRUE)
 
-#set(CF "-O3 -g0 -std=c++11")
-#set(LF "-s")
-set(CF "-O3 -g3 -std=c++11")
-set(LF "")
+set(CF "-O3 -g0 -std=c++11")
+set(LF "-s")
+
+#set(CF "-O3 -g3 -std=c++11")
+#set(LF "")
 
 if(WIN32)
 	set(LF "${LF} -static -mwindows")
@@ -41,6 +42,7 @@ set(SOURCE_FILES ./Source/Main.cpp
                  ./Source/ExtendedInterlayer.cpp
                  ./Source/ExtendedSmoothScroll.cpp
                  ./Source/DynamicSprites.cpp
+                 ./Source/SyncronousRender.cpp
                  ./Source/Keyboard.cpp
                  ./Source/Mouse.cpp)
 

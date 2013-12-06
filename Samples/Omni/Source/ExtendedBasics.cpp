@@ -15,19 +15,19 @@ void TestExtendedBasics()
 {
 	// Setup
 	terminal_set("window.title='Omni: extended output / basics'");
-	terminal_set("0xE000: tiles.png, size=32x32, align=top-left");
+	terminal_set("0xE000: ./Media/Tiles.png, size=32x32, align=top-left");
 	terminal_composition(TK_COMPOSITION_ON);
 
 	int cx = 10, cy = 5;
 	int n_symbols = 10;
 	int radius = 5;
 	float angle = 0.0f;
-
 	int fps = 25;
+	color_t transparent = 0x00FFFFFF, opaque = 0xFFFFFFFF;
 
 	color_t m00[] = {0xFFFF0000, 0xFF00FF00, 0xFF0000FF, 0xFFFFFF00};
+	color_t m01[] = {opaque, opaque, transparent, transparent};
 
-	color_t transparent = 0x00FFFFFF, opaque = 0xFFFFFFFF;
 	color_t m11[] = {transparent, transparent, opaque, transparent};
 	color_t m12[] = {transparent, opaque, transparent, transparent};
 	color_t m21[] = {transparent, transparent, transparent, opaque};
@@ -50,19 +50,22 @@ void TestExtendedBasics()
 		angle += 2.0f*g_pi / (2*fps);
 
 		terminal_print(2, 9, "[color=orange]2.[/color] terminal_put_ext(x, y, dx, dy, code, [color=orange]corners[/color]);");
-		terminal_put_ext(5, 11, 0, 0, 0xE000+8, m00);
+		terminal_put_ext(5, 11, 0, 0, 0xE000+19, m00);
+		terminal_put_ext(10, 11, 0, 0, 0xE000+19, m01);
 
 		terminal_print(2, 14, "[color=orange]3.[/color] terminal_put_ext + composition");
 		int x1 = 5;
 		int y1 = 16;
-		terminal_put(x1+0, y1+0, 0xE000+0);
-		terminal_put(x1+4, y1+0, 0xE000+0);
-		terminal_put(x1+0, y1+2, 0xE000+0);
-		terminal_put(x1+4, y1+2, 0xE000+0);
-		terminal_put_ext(x1+0, y1+0, 0, 0, 0xE000+8, m11);
-		terminal_put_ext(x1+4, y1+0, 0, 0, 0xE000+8, m12);
-		terminal_put_ext(x1+0, y1+2, 0, 0, 0xE000+8, m21);
-		terminal_put_ext(x1+4, y1+2, 0, 0, 0xE000+8, m22);
+		terminal_put(x1+0, y1+0, 0xE000+19);
+		terminal_put(x1+0, y1+2, 0xE000+8);
+		terminal_put(x1+5, y1+0, 0xE000+19);
+		terminal_put(x1+9, y1+0, 0xE000+19);
+		terminal_put(x1+5, y1+2, 0xE000+19);
+		terminal_put(x1+9, y1+2, 0xE000+19);
+		terminal_put_ext(x1+5, y1+0, 0, 0, 0xE000+8, m11);
+		terminal_put_ext(x1+9, y1+0, 0, 0, 0xE000+8, m12);
+		terminal_put_ext(x1+5, y1+2, 0, 0, 0xE000+8, m21);
+		terminal_put_ext(x1+9, y1+2, 0, 0, 0xE000+8, m22);
 
 		/*
 		terminal_put_ext(80-cx-5-17, cy+2, 0, 0, 0xE000, nullptr);

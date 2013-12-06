@@ -14,11 +14,11 @@ void TestTilesets()
 	terminal_composition(TK_COMPOSITION_ON);
 
 	// Load tilesets
-	terminal_set("U+E000: fontawesome-webfont.ttf, size=16x16, bbox=2x1, codepage=fontawesome-codepage.txt");
-	terminal_set("U+E100: runic.png, size=8x16");
-	terminal_set("U+E200: tiles.png, size=32x32, align=top-left");
-	terminal_set("U+E300: fontawesome-webfont.ttf, size=24x24, align=top-left, codepage=fontawesome-codepage.txt");
-	terminal_set("U+E400: Zodiac-S.ttf, size=24x24, align=top-left, codepage=437");
+	//terminal_set("U+E000: ./Media/fontawesome-webfont.ttf, size=16x16, bbox=2x1, codepage=./Media/fontawesome-codepage.txt");
+	terminal_set("U+E100: ./Media/Runic.png, size=8x16");
+	terminal_set("U+E200: ./Media/Tiles.png, size=32x32, align=top-left");
+	terminal_set("U+E300: ./Media/fontawesome-webfont.ttf, size=24x24, align=top-left, codepage=./Media/fontawesome-codepage.txt");
+	terminal_set("U+E400: ./Media/Zodiac-S.ttf, size=24x24, align=top-left, codepage=437");
 
 	terminal_clear();
 	terminal_color("white");
@@ -41,11 +41,11 @@ void TestTilesets()
 
 	terminal_print(2, 10, "[color=orange]4.[/color] Like font characters, tiles may be freely colored and combined:");
 	terminal_put(2+3+0, 11, 0xE200+8);
-	terminal_color("lightest orange");
-	terminal_put(2+3+5, 11, 0xE200+8);
 	terminal_color("lighter orange");
+	terminal_put(2+3+5, 11, 0xE200+8);
+	terminal_color("orange");
 	terminal_put(2+3+10, 11, 0xE200+8);
-	terminal_color("light orange");
+	terminal_color("dark orange");
 	terminal_put(2+3+15, 11, 0xE200+8);
 
 	terminal_color("white");
@@ -71,6 +71,6 @@ void TestTilesets()
 	for (int key=0; key!=TK_CLOSE && key!=TK_ESCAPE; key=terminal_read());
 
 	// Clean up
-	terminal_set("U+E000: none; U+E100: none; U+E200: none; U+E300: none; U+E400: none");
+	terminal_set("U+E100: none; U+E200: none; U+E300: none; U+E400: none");
 	terminal_composition(TK_COMPOSITION_OFF);
 }

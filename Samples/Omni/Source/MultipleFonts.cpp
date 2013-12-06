@@ -12,10 +12,10 @@ void TestMultipleFonts()
 	terminal_set("window.title='Omni: multiple fonts in scene'");
 
 	// Load several fonts
-	terminal_set("font: ./Fonts/VeraMono.ttf, size=8x16");
-	terminal_set("U+E100: ./Fonts/VeraMoIt.ttf, size=8x16, codepage=437");
-	terminal_set("U+E200: ./Fonts/VeraMoBd.ttf, size=8x16, codepage=437");
-	terminal_set("U+E300: ./Fonts/VeraMono.ttf, size=16x32, codepage=437, bbox=2x2");
+	terminal_set("font: ./Media/VeraMono.ttf, size=8x16");
+	terminal_set("U+E100: ./Media/VeraMoIt.ttf, size=8x16");
+	terminal_set("U+E200: ./Media/VeraMoBd.ttf, size=8x16");
+	terminal_set("U+E300: ./Media/VeraMono.ttf, size=16x32, bbox=2x2");
 
 	terminal_clear();
 	terminal_color("white");
@@ -24,7 +24,7 @@ void TestMultipleFonts()
 	(
 		2, 3,
 		"This works by loading several truetype tilesets with custom codepages to an\n"
-		"unused code points and using [color=orqange]base[/color] postformatting tag."
+		"unused code points and using [color=orange]base[/color] postformatting tag."
 	);
 
 	terminal_print

@@ -9,7 +9,9 @@
 #define COMMON_HPP_
 
 #include "BearLibTerminal.h"
+#include <stdint.h>
 
+uint64_t GetTime();
 void delay(int ms);
 
 void TestBasicOutput();
@@ -24,6 +26,7 @@ void TestExtendedBasics();
 void TestExtendedInterlayer();
 void TestExtendedSmoothScroll();
 void TestDynamicSprites();
+void TestSynchronousRender();
 void TestKeyboard();
 void TestMouse();
 
