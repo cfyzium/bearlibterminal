@@ -28,7 +28,7 @@ void delay(int ms)
 uint64_t GetTime()
 {
 	timeval t;
-	gettimeofdat(&t, nullptr);
+	gettimeofday(&t, nullptr);
 	return t.tv_sec*1000 + t.tv_usec/1000;
 }
 #endif

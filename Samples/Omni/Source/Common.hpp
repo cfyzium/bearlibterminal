@@ -29,5 +29,6 @@ void TestDynamicSprites();
 void TestSynchronousRender();
 void TestKeyboard();
 void TestMouse();
+void TestTextInput();
 
 #endif /* COMMON_HPP_ */

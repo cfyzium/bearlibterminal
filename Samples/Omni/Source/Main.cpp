@@ -175,7 +175,7 @@ void Menu()
 {
 	auto reset = []()
 	{
-		terminal_set("window: size=80x25, cellsize=auto, title='Omni: menu'; font=default");
+		terminal_set("window: size=80x25, cellsize=auto, title='Omni: menu'; font: default");
 		terminal_color("white");
 	};
 
@@ -194,11 +194,11 @@ void Menu()
 		{"Extended 2: inter-layer animation", TestExtendedInterlayer},
 		{"Extended 3: smooth scroll", TestExtendedSmoothScroll},
 		{"Dynamic sprites", TestDynamicSprites}, // NYI
-		{"Synchronous rendering", TestSynchronousRender}, // NYI
+		{"Synchronous rendering", nullptr}, // NYI
 		{"Custom rendering", nullptr}, // NYI
 		{"Input 1: keyboard", TestKeyboard},
 		{"Input 2: mouse", TestMouse},
-		{"Input 3: text input", nullptr} // NYI
+		{"Input 3: text input", TestTextInput}
 	};
 
 	reset();

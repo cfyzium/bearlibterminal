@@ -1055,33 +1055,33 @@ namespace BearLibTerminal
 		return result;
 	}
 
+	/**
+	 * Reads the next unicode character from input
+	 * @param timeout in milliseconds
+	 * @return character code / TK_INPUT_NONE / TK_INPUT_CALL_AGAIN
+	 */
 	int Terminal::ReadCharInternal(int timeout)
 	{
 		do
 		{
 			Keystroke stroke = ReadKeystroke(timeout);
-			if (stroke.scancode == TK_CLOSE)
+			if (stroke.character > 0 && !stroke.released)
 			{
-				// Break on VK_CLOSE but push it back so subsequent Read could return it
-				std::unique_lock<std::mutex> lock(m_input_lock);
-				m_input_queue.push_front(Keystroke(TK_CLOSE));
-				ConsumeIrrelevantInput();
-				return -1;
-			}
-			if (stroke.scancode == TK_ESCAPE)
-			{
-				// Just break
-				return TK_INPUT_CANCELLED;
+				// Unicode character available
+				return stroke.character;
 			}
 			else if (stroke.scancode == 0)
 			{
-				// No input available
-				return TK_INPUT_CALL_AGAIN;
+				// No input available right now (nonblocking mode only)
+				return TK_INPUT_NONE;
 			}
-			else if (stroke.character > 0 && !stroke.released)
+			else
 			{
-				// Textual key-down event with
-				return stroke.character;
+				// Push keystroke back
+				std::unique_lock<std::mutex> lock(m_input_lock);
+				m_input_queue.push_front(stroke);
+				ConsumeIrrelevantInput();
+				return TK_INPUT_CALL_AGAIN;
 			}
 		}
 		while (true);
