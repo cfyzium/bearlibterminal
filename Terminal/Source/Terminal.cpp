@@ -26,7 +26,7 @@ namespace BearLibTerminal
 		m_show_grid(false)
 	{
 		// Try to create window
-		m_window = Window::Create();
+		m_window = Window::Create(Window::Asynchronous);
 		m_window->SetOnDestroy(std::bind(&Terminal::OnWindowClose, this));
 		m_window->SetOnInput(std::bind(&Terminal::OnWindowInput, this, std::placeholders::_1));
 		m_window->SetOnRedraw(std::bind(&Terminal::OnWindowRedraw, this));
@@ -63,9 +63,29 @@ namespace BearLibTerminal
 
 	void Terminal::SwitchRenderingThread(bool window)
 	{
+		/*
 		InvokeOnRenderingThread([&]{m_window->ReleaseRC();});
 		m_asynchronous = window;
 		InvokeOnRenderingThread([&]{m_window->AcquireRC();});
+		/*/
+		m_lock.unlock();
+		m_window.reset();
+		m_lock.lock();
+		m_asynchronous = window;
+		m_window = Window::Create(m_asynchronous? Window::Asynchronous: Window::Synchronous);
+		m_window->SetOnInput(std::bind(&Terminal::OnWindowInput, this, std::placeholders::_1));
+		m_window->SetOnRedraw(std::bind(&Terminal::OnWindowRedraw, this));
+		/*if (m_asynchronous) InvokeOnRenderingThread([&]
+		{
+			ConfigureViewport();
+			glEnable(GL_TEXTURE_2D);
+		}); else*/
+		{
+			ConfigureViewport();
+			glEnable(GL_TEXTURE_2D);
+		}
+		m_state = kHidden;
+		//*/
 	}
 
 	void Terminal::LeaveDrawingBlock()
@@ -492,6 +512,14 @@ namespace BearLibTerminal
 
 	void Terminal::Refresh()
 	{
+		if (m_state == kHidden)
+		{
+			m_window->Show();
+			m_state = kVisible;
+		}
+
+		if (m_state != kVisible) return;
+
 		if (m_asynchronous)
 		{
 			// FIXME: m_state here is not protected by lock because
@@ -499,15 +527,11 @@ namespace BearLibTerminal
 			// This additional repaint is unnecessary.
 
 			// If window is not visible, show it
-			if (m_state == kHidden)
-			{
-				m_window->Show();
-				m_state = kVisible;
-			}
+
 
 			// Ignore irrelevant redraw calls (in case something has failed and
 			// state is already kClosed).
-			if (m_state != kVisible) return;
+
 
 			// Synchronously copy backbuffer to frontbuffer
 			{
@@ -524,6 +548,7 @@ namespace BearLibTerminal
 			// NOTE: debug overlays go here
 			//m_window->Invoke([]{});
 			m_window->SwapBuffers();
+			m_window->PumpEvents();
 		}
 	}
 
@@ -705,6 +730,7 @@ namespace BearLibTerminal
 				LeaveDrawingBlock();
 				m_fresh_codes.emplace_back(code);
 				PrepareFreshCharacters();
+				m_world.tiles.atlas.Refresh();
 				j = m_world.tiles.slots.find(code);
 			}
 

@@ -35,7 +35,7 @@ namespace BearLibTerminal
 	class X11Window: public Window
 	{
 	public:
-		X11Window();
+		X11Window(Type type);
 		~X11Window();
 		bool ValidateIcon(const std::wstring& filename) override;
 		void SetTitle(const std::wstring& title) override;
@@ -49,6 +49,7 @@ namespace BearLibTerminal
 		bool ReleaseRC() override;
 		void SwapBuffers() override;
 		void SetVSync(bool enabled) override;
+		bool PumpEvents() override;
 	protected:
 		void ThreadFunction() override;
 		bool Construct() override;
@@ -58,7 +59,6 @@ namespace BearLibTerminal
 		void DestroyWindowObject();
 		void ReportInput(const Keystroke& keystroke);
 		void HandleRepaint();
-		void HandleKey();
 	protected:
 		struct Private;
 		std::unique_ptr<Private> m_private;

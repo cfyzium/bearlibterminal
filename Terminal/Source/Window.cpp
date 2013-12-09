@@ -32,7 +32,8 @@
 
 namespace BearLibTerminal
 {
-	Window::Window():
+	Window::Window(Type type):
+		m_type(type),
 		m_synchronous_redraw(false),
 		m_proceed(false)
 	{ }
@@ -70,7 +71,7 @@ namespace BearLibTerminal
 		m_on_destroy = callback;
 	}
 
-	void Window::Run()
+	void Window::RunAsynchronous()
 	{
 		auto thread_function = [&](std::promise<bool> promise)
 		{
@@ -123,28 +124,45 @@ namespace BearLibTerminal
 		}
 	}
 
+	void Window::RunSynchronous()
+	{
+		try
+		{
+			Construct();
+		}
+		catch(std::exception& e)
+		{
+			LOG(Fatal, L"Window initialization routine has thrown an exception");
+			throw;
+		}
+	}
+
 	void Window::Stop()
 	{
 		m_proceed = false;
 
-		if ( m_thread.joinable() )
+		if (m_type == Asynchronous && m_thread.joinable())
 		{
 			m_thread.join();
 		}
+		else if (m_type == Synchronous)
+		{
+			Destroy();
+		}
 	}
 
-	std::unique_ptr<Window> Window::Create()
+	std::unique_ptr<Window> Window::Create(Type type)
 	{
 		std::unique_ptr<Window> result;
 
 #if defined(__linux)
-		result.reset(new X11Window());
+		result.reset(new X11Window(type));
 #endif
 #if defined(_WIN32)
-		result.reset(new WinApiWindow());
+		result.reset(new WinApiWindow(type));
 #endif
 
-		result->Run();
+		type == Asynchronous? result->RunAsynchronous(): result->RunSynchronous();
 		return std::move(result);
 	}
 }

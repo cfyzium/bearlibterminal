@@ -47,6 +47,7 @@ namespace BearLibTerminal
 		GLXContext glx;
 		XIM im;
 		XIC ic;
+		Atom close_message;
 
 		typedef void (*PFN_GLXSWAPINTERVALEXT)(Display *dpy, GLXDrawable drawable, int interval);
 		typedef int (*PFN_GLXSWAPINTERVALMESA)(int interval);
@@ -62,6 +63,7 @@ namespace BearLibTerminal
 		glx(NULL),
 		im(NULL),
 		ic(NULL),
+		close_message(),
 		glXSwapIntervalEXT(nullptr),
 		glXSwapIntervalMESA(nullptr)
 	{ }
@@ -133,7 +135,8 @@ namespace BearLibTerminal
 
 	// ------------------------------------------------------------------------
 
-	X11Window::X11Window():
+	X11Window::X11Window(Type type):
+		Window(type),
 		m_private(new Private()),
 		m_mouse_wheel(0)
 	{ }
@@ -418,17 +421,6 @@ namespace BearLibTerminal
 		return key;
 	}
 
-	void X11Window::HandleKey()
-	{
-
-	}
-
-	struct InvokationSentry
-	{
-		std::function<void()> func;
-		Semaphore semaphore;
-	};
-
 	struct InvokationSentry2
 	{
 		std::packaged_task<void()> task;
@@ -440,27 +432,6 @@ namespace BearLibTerminal
 
 	void X11Window::Invoke(std::function<void()> func)
 	{
-		/*
-		InvokationSentry sentry;
-		sentry.func = func;
-
-		XClientMessageEvent event;
-		memset(&event, 0, sizeof(XClientMessageEvent));
-		event.type = ClientMessage;
-		event.window = m_private->window;
-		event.format = 32;
-
-		// XXX: bitness-agnostic event marking hack
-		event.data.l[0] = 0;
-		uint64_t* l64 = (uint64_t*)event.data.l;
-		l64[0] = (uint64_t)this;
-		l64[1] = (uint64_t)&sentry;
-
-		XSendEvent(m_private->display, m_private->window, 0, 0, (XEvent*)&event);
-		XFlush(m_private->display);
-
-		sentry.semaphore.Wait();
-		/*/
 		auto sentry = std::make_shared<InvokationSentry2>(func);
 		std::future<void> future = sentry->task.get_future();
 
@@ -480,148 +451,130 @@ namespace BearLibTerminal
 		XFlush(m_private->display);
 
 		future.get();
-		//*/
+	}
+
+	bool X11Window::PumpEvents()
+	{
+		int events_processed = 0;
+		XEvent e;
+
+		while (XPending(m_private->display))
+		{
+			XNextEvent(m_private->display, &e);
+			events_processed += 1;
+
+			if (e.type == Expose && e.xexpose.count == 0)
+			{
+				HandleRepaint();
+			}
+			else if (e.type == KeyPress || e.type == KeyRelease)
+			{
+				wchar_t buffer[255] = {0};
+				KeySym key;
+				Status status;
+
+				int rc = XwcLookupString(m_private->ic, &e.xkey, buffer, 255, &key, &status);
+
+				unsigned int keycode = e.xkey.keycode;
+				int code = X11_TranslateKeycode(m_private->display, keycode);
+
+				Keystroke stroke;
+				stroke.released = (e.type == KeyRelease);
+				stroke.scancode = code;
+				stroke.character = buffer[0];
+
+				if (code != TK_SPACE && ((code >= TK_LBUTTON && code <= TK_DELETE) || rc == 0))
+				{
+					stroke.character = 0;
+				}
+
+				std::lock_guard<std::mutex> guard(m_lock);
+				if (m_on_input) m_on_input(stroke);
+			}
+			else if (e.type == ConfigureNotify)
+			{
+				// OnResize
+				// See: e.xconfigure.width, e.xconfigure.height
+			}
+			else if (e.type == MotionNotify)
+			{
+				// OnMouseMove
+				m_mouse_position.x = e.xmotion.x;
+				m_mouse_position.y = e.xmotion.y;
+
+				Keystroke stroke;
+				stroke.released = true;
+				stroke.scancode = TK_MOUSE_MOVE;
+				stroke.character = 0;
+				stroke.x = m_mouse_position.x;
+				stroke.y = m_mouse_position.y;
+				ReportInput(stroke);
+			}
+			else if (e.type == ButtonPress || e.type == ButtonRelease)
+			{
+				// OnMousePress/Release
+				Keystroke stroke;
+				stroke.released = (e.type == ButtonRelease);
+				stroke.character = 0;
+				if (e.xbutton.button == 1)
+				{
+					// LMB
+					stroke.scancode = TK_LBUTTON;
+				}
+				else if (e.xbutton.button == 3)
+				{
+					// RMB
+					stroke.scancode = TK_RBUTTON;
+				}
+				else if (e.xbutton.button == 4 && !stroke.released)
+				{
+					m_mouse_wheel -= 1;
+					stroke.scancode = TK_MOUSE_SCROLL;
+				}
+				else if (e.xbutton.button == 5 && !stroke.released)
+				{
+					m_mouse_wheel += 1;
+					stroke.scancode = TK_MOUSE_SCROLL;
+				}
+				else
+				{
+					// Not supported
+					continue;
+				}
+				stroke.x = m_mouse_position.x;
+				stroke.y = m_mouse_position.y;
+				stroke.z = m_mouse_wheel;
+				ReportInput(stroke);
+			}
+			else if (e.type == ClientMessage && e.xclient.format == 32 && ((uint64_t*)e.xclient.data.l)[0] == (uint64_t)this)
+			{
+				uint64_t* l64 = (uint64_t*)e.xclient.data.l;
+				auto sentry = *(std::shared_ptr<InvokationSentry2>*)l64[1];
+				sentry->task();
+			}
+			else if (e.type == ClientMessage && e.xclient.data.l[0] == (long)m_private->close_message)
+			{
+				Keystroke stroke;
+				stroke.released = false;
+				stroke.scancode = TK_CLOSE;
+				stroke.character = 0;
+				ReportInput(stroke);
+			}
+		}
+
+		return events_processed > 0;
 	}
 
 	void X11Window::ThreadFunction()
 	{
 		LOG(Trace, "Entering X11-specific window thread function");
 
-		XEvent e;
-
-		Atom wmDeleteMessage = XInternAtom(m_private->display, "WM_DELETE_WINDOW", False);
-		XSetWMProtocols(m_private->display, m_private->window, &wmDeleteMessage, 1);
-
-		X11_InitKeymap();
-
 		while (m_proceed)
 		{
-			if (XPending(m_private->display))
-			{
-				XNextEvent(m_private->display, &e);
-
-				if (e.type == Expose && e.xexpose.count == 0)
-				{
-					HandleRepaint();
-				}
-				else if (e.type == KeyPress || e.type == KeyRelease)
-				{
-					wchar_t buffer[255] = {0};
-					KeySym key;
-					Status status;
-
-					int rc = XwcLookupString(m_private->ic, &e.xkey, buffer, 255, &key, &status);
-
-					unsigned int keycode = e.xkey.keycode;
-					int code = X11_TranslateKeycode(m_private->display, keycode);
-
-					Keystroke stroke;
-					stroke.released = (e.type == KeyRelease);
-					stroke.scancode = code;
-					stroke.character = buffer[0];
-
-					if (code != TK_SPACE && ((code >= TK_LBUTTON && code <= TK_DELETE) || rc == 0))
-					{
-						stroke.character = 0;
-					}
-
-					std::lock_guard<std::mutex> guard(m_lock);
-					if (m_on_input) m_on_input(stroke);
-				}
-				else if (e.type == ConfigureNotify)
-				{
-					// OnResize
-
-					//if ( e.xconfigure.width != w || e.xconfigure.height != h )
-					//{
-						// OnSceneResize
-						//w = e.xconfigure.width;
-						//h = e.xconfigure.height;
-						//std::cout << w << "x" << h << "\n";
-						//m_gl_context->UpdateViewport(Size(w, h));
-					//}
-				}
-				else if (e.type == MotionNotify)
-				{
-					// OnMouseMove
-
-					m_mouse_position.x = e.xmotion.x;
-					m_mouse_position.y = e.xmotion.y;
-
-					Keystroke stroke;
-					stroke.released = true;
-					stroke.scancode = TK_MOUSE_MOVE;
-					stroke.character = 0;
-					stroke.x = m_mouse_position.x;
-					stroke.y = m_mouse_position.y;
-					ReportInput(stroke);
-				}
-				else if (e.type == ButtonPress || e.type == ButtonRelease)
-				{
-					// OnMousePress/Release
-
-					Keystroke stroke;
-					stroke.released = (e.type == ButtonRelease);
-					stroke.character = 0;
-					if (e.xbutton.button == 1)
-					{
-						// LMB
-						stroke.scancode = TK_LBUTTON;
-					}
-					else if (e.xbutton.button == 3)
-					{
-						// RMB
-						stroke.scancode = TK_RBUTTON;
-					}
-					else if (e.xbutton.button == 4 && !stroke.released)
-					{
-						m_mouse_wheel -= 1;
-						stroke.scancode = TK_MOUSE_SCROLL;
-					}
-					else if (e.xbutton.button == 5 && !stroke.released)
-					{
-						m_mouse_wheel += 1;
-						stroke.scancode = TK_MOUSE_SCROLL;
-					}
-					else
-					{
-						// Not supported
-						continue;
-					}
-					stroke.x = m_mouse_position.x;
-					stroke.y = m_mouse_position.y;
-					stroke.z = m_mouse_wheel;
-					ReportInput(stroke);
-				}
-				else if (e.type == ClientMessage && e.xclient.format == 32 && ((uint64_t*)e.xclient.data.l)[0] == (uint64_t)this)
-				{
-					/*
-					uint64_t* l64 = (uint64_t*)e.xclient.data.l;
-					InvokationSentry* sentry = (InvokationSentry*)l64[1];
-					sentry->func();
-					sentry->semaphore.Notify();
-					/*/
-					uint64_t* l64 = (uint64_t*)e.xclient.data.l;
-					auto sentry = *(std::shared_ptr<InvokationSentry2>*)l64[1];
-					sentry->task();
-					//*/
-				}
-				else if (e.type == ClientMessage && e.xclient.data.l[0] == (long)wmDeleteMessage)
-				{
-					Keystroke stroke;
-					stroke.released = false;
-					stroke.scancode = TK_CLOSE;
-					stroke.character = 0;
-					ReportInput(stroke);
-				}
-			}
-			else
-			{
-				usleep(1000);
-			}
+			if (!PumpEvents()) usleep(1000);
 		}
 
-		// Notify possible pending refreshes
+		// Notify possible pending refreshes (TODO: duplicate? there is one in Destroy too)
 		m_redraw_barrier.Notify();
 
 		LOG(Trace, "Leaving X11-specific window thread function");
@@ -631,7 +584,7 @@ namespace BearLibTerminal
 	{
 		std::lock_guard<std::mutex> guard(m_lock);
 
-		if (!CreateWindowObject())// || !CreateOpenGLContext())
+		if (!CreateWindowObject())
 		{
 			DestroyUnlocked();
 			return false;
@@ -643,7 +596,6 @@ namespace BearLibTerminal
 
 	void X11Window::DestroyUnlocked()
 	{
-		//DestroyOpenGLContext();
 		DestroyWindowObject();
 	}
 
@@ -720,7 +672,6 @@ namespace BearLibTerminal
 
 		// Continue with GL
 		m_private->glx = glXCreateContext(m_private->display, m_private->visual, 0, GL_TRUE);
-		//glXMakeCurrent(m_private->display, m_private->window, m_private->glx);
 		AcquireRC();
 		ProbeOpenGL();
 
@@ -799,6 +750,11 @@ namespace BearLibTerminal
 			PointerMotionMask |
 			im_event_mask;
 		XSelectInput(m_private->display, m_private->window, event_mask);
+
+		m_private->close_message = XInternAtom(m_private->display, "WM_DELETE_WINDOW", False);
+		XSetWMProtocols(m_private->display, m_private->window, &m_private->close_message, 1);
+
+		X11_InitKeymap();
 
 		return true;
 	}

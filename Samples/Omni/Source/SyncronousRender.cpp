@@ -135,6 +135,7 @@ void TestSynchronousRender()
 			{
 				async = !async;
 				terminal_setf("output.asynchronous=%s", async? "true": "false");
+				terminal_set("font: default");
 			}
 		}
 
