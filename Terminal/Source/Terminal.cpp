@@ -1486,8 +1486,6 @@ namespace BearLibTerminal
 			glEnable(GL_TEXTURE_2D);
 		}
 
-		m_world.tiles.atlas.Refresh();
-
 		return 1;
 	}
 

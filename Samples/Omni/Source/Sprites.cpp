@@ -11,20 +11,12 @@ void TestSprites()
 {
 	terminal_set("window.title='Omni: sprites'");
 
-	// TODO: background, bmp/png/jpeg images
+	//int screen_width = terminal_state(TK_WIDTH)*terminal_state(TK_CELL_WIDTH);
+	//int screen_height = terminal_state(TK_HEIGHT)*terminal_state(TK_CELL_HEIGHT);
 
-	// Load background
-	int screen_width = terminal_state(TK_WIDTH)*terminal_state(TK_CELL_WIDTH);
-	int screen_height = terminal_state(TK_HEIGHT)*terminal_state(TK_CELL_HEIGHT);
-	//terminal_setf("U+E000: Fallen_bg.png, resize=%dx%d", screen_width, screen_height);
-	//terminal_setf("U+E000: ./Media/Background.jpg, resize=%dx%d, resize-filter=bilinear", screen_width, screen_height);
-	terminal_setf("U+E000: ./Media/Background.jpg");
-	//terminal_set("U+E001: tile_01.png, resize=96x96, resize-filter=nearest");
-	//terminal_set("U+E002: tile_01.png, resize=48x48, resize-filter=nearest");
-	//terminal_set("U+E004: tile_01.png, resize=128x128, resize-filter=bilinear");
-
-	//color_t c = color_from_argb(128, 64, 128, 192);
-	//terminal_setf("U+E003: %#p, size=1x1, resize=64x64", &c);
+	terminal_set("U+E000: ./Media/Background.jpg");
+	terminal_set("U+E001: ./Media/EasternDragon.png, resize=128x128, resize-filter=nearest");
+	terminal_set("U+E002: ./Media/FiveElements.bmp, resize=128x128, resize-filter=bilinear");
 
 	color_t c[] =
 	{
@@ -33,23 +25,29 @@ void TestSprites()
 		color_from_argb(128, 64, 64, 192),
 		color_from_argb(128, 192, 192, 64)
 	};
-	terminal_setf("U+E003: %#p, size=2x2, resize=64x64", &c);
+	terminal_setf("U+E003: %#p, size=2x2, resize=128x128, resize-filter=bicubic", &c);
 
 	terminal_clear();
+
+	terminal_color("black");
+	terminal_print(2, 1, "[color=black]This primarily serves as a quick test of image format support");
+	terminal_print(2, 3, "1. Background is loaded from a JPEG file");
+	terminal_print(2, 5, "2. Dragon sprite is loaded from a PNG file\n   image is upscaled 2x with nearest neighbourhood filter");
+	terminal_print(2, 8, "3. Five elements diagram is loaded from BMP file\n   image is downscaled with bilinear filer");
+	terminal_print(2, 11, "4. Color gradient is loaded from 2x2 in-memory buffer\n   image is upscaled 64x with bicubic filter");
+
+	terminal_color("white");
 	terminal_put(0, 0, 0xE000); // Background
-	terminal_put(15, 5, 0xE001);
-	terminal_put(25, 5, 0xE002);
-	terminal_put(50, 5, 0xE004);
-	terminal_layer(1);
-	terminal_put(8, 4, 0xE003);
-	terminal_layer(0);
-	terminal_refresh();
+	terminal_put(5, 14, 0xE001); // Dragon
+	terminal_put(5+18*1, 14, 0xE002); // FiveElements
+	terminal_put(5+18*2, 14, 0xE003); // Gradient
 
 	for (bool proceed=true; proceed;)
 	{
+		terminal_refresh();
 		int key = terminal_read();
 		if (key == TK_CLOSE || key == TK_ESCAPE) proceed = false;
 	}
 
-	terminal_set("U+E000: none");
+	terminal_set("U+E000: none; U+E001: none; U+E002: none; U+E003: none");
 }

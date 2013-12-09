@@ -585,6 +585,7 @@ namespace BearLibTerminal
 		{
 			// Allocate whole texture for this image
 			m_textures.emplace_back(type, Size(RoundUpTo(size.width, 4), RoundUpTo(size.height,4)));
+			LOG(Trace, "Added sprite texture #" << (uint64_t)&m_textures.back());
 			return m_textures.back().Add(bitmap, region);
 		}
 		else
@@ -601,6 +602,7 @@ namespace BearLibTerminal
 			if (!result)
 			{
 				m_textures.emplace_back(type, Size(256, 256));
+				LOG(Trace, "Added tile texture #" << (uint64_t)&m_textures.back());
 				result = m_textures.back().Add(bitmap, region);
 			}
 
@@ -619,41 +621,14 @@ namespace BearLibTerminal
 			{
 				throw std::runtime_error("Atlas::Remove(...): ownership mismatch");
 			}
+			LOG(Trace, "Erasing texture #" << (uint64_t)&(*i));
 			m_textures.erase(i);
 		}
 	}
 
 	void Atlas::Refresh()
 	{
-		/*
 		for (auto& i: m_textures) i.Refresh();
-		/*/
-		int j = 0;
-		for (auto& i: m_textures)
-		{
-			i.Refresh();
-			glEnable(GL_TEXTURE_2D);
-			int x = 640-(j+1)*74;
-			int y = 400-74;
-			glBegin(GL_QUADS);
-			// Single-colored version
-			glColor4ub(255, 255, 255, 255);
-			// Top-left
-			glTexCoord2f(0.0f, 0.0f);
-			glVertex2i(x, y);
-			// Bottom-left
-			glTexCoord2f(0.0f, 0.2f);
-			glVertex2i(x, y+64);
-			// Bottom-right
-			glTexCoord2f(0.2f, 0.2f);
-			glVertex2i(x+64, y+64);
-			// Top-right
-			glTexCoord2f(0.2f, 0.0f);
-			glVertex2i(x+64, y);
-			glEnd();
-			j++;
-		}
-		//*/
 	}
 
 	void Atlas::Dispose()

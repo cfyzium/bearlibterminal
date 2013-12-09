@@ -29,6 +29,7 @@
 */
 
 #include "PicoPNG.hpp"
+#include "Log.hpp"
 
 /*
 * decodePNG: The picoPNG function, decodes a PNG file buffer in memory, into a raw pixel buffer.
@@ -370,7 +371,7 @@ int decodePNG(std::vector<unsigned char>& out_image, unsigned long& image_width,
         for(int i = 0; i < 7; i++)
           adam7Pass(&out_[0], &scanlinen[0], &scanlineo[0], &scanlines[passstart[i]], info.width, pattern[i], pattern[i + 7], pattern[i + 14], pattern[i + 21], passw[i], passh[i], bpp);
       }
-      if(convert_to_rgba32 && (info.colorType != 6 || info.bitDepth != 8)) //conversion needed
+      if(convert_to_rgba32)// && (info.colorType != 6 || info.bitDepth != 8)) //conversion needed
       {
         std::vector<unsigned char> data = out;
         error = convert(out, &data[0], info, info.width, info.height);
@@ -475,127 +476,160 @@ int decodePNG(std::vector<unsigned char>& out_image, unsigned long& image_width,
       out.resize(numpixels * 4);
       unsigned char* out_ = out.empty() ? 0 : &out[0]; //faster if compiled without optimization
       if(infoIn.bitDepth == 8 && infoIn.colorType == 0) //greyscale
-      for(size_t i = 0; i < numpixels; i++)
       {
+    	  LOG(Trace, "PicoPNG::convert: color type = 8/0 (greyscale)");
+		  for(size_t i = 0; i < numpixels; i++)
+		  {
 #if !defined(A)
-        out_[4 * i + 0] = out_[4 * i + 1] = out_[4 * i + 2] = in[i];
-        out_[4 * i + 3] = (infoIn.key_defined && in[i] == infoIn.key_r) ? 0 : 255;
+			out_[4 * i + 0] = out_[4 * i + 1] = out_[4 * i + 2] = in[i];
+			out_[4 * i + 3] = (infoIn.key_defined && in[i] == infoIn.key_r) ? 0 : 255;
 #else
-    	out_[4 * i + 0] = out_[4 * i + 1] = out_[4 * i + 2] = in[i];
-    	out_[4 * i + 3] = (infoIn.key_defined && in[i] == infoIn.key_r) ? 0 : 255;
+			out_[4 * i + 0] = out_[4 * i + 1] = out_[4 * i + 2] = in[i];
+			out_[4 * i + 3] = (infoIn.key_defined && in[i] == infoIn.key_r) ? 0 : 255;
 #endif
+		  }
       }
       else if(infoIn.bitDepth == 8 && infoIn.colorType == 2) //RGB color
-      for(size_t i = 0; i < numpixels; i++)
       {
+    	  LOG(Trace, "PicoPNG::convert: color type = 8/2 (RGB)");
+		  for(size_t i = 0; i < numpixels; i++)
+		  {
 #if !defined(A)
-        for(size_t c = 0; c < 3; c++) out_[4 * i + c] = in[3 * i + c];
-    	out_[4 * i + 3] = (infoIn.key_defined == 1 && in[3 * i + 0] == infoIn.key_r && in[3 * i + 1] == infoIn.key_g && in[3 * i + 2] == infoIn.key_b) ? 0 : 255;
+			for(size_t c = 0; c < 3; c++) out_[4 * i + c] = in[3 * i + c];
+			out_[4 * i + 3] = (infoIn.key_defined == 1 && in[3 * i + 0] == infoIn.key_r && in[3 * i + 1] == infoIn.key_g && in[3 * i + 2] == infoIn.key_b) ? 0 : 255;
 #else
-    	for(size_t c = 0; c < 3; c++) out_[4 * i + 2 - c] = in[3 * i + c];
-        out_[4 * i + 3] = (infoIn.key_defined == 1 && in[3 * i + 0] == infoIn.key_r && in[3 * i + 1] == infoIn.key_g && in[3 * i + 2] == infoIn.key_b) ? 0 : 255;
+			for(size_t c = 0; c < 3; c++) out_[4 * i + 2 - c] = in[3 * i + c];
+			out_[4 * i + 3] = (infoIn.key_defined == 1 && in[3 * i + 0] == infoIn.key_r && in[3 * i + 1] == infoIn.key_g && in[3 * i + 2] == infoIn.key_b) ? 0 : 255;
 #endif
+		  }
       }
       else if(infoIn.bitDepth == 8 && infoIn.colorType == 3) //indexed color (palette)
-      for(size_t i = 0; i < numpixels; i++)
       {
+    	  LOG(Trace, "PicoPNG::convert: color type = 8/3 (indexed)");
+		  for(size_t i = 0; i < numpixels; i++)
+		  {
 #if !defined(A)
-        if(4U * in[i] >= infoIn.palette.size()) return 46;
-        for(size_t c = 0; c < 4; c++) out_[4 * i + c] = infoIn.palette[4 * in[i] + c]; //get rgb colors from the palette
+			if(4U * in[i] >= infoIn.palette.size()) return 46;
+			for(size_t c = 0; c < 4; c++) out_[4 * i + c] = infoIn.palette[4 * in[i] + c]; //get rgb colors from the palette
 #else
-    	if(4U * in[i] >= infoIn.palette.size()) return 46;
-    	for(size_t c = 0; c < 3; c++) out_[4 * i + 2 - c] = infoIn.palette[4 * in[i] + c]; //get rgb colors from the palette
-    	out_[4 * i + 3] = infoIn.palette[4 * in[i] + 3];
+			if(4U * in[i] >= infoIn.palette.size()) return 46;
+			for(size_t c = 0; c < 3; c++) out_[4 * i + 2 - c] = infoIn.palette[4 * in[i] + c]; //get rgb colors from the palette
+			out_[4 * i + 3] = infoIn.palette[4 * in[i] + 3];
 #endif
+		  }
       }
       else if(infoIn.bitDepth == 8 && infoIn.colorType == 4) //greyscale with alpha
-      for(size_t i = 0; i < numpixels; i++)
       {
+    	  LOG(Trace, "PicoPNG::convert: color type = 8/4 (greyscale with alpha)");
+		  for(size_t i = 0; i < numpixels; i++)
+		  {
 #if !defined(A)
-        out_[4 * i + 0] = out_[4 * i + 1] = out_[4 * i + 2] = in[2 * i + 0];
-        out_[4 * i + 3] = in[2 * i + 1];
+			out_[4 * i + 0] = out_[4 * i + 1] = out_[4 * i + 2] = in[2 * i + 0];
+			out_[4 * i + 3] = in[2 * i + 1];
 #else
-        out_[4 * i + 0] = out_[4 * i + 1] = out_[4 * i + 2] = in[2 * i + 0];
-        out_[4 * i + 3] = in[2 * i + 1];
+			out_[4 * i + 0] = out_[4 * i + 1] = out_[4 * i + 2] = in[2 * i + 0];
+			out_[4 * i + 3] = in[2 * i + 1];
 #endif
+		  }
       }
       else if(infoIn.bitDepth == 8 && infoIn.colorType == 6)
-#if !defined(A)
-      for(size_t i = 0; i < numpixels; i++) for(size_t c = 0; c < 4; c++) out_[4 * i + c] = in[4 * i + c]; //RGB with alpha
-#else
-      for(size_t i = 0; i < numpixels; i++)
       {
-    	  for(size_t c = 0; c < 3; c++) out_[4 * i + 2 - c] = in[4 * i + c]; //RGB with alpha
-    	  out_[4 * i + 3] = in[4 * i + 3];
+    	  LOG(Trace, "PicoPNG::convert: color type = 8/6 (RGB with alpha)");
+#if !defined(A)
+		  for(size_t i = 0; i < numpixels; i++) for(size_t c = 0; c < 4; c++) out_[4 * i + c] = in[4 * i + c]; //RGB with alpha
+#else
+		  for(size_t i = 0; i < numpixels; i++)
+		  {
+			  for(size_t c = 0; c < 3; c++) out_[4 * i + 2 - c] = in[4 * i + c]; //RGB with alpha
+			  out_[4 * i + 3] = in[4 * i + 3];
+		  }
+#endif
       }
-#endif
       else if(infoIn.bitDepth == 16 && infoIn.colorType == 0) //greyscale
-      for(size_t i = 0; i < numpixels; i++)
       {
+    	  LOG(Trace, "PicoPNG::convert: color type = 16/0 (greyscale)");
+		  for(size_t i = 0; i < numpixels; i++)
+		  {
 #if !defined(A)
-        out_[4 * i + 0] = out_[4 * i + 1] = out_[4 * i + 2] = in[2 * i];
-        out_[4 * i + 3] = (infoIn.key_defined && 256U * in[i] + in[i + 1] == infoIn.key_r) ? 0 : 255;
+			out_[4 * i + 0] = out_[4 * i + 1] = out_[4 * i + 2] = in[2 * i];
+			out_[4 * i + 3] = (infoIn.key_defined && 256U * in[i] + in[i + 1] == infoIn.key_r) ? 0 : 255;
 #else
-    	out_[4 * i + 0] = out_[4 * i + 1] = out_[4 * i + 2] = in[2 * i];
-    	out_[4 * i + 3] = (infoIn.key_defined && 256U * in[i] + in[i + 1] == infoIn.key_r) ? 0 : 255;
+			out_[4 * i + 0] = out_[4 * i + 1] = out_[4 * i + 2] = in[2 * i];
+			out_[4 * i + 3] = (infoIn.key_defined && 256U * in[i] + in[i + 1] == infoIn.key_r) ? 0 : 255;
 #endif
+		  }
       }
       else if(infoIn.bitDepth == 16 && infoIn.colorType == 2) //RGB color
-      for(size_t i = 0; i < numpixels; i++)
       {
+    	  LOG(Trace, "PicoPNG::convert: color type = 16/2 (RGB)");
+		  for(size_t i = 0; i < numpixels; i++)
+		  {
 #if !defined(A)
-        for(size_t c = 0; c < 3; c++) out_[4 * i + c] = in[6 * i + 2 * c];
-        out_[4 * i + 3] = (infoIn.key_defined && 256U*in[6*i+0]+in[6*i+1] == infoIn.key_r && 256U*in[6*i+2]+in[6*i+3] == infoIn.key_g && 256U*in[6*i+4]+in[6*i+5] == infoIn.key_b) ? 0 : 255;
+			for(size_t c = 0; c < 3; c++) out_[4 * i + c] = in[6 * i + 2 * c];
+			out_[4 * i + 3] = (infoIn.key_defined && 256U*in[6*i+0]+in[6*i+1] == infoIn.key_r && 256U*in[6*i+2]+in[6*i+3] == infoIn.key_g && 256U*in[6*i+4]+in[6*i+5] == infoIn.key_b) ? 0 : 255;
 #else
-        for(size_t c = 0; c < 3; c++) out_[4 * i + 2 - c] = in[6 * i + 2 * c];
-        out_[4 * i + 3] = (infoIn.key_defined && 256U*in[6*i+0]+in[6*i+1] == infoIn.key_r && 256U*in[6*i+2]+in[6*i+3] == infoIn.key_g && 256U*in[6*i+4]+in[6*i+5] == infoIn.key_b) ? 0 : 255;
+			for(size_t c = 0; c < 3; c++) out_[4 * i + 2 - c] = in[6 * i + 2 * c];
+			out_[4 * i + 3] = (infoIn.key_defined && 256U*in[6*i+0]+in[6*i+1] == infoIn.key_r && 256U*in[6*i+2]+in[6*i+3] == infoIn.key_g && 256U*in[6*i+4]+in[6*i+5] == infoIn.key_b) ? 0 : 255;
 #endif
+		  }
       }
       else if(infoIn.bitDepth == 16 && infoIn.colorType == 4) //greyscale with alpha
-      for(size_t i = 0; i < numpixels; i++)
       {
+    	  LOG(Trace, "PicoPNG::convert: color type = 16/4 (greyscale with alpha)");
+		  for(size_t i = 0; i < numpixels; i++)
+		  {
 #if !defined(A)
-        out_[4 * i + 0] = out_[4 * i + 1] = out_[4 * i + 2] = in[4 * i]; //most significant byte
-        out_[4 * i + 3] = in[4 * i + 2];
+			out_[4 * i + 0] = out_[4 * i + 1] = out_[4 * i + 2] = in[4 * i]; //most significant byte
+			out_[4 * i + 3] = in[4 * i + 2];
 #else
-    	out_[4 * i + 0] = out_[4 * i + 1] = out_[4 * i + 2] = in[4 * i]; //most significant byte
-    	out_[4 * i + 3] = in[4 * i + 2];
+			out_[4 * i + 0] = out_[4 * i + 1] = out_[4 * i + 2] = in[4 * i]; //most significant byte
+			out_[4 * i + 3] = in[4 * i + 2];
 #endif
+		  }
       }
       else if(infoIn.bitDepth == 16 && infoIn.colorType == 6)
-#if !defined(A)
-      for(size_t i = 0; i < numpixels; i++) for(size_t c = 0; c < 4; c++) out_[4 * i + c] = in[8 * i + 2 * c]; //RGB with alpha
-#else
-      for(size_t i = 0; i < numpixels; i++)
       {
-    	  for(size_t c = 0; c < 3; c++) out_[4 * i + 2 - c] = in[8 * i + 2 * c]; //RGB with alpha
-    	  out_[4 * i + 3] = in[8 * i + 2 * 3];
+    	  LOG(Trace, "PicoPNG::convert: color type = 16/6 (RGB with alpha)");
+#if !defined(A)
+		  for(size_t i = 0; i < numpixels; i++) for(size_t c = 0; c < 4; c++) out_[4 * i + c] = in[8 * i + 2 * c]; //RGB with alpha
+#else
+		  for(size_t i = 0; i < numpixels; i++)
+		  {
+			  for(size_t c = 0; c < 3; c++) out_[4 * i + 2 - c] = in[8 * i + 2 * c]; //RGB with alpha
+			  out_[4 * i + 3] = in[8 * i + 2 * 3];
+		  }
+#endif
       }
-#endif
       else if(infoIn.bitDepth < 8 && infoIn.colorType == 0) //greyscale
-      for(size_t i = 0; i < numpixels; i++)
       {
-        unsigned long value = (readBitsFromReversedStream(bp, in, infoIn.bitDepth) * 255) / ((1 << infoIn.bitDepth) - 1); //scale value from 0 to 255
+    	  LOG(Trace, "PicoPNG::convert: color type = <8/0 (greyscale)");
+		  for(size_t i = 0; i < numpixels; i++)
+		  {
+			unsigned long value = (readBitsFromReversedStream(bp, in, infoIn.bitDepth) * 255) / ((1 << infoIn.bitDepth) - 1); //scale value from 0 to 255
 #if !defined(A)
-        out_[4 * i + 0] = out_[4 * i + 1] = out_[4 * i + 2] = (unsigned char)(value);
-        out_[4 * i + 3] = (infoIn.key_defined && value && ((1U << infoIn.bitDepth) - 1U) == infoIn.key_r && ((1U << infoIn.bitDepth) - 1U)) ? 0 : 255;
+			out_[4 * i + 0] = out_[4 * i + 1] = out_[4 * i + 2] = (unsigned char)(value);
+			out_[4 * i + 3] = (infoIn.key_defined && value && ((1U << infoIn.bitDepth) - 1U) == infoIn.key_r && ((1U << infoIn.bitDepth) - 1U)) ? 0 : 255;
 #else
-        out_[4 * i + 0] = out_[4 * i + 1] = out_[4 * i + 2] = (unsigned char)(value);
-        out_[4 * i + 3] = (infoIn.key_defined && value && ((1U << infoIn.bitDepth) - 1U) == infoIn.key_r && ((1U << infoIn.bitDepth) - 1U)) ? 0 : 255;
+			out_[4 * i + 0] = out_[4 * i + 1] = out_[4 * i + 2] = (unsigned char)(value);
+			out_[4 * i + 3] = (infoIn.key_defined && value && ((1U << infoIn.bitDepth) - 1U) == infoIn.key_r && ((1U << infoIn.bitDepth) - 1U)) ? 0 : 255;
 #endif
+		  }
       }
       else if(infoIn.bitDepth < 8 && infoIn.colorType == 3) //palette
-      for(size_t i = 0; i < numpixels; i++)
       {
-        unsigned long value = readBitsFromReversedStream(bp, in, infoIn.bitDepth);
+    	  LOG(Trace, "PicoPNG::convert: color type = <8/3 (palette)");
+		  for(size_t i = 0; i < numpixels; i++)
+		  {
+			unsigned long value = readBitsFromReversedStream(bp, in, infoIn.bitDepth);
 #if !defined(A)
-        if(4 * value >= infoIn.palette.size()) return 47;
-        for(size_t c = 0; c < 4; c++) out_[4 * i + c] = infoIn.palette[4 * value + c]; //get rgb colors from the palette
+			if(4 * value >= infoIn.palette.size()) return 47;
+			for(size_t c = 0; c < 4; c++) out_[4 * i + c] = infoIn.palette[4 * value + c]; //get rgb colors from the palette
 #else
-        if(4 * value >= infoIn.palette.size()) return 47;
-        for(size_t c = 0; c < 3; c++) out_[4 * i + 2 - c] = infoIn.palette[4 * value + c]; //get rgb colors from the palette
-        out_[4 * i + 3] = infoIn.palette[4 * value + 3];
+			if(4 * value >= infoIn.palette.size()) return 47;
+			for(size_t c = 0; c < 3; c++) out_[4 * i + 2 - c] = infoIn.palette[4 * value + c]; //get rgb colors from the palette
+			out_[4 * i + 3] = infoIn.palette[4 * value + 3];
 #endif
+		  }
       }
       return 0;
     }

@@ -42,6 +42,7 @@ namespace BearLibTerminal
 		void Bind();
 		void Update(const Bitmap& bitmap);
 		void Update(Rectangle area, const Bitmap& bitmap);
+		Bitmap Download();
 		Size GetSize() const;
 		handle_t GetHandle() const;
 		static void Enable();
@@ -50,8 +51,8 @@ namespace BearLibTerminal
 		static handle_t BoundId();
 
 		// NonCopyable, NonAssignable
-		Texture(const Texture&) = delete;
-		Texture& operator=(const Texture&) = delete;
+		Texture(Texture&&) = delete;
+		Texture& operator=(Texture&&) = delete;
 
 	protected:
 		handle_t m_handle;

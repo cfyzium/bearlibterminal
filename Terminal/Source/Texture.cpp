@@ -57,6 +57,7 @@ namespace BearLibTerminal
 	{
 		if (m_handle > 0)
 		{
+			Unbind();
 			glDeleteTextures(1, &m_handle);
 			m_handle = 0;
 		}
@@ -134,6 +135,23 @@ namespace BearLibTerminal
 			throw std::runtime_error("Texture::Update: OpenGL error");
 		}
 		//*/
+	}
+
+	Bitmap Texture::Download()
+	{
+		if (m_handle == 0)
+		{
+			LOG(Error, L"[Texture::Download] Texture is not yet created");
+			throw std::runtime_error("invalid texture");
+		}
+
+		Bitmap result(m_size, Color());
+		uint8_t* data = (uint8_t*)&result(0, 0);
+
+		Bind();
+		glGetTexImage(GL_TEXTURE_2D, 0, GL_BGRA, GL_UNSIGNED_BYTE, data);
+
+		return result;
 	}
 
 	void Texture::Update(Rectangle area, const Bitmap& bitmap)

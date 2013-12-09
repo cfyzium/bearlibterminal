@@ -131,7 +131,7 @@ namespace BearLibTerminal
 
 		timeval t1, t2;
 		gettimeofday(&t1, NULL);
-		if ( decodePNG(out_buffer, width, height, (const unsigned char*)in_buffer.c_str(), in_buffer.size()) )
+		if (decodePNG(out_buffer, width, height, (const unsigned char*)in_buffer.c_str(), in_buffer.size(), true))
 		{
 			throw std::runtime_error("PNG decode failed");
 		}
