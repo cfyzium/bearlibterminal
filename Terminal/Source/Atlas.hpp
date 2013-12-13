@@ -97,6 +97,7 @@ namespace BearLibTerminal
 	private:
 		bool TryGrow();
 		void PostprocessSpaces();
+		void MergeSpaces();
 		TexCoords CalcTexCoords(Rectangle region);
 
 		Type m_type;

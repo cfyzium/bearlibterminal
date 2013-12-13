@@ -55,6 +55,15 @@ namespace BearLibTerminal
 		PFN_GLXSWAPINTERVALMESA glXSwapIntervalMESA;
 	};
 
+	struct InvokationSentry2
+	{
+		std::packaged_task<void()> task;
+
+		InvokationSentry2(std::function<void()> func):
+			task(func)
+		{ }
+	};
+
 	X11Window::Private::Private():
 		display(NULL),
 		window(0),
@@ -421,15 +430,6 @@ namespace BearLibTerminal
 		return key;
 	}
 
-	struct InvokationSentry2
-	{
-		std::packaged_task<void()> task;
-
-		InvokationSentry2(std::function<void()> func):
-			task(func)
-		{ }
-	};
-
 	void X11Window::Invoke(std::function<void()> func)
 	{
 		auto sentry = std::make_shared<InvokationSentry2>(func);
@@ -571,7 +571,7 @@ namespace BearLibTerminal
 
 		while (m_proceed)
 		{
-			if (!PumpEvents()) usleep(1000);
+			if (!PumpEvents()) usleep(500);
 		}
 
 		// Notify possible pending refreshes (TODO: duplicate? there is one in Destroy too)

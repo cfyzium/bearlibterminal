@@ -44,6 +44,16 @@ namespace BearLibTerminal
 	std::wostream& operator<<(std::wostream& s, const ResizeFilter& value);
 	std::wistream& operator>>(std::wistream& s, ResizeFilter& value);
 
+	enum class ResizeMode
+	{
+		Stretch,
+		Fit,
+		Crop
+	};
+
+	std::wostream& operator<<(std::wostream& s, const ResizeMode& value);
+	std::wistream& operator>>(std::wistream& s, ResizeMode& value);
+
 	class Bitmap
 	{
 	public:
@@ -67,7 +77,7 @@ namespace BearLibTerminal
 		const Color* GetData() const;
 		bool HasAlpha() const;
 		void MakeTransparent(Color color);
-		Bitmap Resize(Size size, ResizeFilter filter);
+		Bitmap Resize(Size size, ResizeFilter filter, ResizeMode mode);
 
 	protected:
 		Size m_size;

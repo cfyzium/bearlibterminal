@@ -259,8 +259,7 @@ namespace BearLibTerminal
 		// Give back used space
 		m_spaces.push_back(Rectangle(slot->texture_region.Location(), slot->space_size));
 
-		//*
-		// DEBUG: clear freed area with some color
+		// DEBUG: fill freed area with some color
 		Rectangle area = Rectangle(slot->texture_region.Location(), slot->space_size);
 		for (int y=area.top; y<area.top+area.height; y++)
 		{
@@ -270,9 +269,26 @@ namespace BearLibTerminal
 			}
 		}
 		m_is_dirty = true;
-		//*/
 
 		PostprocessSpaces();
+		MergeSpaces(); // TODO: move it a level higher (once per tileset removal)
+
+		// Check if the texture is too fragmented
+		if (m_canvas.GetSize().width > 256 && m_canvas.GetSize().height > 256)
+		{
+			float used_area = 0, unused_area = 0;
+			for (auto& slot: m_slots) used_area += slot->space_size.Area();
+			for (auto& space: m_spaces) unused_area += space.Area();
+
+			float used_unused_ratio = used_area / unused_area;
+			float average_unused = unused_area / m_spaces.size();
+
+			if (used_unused_ratio < 0.2f && average_unused/m_canvas.GetSize().Area() < 0.01f)
+			{
+				LOG(Info, "Atlas texture " << m_canvas.GetSize() << ": used/unused = " << used_unused_ratio << ", relative average unused = " << average_unused/m_canvas.GetSize().Area());
+				// TODO: Defragment
+			}
+		}
 	}
 
 	bool AtlasTexture::IsEmpty() const
@@ -341,8 +357,60 @@ namespace BearLibTerminal
 
 	void AtlasTexture::PostprocessSpaces()
 	{
-		// FIXME: sort spaces
-		// TODO: merge spaces
+		// Sorting so that smallest ones are first
+		m_spaces.sort([](Rectangle a, Rectangle b){return a.Area() < b.Area();});
+	}
+
+	void AtlasTexture::MergeSpaces()
+	{
+		// Simple megre algorithm
+		for(auto i=m_spaces.begin(); i != m_spaces.end(); i++)
+		{
+			for (auto j=m_spaces.begin(); j!=m_spaces.end();)
+			{
+				if (j == i)
+				{
+					j++;
+					continue;
+				}
+				else if (j->left+j->width == i->left && j->top == i->top && j->height == i->height)
+				{
+					// Left-adjacent
+					i->left -= j->width;
+					i->width += j->width;
+					m_spaces.erase(j);
+					j = m_spaces.begin();
+					continue;
+				}
+				else if (j->top+j->height == i->top && j->left == i->left && j->width == i->width)
+				{
+					// Top-adjacent
+					i->top -= j->height;
+					i->height += j->height;
+					m_spaces.erase(j);
+					j = m_spaces.begin();
+					continue;
+				}
+				else if (j->left == i->left+i->width && j->top == i->top && j->height == i->height)
+				{
+					// Right-adjacent
+					i->width += j->width;
+					m_spaces.erase(j);
+					j = m_spaces.begin();
+					continue;
+				}
+				else if (j->top == i->top+i->height && j->left == i->left && j->width == i->width)
+				{
+					// Bottom-adjacent
+					i->height += j->height;
+					m_spaces.erase(j);
+					j = m_spaces.begin();
+					continue;
+				}
+
+				j++;
+			}
+		}
 	}
 
 	TexCoords AtlasTexture::CalcTexCoords(Rectangle region)

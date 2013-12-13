@@ -14,7 +14,7 @@
 
 namespace BearLibTerminal
 {
-	Logger g_log;
+	std::unique_ptr<Log> g_logger(new Log()); // Leave empty? It is reset in Terminal ctor
 
 	static std::string FormatTime()
 	{
@@ -49,14 +49,14 @@ namespace BearLibTerminal
 		return buffer;
 	}
 
-	Logger::Logger():
+	Log::Log():
 		m_level(Level::Trace),
 		m_mode(Mode::Truncate),
 		m_filename(L"bearlibterminal.log"),
 		m_truncated(false)
 	{ }
 
-	void Logger::Write(Level level, const std::wstring& what)
+	void Log::Write(Level level, const std::wstring& what)
 	{
 		std::lock_guard<std::mutex> guard(m_lock);
 		std::ofstream stream;
@@ -83,13 +83,13 @@ namespace BearLibTerminal
 		stream << UTF8->Convert(ss.str()) << "\n";
 	}
 
-	void Logger::SetLevel(Level level)
+	void Log::SetLevel(Level level)
 	{
 		// Atomic
 		m_level = level;
 	}
 
-	void Logger::SetFile(const std::wstring& filename)
+	void Log::SetFile(const std::wstring& filename)
 	{
 		std::lock_guard<std::mutex> guard(m_lock);
 		m_filename = filename;
@@ -100,47 +100,47 @@ namespace BearLibTerminal
 		m_truncated = false;
 	}
 
-	void Logger::SetMode(Mode mode)
+	void Log::SetMode(Mode mode)
 	{
 		std::lock_guard<std::mutex> guard(m_lock);
 		m_mode = mode;
 	}
 
-	std::wstring Logger::GetFile() const
+	std::wstring Log::GetFile() const
 	{
 		std::lock_guard<std::mutex> guard(m_lock);
 		return m_filename;
 	}
 
-	Logger::Mode Logger::GetMode() const
+	Log::Mode Log::GetMode() const
 	{
 		std::lock_guard<std::mutex> guard(m_lock);
 		return m_mode;
 	}
 
-	std::wostream& operator<< (std::wostream& s, const Logger::Level& value)
+	std::wostream& operator<< (std::wostream& s, const Log::Level& value)
 	{
 		switch (value)
 		{
-		case Logger::Level::None:
+		case Log::Level::None:
 			s << L"None";
 			break;
-		case Logger::Level::Fatal:
+		case Log::Level::Fatal:
 			s << L"Fatal";
 			break;
-		case Logger::Level::Error:
+		case Log::Level::Error:
 			s << L"Error";
 			break;
-		case Logger::Level::Warning:
+		case Log::Level::Warning:
 			s << L"Warning";
 			break;
-		case Logger::Level::Info:
+		case Log::Level::Info:
 			s << L"Info";
 			break;
-		case Logger::Level::Debug:
+		case Log::Level::Debug:
 			s << L"Debug";
 			break;
-		case Logger::Level::Trace:
+		case Log::Level::Trace:
 			s << L"Trace";
 			break;
 		default:
@@ -150,29 +150,55 @@ namespace BearLibTerminal
 		return s;
 	}
 
-	std::wistream& operator>> (std::wistream& s, Logger::Level& value)
+	std::wistream& operator>> (std::wistream& s, Log::Level& value)
 	{
 		std::wstring temp;
 		s >> temp;
-		if (temp == L"trace") value = Logger::Level::Trace;
-		else if (temp == L"debug") value = Logger::Level::Debug;
-		else if (temp == L"info") value = Logger::Level::Info;
-		else if (temp == L"warning") value = Logger::Level::Warning;
-		else if (temp == L"error") value = Logger::Level::Error;
-		else if (temp == L"fatal") value = Logger::Level::Fatal;
-		else if (temp == L"none") value = Logger::Level::None;
-		else value = Logger::Level::Error;
+
+		if (temp == L"trace")
+		{
+			value = Log::Level::Trace;
+		}
+		else if (temp == L"debug")
+		{
+			value = Log::Level::Debug;
+		}
+		else if (temp == L"info")
+		{
+			value = Log::Level::Info;
+		}
+		else if (temp == L"warning")
+		{
+			value = Log::Level::Warning;
+		}
+		else if (temp == L"error")
+		{
+			value = Log::Level::Error;
+		}
+		else if (temp == L"fatal")
+		{
+			value = Log::Level::Fatal;
+		}
+		else if (temp == L"none")
+		{
+			value = Log::Level::None;
+		}
+		else
+		{
+			s.setstate(std::wistream::badbit);
+		}
+
 		return s;
 	}
 
-	std::wostream& operator<< (std::wostream& s, const Logger::Mode& value)
+	std::wostream& operator<< (std::wostream& s, const Log::Mode& value)
 	{
 		switch (value)
 		{
-		case Logger::Mode::Truncate:
+		case Log::Mode::Truncate:
 			s << L"truncate";
 			break;
-		case Logger::Mode::Append:
+		case Log::Mode::Append:
 			s << L"append";
 			break;
 		default:
@@ -182,12 +208,24 @@ namespace BearLibTerminal
 		return s;
 	}
 
-	std::wistream& operator>> (std::wistream& s, Logger::Mode& value)
+	std::wistream& operator>> (std::wistream& s, Log::Mode& value)
 	{
 		std::wstring temp;
 		s >> temp;
-		if (temp == L"append") value = Logger::Mode::Append;
-		else value = Logger::Mode::Truncate;
+
+		if (temp == L"append")
+		{
+			value = Log::Mode::Append;
+		}
+		else if (temp == L"truncate")
+		{
+			value = Log::Mode::Truncate;
+		}
+		else
+		{
+			s.setstate(std::wistream::badbit);
+		}
+
 		return s;
 	}
 }

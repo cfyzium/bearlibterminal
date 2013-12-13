@@ -27,16 +27,17 @@
 #include <string>
 #include <sstream>
 #include <atomic>
+#include <memory>
 
 namespace BearLibTerminal
 {
-	class Logger
+	class Log
 	{
 	public:
 		enum class Level {None, Fatal, Error, Warning, Info, Debug, Trace};
 		enum class Mode {Truncate, Append};
 	public:
-		Logger();
+		Log();
 		void Write(Level level, const std::wstring& what);
 		void SetFile(const std::wstring& filename);
 		void SetLevel(Level level);
@@ -52,23 +53,23 @@ namespace BearLibTerminal
 		bool m_truncated;
 	};
 
-	std::wostream& operator<< (std::wostream& stream, const Logger::Level& value);
-	std::wistream& operator>> (std::wistream& stream, Logger::Level& value);
+	std::wostream& operator<< (std::wostream& stream, const Log::Level& value);
+	std::wistream& operator>> (std::wistream& stream, Log::Level& value);
 
-	std::wostream& operator<< (std::wostream& stream, const Logger::Mode& value);
-	std::wistream& operator>> (std::wistream& stream, Logger::Mode& mode);
+	std::wostream& operator<< (std::wostream& stream, const Log::Mode& value);
+	std::wistream& operator>> (std::wistream& stream, Log::Mode& mode);
 
-	extern Logger g_log;
+	extern std::unique_ptr<Log> g_logger;
 }
 
 #define LOG(level, what)\
 	do\
 	{\
-		if (BearLibTerminal::Logger::Level::level <= BearLibTerminal::g_log.GetLevel())\
+		if (BearLibTerminal::Log::Level::level <= BearLibTerminal::g_logger->GetLevel())\
 		{\
 			std::wostringstream wss_;\
 			wss_ << what;\
-			BearLibTerminal::g_log.Write(BearLibTerminal::Logger::Level::level, wss_.str());\
+			BearLibTerminal::g_logger->Write(BearLibTerminal::Log::Level::level, wss_.str());\
 		}\
 	}\
 	while (0)

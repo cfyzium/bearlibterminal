@@ -25,6 +25,9 @@ namespace BearLibTerminal
 		m_inside_drawing_block(false),
 		m_show_grid(false)
 	{
+		// Reset logger (this is terrible)
+		g_logger = std::unique_ptr<Log>(new Log());
+
 		// Try to create window
 		m_window = Window::Create(Window::Asynchronous);
 		m_window->SetOnDestroy(std::bind(&Terminal::OnWindowClose, this));
@@ -33,7 +36,7 @@ namespace BearLibTerminal
 		m_window->SetOnActivate(std::bind(&Terminal::OnWindowActivate, this));
 
 		// Default parameters
-		SetOptionsInternal(L"window: size=40x25, icon=default; font: default; terminal.encoding=utf8");
+		SetOptionsInternal(L"window: size=80x25, icon=default; font: default; terminal.encoding=utf8");
 	}
 
 	Terminal::~Terminal()
@@ -68,23 +71,38 @@ namespace BearLibTerminal
 		m_asynchronous = window;
 		InvokeOnRenderingThread([&]{m_window->AcquireRC();});
 		/*/
+
+		// Briefly unlock the mutex because window must invoke OnDestroy
 		m_lock.unlock();
 		m_window.reset();
 		m_lock.lock();
+
+		// Create new window
 		m_asynchronous = window;
 		m_window = Window::Create(m_asynchronous? Window::Asynchronous: Window::Synchronous);
 		m_window->SetOnInput(std::bind(&Terminal::OnWindowInput, this, std::placeholders::_1));
 		m_window->SetOnRedraw(std::bind(&Terminal::OnWindowRedraw, this));
-		/*if (m_asynchronous) InvokeOnRenderingThread([&]
+		m_window->SetOnDestroy(std::bind(&Terminal::OnWindowClose, this));
+		m_window->SetOnActivate(std::bind(&Terminal::OnWindowActivate, this));
+
+		// Reset basic graphics settings
+		auto reset = [&]()
 		{
 			ConfigureViewport();
 			glEnable(GL_TEXTURE_2D);
-		}); else*/
-		{
-			ConfigureViewport();
-			glEnable(GL_TEXTURE_2D);
-		}
+
+			// Readd base font
+			OptionGroup group;
+			group.name = L"font";
+			group.attributes[L"name"] = L"default";
+			m_world.tilesets[0] = Tileset::Create(m_world.tiles, group);
+			m_world.tilesets[0]->Save();
+		};
+		InvokeOnRenderingThread([&]{reset();});
+
+		// FIXME: better just show the window if state is not kHidden
 		m_state = kHidden;
+
 		//*/
 	}
 
@@ -268,9 +286,9 @@ namespace BearLibTerminal
 		}
 
 		// Such implementation is awful. Should use some global (external library?) instance.
-		if (updated.log_filename != m_options.log_filename) g_log.SetFile(updated.log_filename);
-		if (updated.log_level != m_options.log_level) g_log.SetLevel(updated.log_level);
-		if (updated.log_mode != m_options.log_mode) g_log.SetMode(updated.log_mode);
+		if (updated.log_filename != m_options.log_filename) g_logger->SetFile(updated.log_filename);
+		if (updated.log_level != m_options.log_level) g_logger->SetLevel(updated.log_level);
+		if (updated.log_mode != m_options.log_mode) g_logger->SetMode(updated.log_mode);
 
 		if (updated.terminal_encoding != m_options.terminal_encoding)
 		{
@@ -540,7 +558,15 @@ namespace BearLibTerminal
 			}
 
 			// NOTE: this call will wait OnWindowRedraw completion
+			/*
 			m_window->Redraw();
+			/*/
+			m_window->Invoke([&]()
+			{
+				OnWindowRedraw();
+				m_window->SwapBuffers();
+			});
+			//*/
 		}
 		else
 		{
@@ -652,6 +678,8 @@ namespace BearLibTerminal
 	{
 		if (m_asynchronous)
 		{
+			//return;
+
 			uint16_t u16code = (uint16_t)code;
 			if (m_world.tiles.slots.find(u16code) == m_world.tiles.slots.end())
 			{
@@ -691,7 +719,7 @@ namespace BearLibTerminal
 				}
 
 				// Background color
-				if (m_world.state.layer == 0)
+				if (m_world.state.layer == 0 && m_world.state.bkcolor)
 				{
 					m_world.stage.backbuffer.background[index] = m_world.state.bkcolor;
 				}

@@ -21,7 +21,7 @@ void UpdateInputFilter(bool press, bool release, bool move, bool scroll)
 
 void UpdatePreciseMovement(bool flag)
 {
-	std::string s = std::string("input.precise_mousemove=") + (flag? "true": "false");
+	std::string s = std::string("input.precise-mousemove=") + (flag? "true": "false");
 	terminal_set(s.c_str());
 }
 

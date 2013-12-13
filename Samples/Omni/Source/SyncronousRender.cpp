@@ -75,6 +75,8 @@ void TestSynchronousRender()
 	terminal_set("window.title='Omni: syncronous rendering'");
 	terminal_composition(TK_COMPOSITION_ON);
 
+	terminal_setf("output.vsync=false");
+
 	unsigned int shift_f = 0, shift_b = 0, shift_f2 = 0;
 	float shift_f2f = 0;
 

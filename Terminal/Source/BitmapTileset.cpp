@@ -66,13 +66,20 @@ namespace BearLibTerminal
 				if (n < name.length()-1) l2 = name.substr(n+1);
 			}
 
-			LOG(Debug, "\"" << group.attributes[L"name"] << "\" -> " << "\"" << l1 << "\", \"" << l2 << "\"");
+			if (!l1.empty() || !l2.empty())
+			{
+				LOG(Debug, "Bitmap tileset: guessing encoding and tile size: \"" << group.attributes[L"name"] << "\" -> " << "\"" << l1 << "\", \"" << l2 << "\"");
+			}
 
 			Size temp_size;
 			if (try_parse(l2, temp_size))
 			{
 				m_tile_size = temp_size;
 				m_codepage = GetUnibyteEncoding(l1);
+			}
+			else
+			{
+				LOG(Debug, "Bitmap tileset: failed to parse guessed tile size, not an error");
 			}
 		}
 
@@ -91,6 +98,12 @@ namespace BearLibTerminal
 		if (group.attributes.count(L"resize-filter") && !try_parse(group.attributes[L"resize-filter"], resize_filter))
 		{
 			throw std::runtime_error("BitmapTileset: failed to parse 'resize-filter' attribute");
+		}
+
+		ResizeMode resize_mode = ResizeMode::Stretch;
+		if (group.attributes.count(L"resize-mode") && !try_parse(group.attributes[L"resize-mode"], resize_mode))
+		{
+			throw std::runtime_error("BitmapTileset: failed to parse 'resize-mode' attribute");
 		}
 
 		if (group.attributes.count(L"codepage"))
@@ -150,13 +163,9 @@ namespace BearLibTerminal
 
 		if (resize_to.Area())
 		{
-			timeval t1, t2;
-			gettimeofday(&t1, NULL);
+			LOG(Trace, "BitmapTileset: resizing tileset image to " << resize_to << " with " << resize_filter << " filter, " << resize_mode << " mode");
 			Size prev = m_cache.GetSize();
-			m_cache = m_cache.Resize(resize_to, resize_filter);
-			gettimeofday(&t2, NULL);
-			uint64_t delay = (t2.tv_sec-t1.tv_sec)*1000000+(t2.tv_usec-t1.tv_usec);
-			LOG(Trace, "Resizing " << prev << " -> " << resize_to << " took " << delay << " us");
+			m_cache = m_cache.Resize(resize_to, resize_filter, resize_mode);
 		}
 
 		if (group.attributes.count(L"transparent"))

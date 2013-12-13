@@ -21,6 +21,7 @@
 */
 
 #include "Bitmap.hpp"
+#include "Log.hpp"
 #include <stdexcept>
 #include <cstring>
 #include <cmath>
@@ -52,6 +53,7 @@ namespace BearLibTerminal
 	{
 		std::wstring temp;
 		s >> temp;
+
 		if (temp == L"bilinear")
 		{
 			value = ResizeFilter::Bilinear;
@@ -60,9 +62,59 @@ namespace BearLibTerminal
 		{
 			value = ResizeFilter::Bicubic;
 		}
-		else
+		else if (temp == L"nearest")
 		{
 			value = ResizeFilter::Nearest;
+		}
+		else
+		{
+			s.setstate(std::wistream::badbit);
+		}
+
+		return s;
+	}
+
+	std::wostream& operator<<(std::wostream& s, const ResizeMode& value)
+	{
+		switch (value)
+		{
+		case ResizeMode::Stretch:
+			s << "stretch";
+			break;
+		case ResizeMode::Fit:
+			s << "fit";
+			break;
+		case ResizeMode::Crop:
+			s << "crop";
+			break;
+		default:
+			s << "n/a";
+			break;
+		}
+
+		return s;
+	}
+
+	std::wistream& operator>>(std::wistream& s, ResizeMode& value)
+	{
+		std::wstring temp;
+		s >> temp;
+
+		if (temp == L"stretch")
+		{
+			value = ResizeMode::Stretch;
+		}
+		else if (temp == L"fit")
+		{
+			value = ResizeMode::Fit;
+		}
+		else if (temp == L"crop")
+		{
+			value = ResizeMode::Crop;
+		}
+		else
+		{
+			s.setstate(std::wistream::badbit);
 		}
 
 		return s;
@@ -239,17 +291,6 @@ namespace BearLibTerminal
 
 	Bitmap ResizeNearest(Bitmap& original, Size size)
 	{
-		/*
-		float scaleFactor = 3.0f;
-
-		for (int y=0; y < scaledImageHeight; y++)
-		  for (int x=0; x < scaledImageWidth; x++) {
-		    int sourceImageX = (int)std::max(x * 1.0f / scaleFactor, (float)(sourceImageWidth - 1));
-		    int sourceImageY = (int)std::max(y * 1.0f / scaleFactor, (float)(sourceImageHeight - 1));
-		    scaledImage[y * scaledImageWidth + x] = sourceImage[sourceImageY * sourceImageWidth + sourceImageX];
-		  }
-		*/
-
 		Bitmap result(size, Color());
 
 		Size original_size = original.GetSize();
@@ -407,18 +448,72 @@ namespace BearLibTerminal
 		return result;
 	}
 
-	Bitmap Bitmap::Resize(Size size, ResizeFilter filter)
+	Bitmap Bitmap::Resize(Size size, ResizeFilter filter, ResizeMode mode)
 	{
-		switch (filter)
+		Size intermediate_size = size;
+
+		if (mode == ResizeMode::Fit)
 		{
-		case ResizeFilter::Nearest:
-			return ResizeNearest(*this, size);
-		case ResizeFilter::Bilinear:
-			return ResizeBilinear(*this, size);
-		case ResizeFilter::Bicubic:
-			return ResizeBicubic(*this, size);
-		default:
+			// Less or equal size
+			float factor = std::min(size.width / (float)m_size.width, size.height / (float)m_size.height);
+			intermediate_size.width = m_size.width * factor;
+			intermediate_size.height = m_size.height * factor;
+		}
+		else if (mode == ResizeMode::Crop)
+		{
+			// Greater or equal size
+			float factor = std::max(size.width / (float)m_size.width, size.height / (float)m_size.height);
+			intermediate_size.width = m_size.width * factor;
+			intermediate_size.height = m_size.height * factor;
+		}
+		else if (mode != ResizeMode::Stretch)
+		{
+			throw std::runtime_error("Bitmap::Resize: unknown resize mode");
+		}
+
+		Bitmap intermediate;
+
+		if (filter == ResizeFilter::Nearest)
+		{
+			intermediate = ResizeNearest(*this, intermediate_size);
+		}
+		else if (filter == ResizeFilter::Bilinear)
+		{
+			intermediate =  ResizeBilinear(*this, intermediate_size);
+		}
+		else if (filter == ResizeFilter::Bicubic)
+		{
+			intermediate = ResizeBicubic(*this, intermediate_size);
+		}
+		else
+		{
 			throw std::runtime_error("Bitmap::Resize: unknown resize filter");
+		}
+
+		if (intermediate_size == size)
+		{
+			// Stretch should fall here
+			return intermediate;
+		}
+		else if (mode == ResizeMode::Fit)
+		{
+			Bitmap result(size, Color(255, 0, 0, 0));
+			int left = (size.width - intermediate_size.width)/2;
+			int top = (size.height - intermediate_size.height)/2;
+			result.Blit(intermediate, Point(left, top));
+			return result;
+		}
+		else if (mode == ResizeMode::Crop)
+		{
+			Bitmap result(size, Color());
+			int left = (intermediate_size.width-size.width)/2;
+			int top = (intermediate_size.height-size.height)/2;
+			result.Blit(intermediate, Rectangle(Point(left, top), size), Point());
+			return result;
+		}
+		else
+		{
+			throw std::runtime_error("Bitmap::Resize: internal logic error");
 		}
 	}
 }

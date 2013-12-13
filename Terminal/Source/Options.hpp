@@ -41,8 +41,8 @@ namespace BearLibTerminal
 
 		// Log
 		std::wstring log_filename;
-		Logger::Level log_level;
-		Logger::Mode log_mode;
+		Log::Level log_level;
+		Log::Mode log_mode;
 
 		Options();
 	};

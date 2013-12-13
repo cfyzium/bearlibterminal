@@ -147,6 +147,7 @@ namespace BearLibTerminal
 		}
 		else if (m_type == Synchronous)
 		{
+			if (m_on_destroy) m_on_destroy();
 			Destroy();
 		}
 	}

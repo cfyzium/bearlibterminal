@@ -90,7 +90,7 @@ void TestTextInput()
 		terminal_print(2, 3, "[color=orange]1.[/color] terminal_read_str");
 		DrawFrame(5, 4, max_chars+2, 3);
 		terminal_printf(6, 5, "%ls", buffer);
-		terminal_printf(5+max_chars+2+1, 5, "[color=gray]last operation: %s", result >=0? "OK": "cancelled");
+		terminal_printf(5+max_chars+2+1, 5, "[color=gray] %s", result >=0? "OK": "Cancelled");
 
 		terminal_print(2, 8, "[color=orange]2.[/color] terminal_read_char");
 		DrawFrame(5, 9, 5, 3);
