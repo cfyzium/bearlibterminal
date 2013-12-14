@@ -43,8 +43,7 @@ int main()
 		{"Extended 2: inter-layer animation", TestExtendedInterlayer},
 		{"Extended 3: smooth scroll", TestExtendedSmoothScroll},
 		{"Dynamic sprites", TestDynamicSprites},
-		{"Synchronous rendering", TestSynchronousRender}, // NYI
-		{"Custom rendering", nullptr}, // NYI
+		{"Speed", TestSpeed}, // NYI
 		{"Input 1: keyboard", TestKeyboard},
 		{"Input 2: mouse", TestMouse},
 		{"Input 3: text input", TestTextInput}

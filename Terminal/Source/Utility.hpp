@@ -73,6 +73,45 @@ namespace BearLibTerminal
 		std::transform(s.begin(), s.end(), s.begin(), ::tolower);
 		return s;
 	}
+
+	uint64_t gettime();
+
+	inline uint64_t start_timing()
+	{
+		return gettime();
+	}
+
+	inline uint64_t stop_timing(uint64_t start)
+	{
+		return gettime() - start;
+	}
+
+	template<typename T> class average
+	{
+	public:
+		average():
+			m_sum(),
+			m_count()
+		{ }
+
+		void add(T value)
+		{
+			m_sum += value;
+			m_count += 1;
+		}
+
+		T get()
+		{
+			T result = m_count? m_sum / m_count: T();
+			m_sum = T();
+			m_count = 0;
+			return result;
+		}
+
+	private:
+		T m_sum;
+		size_t m_count;
+	};
 }
 
 #endif /* UTILITY_HPP_ */

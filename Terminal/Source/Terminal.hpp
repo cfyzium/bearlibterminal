@@ -51,7 +51,6 @@ namespace BearLibTerminal
 		void SetComposition(int mode);
 		void Put(int x, int y, wchar_t code);
 		void PutExtended(int x, int y, int dx, int dy, wchar_t code, Color* corners);
-		void CustomRendering(int mode);
 		int Print(int x, int y, const std::wstring& str);
 		int HasInput();
 		int GetState(int code);
@@ -69,7 +68,7 @@ namespace BearLibTerminal
 		void ValidateTerminalOptions(OptionGroup& group, Options& options);
 		void ValidateLoggingOptions(OptionGroup& group, Options& options);
 		void ConfigureViewport();
-		void PutUnlocked(int x, int y, int dx, int dy, wchar_t code, Color* colors);
+		void PutInternal(int x, int y, int dx, int dy, wchar_t code, Color* colors);
 		void PrepareFreshCharacters();
 		void ConsumeIrrelevantInput();
 		void ConsumeStroke(const Keystroke& stroke);
@@ -81,10 +80,6 @@ namespace BearLibTerminal
 		int OnWindowRedraw();
 		void OnWindowInput(Keystroke keystroke);
 		void OnWindowActivate();
-		void InvokeOnRenderingThread(std::function<void()> func);
-		void SwitchRenderingThread(bool window);
-		void LeaveDrawingBlock();
-		void EnterDrawingBlock();
 	private:
 		enum state_t {kHidden, kVisible, kClosed} m_state;
 		mutable std::mutex m_lock;
@@ -97,9 +92,6 @@ namespace BearLibTerminal
 		World m_world;
 		Options m_options;
 		std::list<uint16_t> m_fresh_codes;
-		std::atomic<bool> m_asynchronous;
-		uint64_t m_current_texture;
-		bool m_inside_drawing_block;
 		std::map<std::wstring, std::unique_ptr<Encoding<char>>> m_codepage_cache;
 		bool m_show_grid;
 	};

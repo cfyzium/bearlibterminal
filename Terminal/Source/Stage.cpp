@@ -33,7 +33,10 @@ namespace BearLibTerminal
 		}
 
 		// TODO: unnecessary?
-		frontbuffer = backbuffer;
+		if (frontbuffer.background.size() != backbuffer.background.size())
+		{
+			frontbuffer = backbuffer;
+		}
 	}
 
 	State::State():

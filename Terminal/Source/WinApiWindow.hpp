@@ -57,6 +57,7 @@ namespace BearLibTerminal
 		void ThreadFunction() override;
 		bool Construct() override;
 		void Destroy() override;
+		bool PumpEvents() override;
 		void DestroyUnlocked();
 		bool CreateWindowObject();
 		bool CreateOpenGLContext();

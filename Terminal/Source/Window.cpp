@@ -32,8 +32,8 @@
 
 namespace BearLibTerminal
 {
-	Window::Window(Type type):
-		m_type(type),
+	Window::Window(/*Type type*/):
+		/*m_type(type),*/
 		m_synchronous_redraw(false),
 		m_proceed(false)
 	{ }
@@ -124,6 +124,7 @@ namespace BearLibTerminal
 		}
 	}
 
+	/*
 	void Window::RunSynchronous()
 	{
 		try
@@ -136,23 +137,24 @@ namespace BearLibTerminal
 			throw;
 		}
 	}
+	*/
 
 	void Window::Stop()
 	{
 		m_proceed = false;
 
-		if (m_type == Asynchronous && m_thread.joinable())
+		if (/*m_type == Asynchronous &&*/ m_thread.joinable())
 		{
 			m_thread.join();
 		}
-		else if (m_type == Synchronous)
+		/*else if (m_type == Synchronous)
 		{
 			if (m_on_destroy) m_on_destroy();
 			Destroy();
-		}
+		}*/
 	}
 
-	std::unique_ptr<Window> Window::Create(Type type)
+	std::unique_ptr<Window> Window::Create(/*Type type*/)
 	{
 		std::unique_ptr<Window> result;
 
@@ -160,10 +162,10 @@ namespace BearLibTerminal
 		result.reset(new X11Window(type));
 #endif
 #if defined(_WIN32)
-		result.reset(new WinApiWindow(type));
+		result.reset(new WinApiWindow(/*type*/));
 #endif
 
-		type == Asynchronous? result->RunAsynchronous(): result->RunSynchronous();
+		/*type == Asynchronous?*/ result->RunAsynchronous()/*: result->RunSynchronous()*/;
 		return std::move(result);
 	}
 }

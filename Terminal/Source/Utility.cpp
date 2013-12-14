@@ -8,6 +8,12 @@
 #include "Utility.hpp"
 #include "Log.hpp"
 
+#if defined(_WIN32)
+#include <Windows.h>
+#elif defined(__linux)
+#include <sys/time.h>
+#endif
+
 namespace BearLibTerminal
 {
 	bool try_parse(const std::wstring& s, bool& out)
@@ -78,4 +84,28 @@ namespace BearLibTerminal
 		out = (wchar_t)temp;
 		return true;
 	}
+
+#if defined(_WIN32)
+	static float get_timer_factor()
+	{
+		LARGE_INTEGER f;
+		QueryPerformanceFrequency(&f);
+		return f.QuadPart / 1E+6f;
+	}
+
+	uint64_t gettime()
+	{
+		static float factor = get_timer_factor();
+		LARGE_INTEGER t;
+		QueryPerformanceCounter(&t);
+		return t.QuadPart / factor;
+	}
+#elif defined(__linux)
+	uint64_t gettime()
+	{
+		timeval t;
+		gettimeofday(&t, nullptr);
+		return t.tv_sec*1000000 + t.tv_usec;
+	}
+#endif
 }

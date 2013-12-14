@@ -102,8 +102,8 @@ namespace BearLibTerminal
 		{
 			result = (HICON)LoadImageW
 			(
-				GetCurrentModule(),
-				MAKEINTRESOURCE(100), // FIXME: magic constant
+				(HINSTANCE)GetCurrentModule(),
+				(LPWSTR)MAKEINTRESOURCE(100), // FIXME: magic constant
 				IMAGE_ICON,
 				GetSystemMetrics(small? SM_CXSMICON: SM_CXICON),
 				GetSystemMetrics(small? SM_CYSMICON: SM_CYICON),
@@ -174,7 +174,9 @@ namespace BearLibTerminal
 		m_redraw_barrier.SetValue(0);
 		if ( m_handle == nullptr ) return;
 		InvalidateRect(m_handle, NULL, FALSE);
+		m_lock.unlock();
 		m_redraw_barrier.Wait();
+		m_lock.lock();
 	}
 
 	void WinApiWindow::Show()
@@ -226,24 +228,37 @@ namespace BearLibTerminal
 		}
 	}
 
+	bool WinApiWindow::PumpEvents()
+	{
+		int processed = 0;
+
+		for(MSG msg; PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE); )
+		{
+			processed += 1;
+
+			if (msg.message == WM_QUIT)
+			{
+				m_proceed = false;
+				break;
+			}
+
+			TranslateMessage(&msg);
+			DispatchMessageW(&msg);
+		}
+
+		return processed > 0;
+	}
+
 	void WinApiWindow::ThreadFunction()
 	{
-		MSG msg;
+		timeBeginPeriod(1);
 
-		while( m_proceed )
+		while(m_proceed)
 		{
-			if ( PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE) )
-			{
-				if ( msg.message == WM_QUIT ) break;
-
-				TranslateMessage(&msg);
-				DispatchMessageW(&msg);
-			}
-			else
-			{
-				Sleep(10);
-			}
+			if (!PumpEvents()) Sleep(1);
 		}
+
+		timeEndPeriod(1);
 	}
 
 	bool WinApiWindow::Construct()
@@ -473,7 +488,7 @@ namespace BearLibTerminal
 				else if (rc < 0)
 				{
 					// Reschedule
-					PostMessageW(m_handle, WM_PAINT, 0, 0);
+					//PostMessageW(m_handle, WM_PAINT, 0, 0);
 				}
 			}
 		}
@@ -483,7 +498,7 @@ namespace BearLibTerminal
 			m_proceed = false;
 		}
 
-		if (rc >= 0)
+		//if (rc >= 0)
 		{
 			// Mark window area as processed
 			RECT rect;
@@ -492,7 +507,7 @@ namespace BearLibTerminal
 		}
 
 		// Open barrier
-		m_redraw_barrier.Notify();
+		m_redraw_barrier.NotifyAtMost(1);
 
 		return FALSE;
 	}
@@ -558,7 +573,7 @@ namespace BearLibTerminal
 		}
 		else if ( uMsg == WM_ERASEBKGND )
 		{
-			return TRUE;
+			return 0;//TRUE;
 		}
 		else if ( uMsg == WM_CHAR )
 		{

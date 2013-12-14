@@ -129,12 +129,6 @@ void terminal_put_ext(int x, int y, int dx, int dy, int code, color_t* corners)
 	g_instance->PutExtended(x, y, dx, dy, encoding.Convert(code), (BearLibTerminal::Color*)corners);
 }
 
-void terminal_custom(int mode)
-{
-	if (!g_instance) return;
-	g_instance->CustomRendering(mode);
-}
-
 int terminal_print8(int x, int y, const int8_t* s)
 {
 	if (!g_instance || !s) return -1;

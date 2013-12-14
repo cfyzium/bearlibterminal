@@ -45,7 +45,7 @@ namespace BearLibTerminal
 	class Window
 	{
 	public:
-		enum Type {Asynchronous, Synchronous};
+		/*enum Type {Asynchronous, Synchronous};*/
 		virtual ~Window();
 		void SetOnRedraw(DrawEventHandler callback);
 		void SetOnInput(InputEventHandler callback);
@@ -65,17 +65,17 @@ namespace BearLibTerminal
 		virtual bool ReleaseRC() = 0;
 		virtual void SwapBuffers() = 0;
 		virtual void SetVSync(bool enabled) = 0;
-		virtual bool PumpEvents() = 0;
-		static std::unique_ptr<Window> Create(Type type);
+		static std::unique_ptr<Window> Create(/*Type type*/);
 	protected:
-		Window(Type type);
+		Window(/*Type type*/);
 		virtual void ThreadFunction() = 0; // noexcept(true)
 		virtual bool Construct() = 0;
 		virtual void Destroy() = 0; // noexcept(true)
+		virtual bool PumpEvents() = 0;
 		void RunAsynchronous();
 		void RunSynchronous();
 		void Stop();
-		Type m_type;
+		/*Type m_type;*/
 		DrawEventHandler m_on_redraw;
 		EventHandler m_on_deactivate;
 		EventHandler m_on_activate;

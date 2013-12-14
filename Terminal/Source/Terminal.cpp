@@ -15,21 +15,28 @@
 #include <cmath>
 #include <future>
 
+//#define DEBUG_TIMING
+
+#if defined(DEBUG_TIMING)
+namespace BearLibTerminal
+{
+	average<float> time_scene_full, time_scene, time_copy, time_invoke, time_draw, time_swap;
+	uint64_t time_last_report_time = 0;
+}
+#endif
+
 namespace BearLibTerminal
 {
 	Terminal::Terminal():
 		m_state{kHidden},
 		m_vars{},
-		m_asynchronous{true},
-		m_current_texture(0),
-		m_inside_drawing_block(false),
 		m_show_grid(false)
 	{
 		// Reset logger (this is terrible)
 		g_logger = std::unique_ptr<Log>(new Log());
 
 		// Try to create window
-		m_window = Window::Create(Window::Asynchronous);
+		m_window = Window::Create(/*Window::Asynchronous*/);
 		m_window->SetOnDestroy(std::bind(&Terminal::OnWindowClose, this));
 		m_window->SetOnInput(std::bind(&Terminal::OnWindowInput, this, std::placeholders::_1));
 		m_window->SetOnRedraw(std::bind(&Terminal::OnWindowRedraw, this));
@@ -41,88 +48,7 @@ namespace BearLibTerminal
 
 	Terminal::~Terminal()
 	{
-		if (!m_asynchronous && m_window)
-		{
-			// Must rebind OpenGL context to window thread for safe deinitialization
-			SwitchRenderingThread(true);
-		}
-
 		m_window.reset();
-	}
-
-	void Terminal::InvokeOnRenderingThread(std::function<void()> func)
-	{
-		if (m_asynchronous)
-		{
-			// Window thread owns rendering context
-			m_window->Invoke(func);
-		}
-		else
-		{
-			// Terminal (current thread) owns rendering context
-			func();
-		}
-	}
-
-	void Terminal::SwitchRenderingThread(bool window)
-	{
-		/*
-		InvokeOnRenderingThread([&]{m_window->ReleaseRC();});
-		m_asynchronous = window;
-		InvokeOnRenderingThread([&]{m_window->AcquireRC();});
-		/*/
-
-		// Briefly unlock the mutex because window must invoke OnDestroy
-		m_lock.unlock();
-		m_window.reset();
-		m_lock.lock();
-
-		// Create new window
-		m_asynchronous = window;
-		m_window = Window::Create(m_asynchronous? Window::Asynchronous: Window::Synchronous);
-		m_window->SetOnInput(std::bind(&Terminal::OnWindowInput, this, std::placeholders::_1));
-		m_window->SetOnRedraw(std::bind(&Terminal::OnWindowRedraw, this));
-		m_window->SetOnDestroy(std::bind(&Terminal::OnWindowClose, this));
-		m_window->SetOnActivate(std::bind(&Terminal::OnWindowActivate, this));
-
-		// Reset basic graphics settings
-		auto reset = [&]()
-		{
-			ConfigureViewport();
-			glEnable(GL_TEXTURE_2D);
-
-			// Readd base font
-			OptionGroup group;
-			group.name = L"font";
-			group.attributes[L"name"] = L"default";
-			m_world.tilesets[0] = Tileset::Create(m_world.tiles, group);
-			m_world.tilesets[0]->Save();
-		};
-		InvokeOnRenderingThread([&]{reset();});
-
-		// FIXME: better just show the window if state is not kHidden
-		m_state = kHidden;
-
-		//*/
-	}
-
-	void Terminal::LeaveDrawingBlock()
-	{
-		if (!m_asynchronous && m_inside_drawing_block)
-		{
-			glEnd();
-			m_inside_drawing_block = false;
-		}
-	}
-
-	void Terminal::EnterDrawingBlock()
-	{
-		if (!m_asynchronous && !m_inside_drawing_block)
-		{
-			m_world.tiles.atlas.Refresh();
-			glBegin(GL_QUADS);
-			m_inside_drawing_block = true;
-		}
 	}
 
 	int Terminal::SetOptions(const std::wstring& value)
@@ -215,10 +141,8 @@ namespace BearLibTerminal
 	void Terminal::SetOptionsInternal(const std::wstring& value)
 	{
 		std::lock_guard<std::mutex> guard(m_lock);
-		if (!m_asynchronous) LeaveDrawingBlock();
 
 		auto groups = ParseOptions(value);
-
 		Options updated = m_options;
 		std::map<uint16_t, std::unique_ptr<Tileset>> new_tilesets;
 
@@ -262,21 +186,15 @@ namespace BearLibTerminal
 			}
 		}
 
-		if (updated.output_asynchronous != m_options.output_asynchronous)
-		{
-			LOG(Debug, "Switching to " << (updated.output_asynchronous? "asynchronous": "synchronous") << " rendering mode");
-			SwitchRenderingThread(updated.output_asynchronous);
-		}
-
 		if (updated.output_vsync != m_options.output_vsync)
 		{
-			InvokeOnRenderingThread([&]{m_window->SetVSync(updated.output_vsync);});
+			m_window->Invoke([&]{m_window->SetVSync(updated.output_vsync);});
 		}
 
 		// All options and parameters must be validated, may try to apply them
 		if (!new_tilesets.empty())
 		{
-			InvokeOnRenderingThread([&](){ApplyTilesets(new_tilesets);});
+			m_window->Invoke([&](){ApplyTilesets(new_tilesets);});
 		}
 
 		// Primary sanity check: if there is no base font, lots of things are gonna fail
@@ -335,7 +253,7 @@ namespace BearLibTerminal
 
 			// Must readd dynamic tileset.
 			// NOTE: SHOULD NOT fail.
-			InvokeOnRenderingThread([=](){UpdateDynamicTileset(m_world.state.cellsize);});
+			m_window->Invoke([=](){UpdateDynamicTileset(m_world.state.cellsize);});
 
 			viewport_size_changed = true;
 			LOG(Debug, L"SetOptions: new cell size is " << m_world.state.cellsize);
@@ -356,7 +274,7 @@ namespace BearLibTerminal
 			// Resize window object
 			Size viewport_size = m_world.stage.size * m_world.state.cellsize;
 			m_window->SetClientSize(viewport_size);
-			InvokeOnRenderingThread([=](){ConfigureViewport();});
+			m_window->Invoke([=](){ConfigureViewport();});
 		}
 
 		// Briefly grab input lock so that input routines do not contend for m_options
@@ -528,6 +446,67 @@ namespace BearLibTerminal
 		}
 	}
 
+#if defined(DEBUG_TIMING)
+	void Terminal::Refresh()
+	{
+		static uint64_t time_scene_prev = gettime();
+		uint64_t time_scene_now = gettime();
+		uint64_t scene_full = time_scene_now - time_scene_prev;
+		time_scene_prev = time_scene_now;
+
+		if (m_state == kHidden)
+		{
+			m_window->Show();
+			m_state = kVisible;
+		}
+
+		if (m_state != kVisible) return;
+
+		uint64_t time_copy_start;
+		// Synchronously copy backbuffer to frontbuffer
+		{
+			std::lock_guard<std::mutex> guard(m_lock);
+			m_world.stage.frontbuffer = m_world.stage.backbuffer;
+		}
+
+		uint64_t time_invoke_start = gettime(), time_draw_start, time_swap_start, time_swap_end;
+		m_window->Invoke([&]()
+		{
+			time_draw_start = gettime();
+			OnWindowRedraw();
+			time_swap_start = gettime();
+			m_window->SwapBuffers();
+			time_swap_end = gettime();
+		});
+		uint64_t time_invoke_end = gettime();
+
+		int64_t copy = time_invoke_start - time_copy_start;
+		int64_t draw = time_swap_start - time_draw_start;
+		int64_t swap = time_swap_end - time_swap_start;
+		int64_t invoke = time_invoke_end - time_invoke_start - (draw + swap);
+
+		copy = copy > 0? copy: 0;
+		draw = draw > 0? draw: 0;
+		swap = swap > 0? swap: 0;
+		invoke = invoke > 0? invoke: 0;
+		int64_t scene = ((int64_t)scene_full - (int64_t)(copy + draw + swap + invoke));
+		scene = scene > 0? scene: 0;
+
+		time_scene_full.add(scene_full);
+		time_scene.add(scene);
+		time_copy.add(copy);
+		time_invoke.add(invoke);
+		time_draw.add(draw);
+		time_swap.add(swap);
+
+		uint64_t now = gettime();
+		if (now > time_last_report_time + 1000000)
+		{
+			LOG(Trace, "Timing report: full scene " << time_scene_full.get() << ", bare scene " << time_scene.get() << ", copy " << time_copy.get() << ", invoke " << time_invoke.get() << ", draw " << time_draw.get() << ", swap " << time_swap.get());
+			time_last_report_time = now;
+		}
+	}
+#else
 	void Terminal::Refresh()
 	{
 		if (m_state == kHidden)
@@ -538,106 +517,69 @@ namespace BearLibTerminal
 
 		if (m_state != kVisible) return;
 
-		if (m_asynchronous)
+		// Synchronously copy backbuffer to frontbuffer
 		{
-			// FIXME: m_state here is not protected by lock because
-			// Window::Show will try to repaint syncronously which causes deadlock.
-			// This additional repaint is unnecessary.
-
-			// If window is not visible, show it
-
-
-			// Ignore irrelevant redraw calls (in case something has failed and
-			// state is already kClosed).
-
-
-			// Synchronously copy backbuffer to frontbuffer
-			{
-				std::lock_guard<std::mutex> guard(m_lock);
-				m_world.stage.frontbuffer = m_world.stage.backbuffer;
-			}
-
-			// NOTE: this call will wait OnWindowRedraw completion
-			/*
-			m_window->Redraw();
-			/*/
-			m_window->Invoke([&]()
-			{
-				OnWindowRedraw();
-				m_window->SwapBuffers();
-			});
-			//*/
+			std::lock_guard<std::mutex> guard(m_lock);
+			m_world.stage.frontbuffer = m_world.stage.backbuffer;
 		}
-		else
+
+		m_window->Invoke([&]()
 		{
-			LeaveDrawingBlock();
-			// NOTE: debug overlays go here
-			//m_window->Invoke([]{});
+			OnWindowRedraw();
 			m_window->SwapBuffers();
-			m_window->PumpEvents();
-		}
+		});
 	}
+#endif
 
 	void Terminal::Clear()
 	{
-		if (m_asynchronous)
+		/*
+		std::lock_guard<std::mutex> guard(m_lock);
+		m_world.stage.Resize(m_world.stage.size);
+		/*/
+		if (m_world.stage.backbuffer.background.size() != m_world.stage.size.Area())
 		{
+			LOG(Trace, "World resize");
 			std::lock_guard<std::mutex> guard(m_lock);
 			m_world.stage.Resize(m_world.stage.size);
 		}
 		else
 		{
-			LeaveDrawingBlock();
-			glClear(GL_COLOR_BUFFER_BIT);
+			for (auto& layer: m_world.stage.backbuffer.layers)
+			{
+				for (auto& cell: layer.cells)
+				{
+					cell.leafs.clear();
+				}
+			}
+
+			for (auto& color: m_world.stage.backbuffer.background)
+			{
+				color = Color();
+			}
 		}
 	}
 
 	void Terminal::Clear(int x, int y, int w, int h)
 	{
-		if (m_asynchronous)
+		Size stage_size = m_world.stage.size;
+		if (x < 0) x = 0;
+		if (y < 0) y = 0;
+		if (x+w >= stage_size.width) w = stage_size.width-x;
+		if (y+h >= stage_size.height) h = stage_size.height-y;
+
+		Layer& layer = m_world.stage.backbuffer.layers[m_world.state.layer];
+		for (int i=x; i<x+w; i++)
 		{
-			std::lock_guard<std::mutex> guard(m_lock);
-
-			Size stage_size = m_world.stage.size;
-			if (x < 0) x = 0;
-			if (y < 0) y = 0;
-			if (x+w >= stage_size.width) w = stage_size.width-x;
-			if (y+h >= stage_size.height) h = stage_size.height-y;
-
-			Layer& layer = m_world.stage.backbuffer.layers[m_world.state.layer];
-			for (int i=x; i<x+w; i++)
+			for (int j=y; j<y+h; j++)
 			{
-				for (int j=y; j<y+h; j++)
+				int k = stage_size.width*j+i;
+				layer.cells[k].leafs.clear();
+				if (m_world.state.layer == 0)
 				{
-					int k = stage_size.width*j+i;
-					layer.cells[k].leafs.clear();
-					if (m_world.state.layer == 0)
-					{
-						m_world.stage.backbuffer.background[k] = m_world.state.bkcolor;
-					}
+					m_world.stage.backbuffer.background[k] = m_world.state.bkcolor;
 				}
 			}
-		}
-		else
-		{
-			Size stage_size = m_world.stage.size;
-			Size cell_size = m_world.state.cellsize;
-			if (x < 0) x = 0;
-			if (y < 0) y = 0;
-			if (x+w >= stage_size.width) w = stage_size.width-x;
-			if (y+h >= stage_size.height) h = stage_size.height-y;
-
-			LeaveDrawingBlock();
-			glEnable(GL_SCISSOR_TEST);
-			glScissor
-			(
-				x * cell_size.width,
-				(stage_size.height - (y+1)) * cell_size.height,
-				w * cell_size.width,
-				h * cell_size.height
-			);
-			glClear(GL_COLOR_BUFFER_BIT);
-			glDisable(GL_SCISSOR_TEST);
 		}
 	}
 
@@ -649,7 +591,6 @@ namespace BearLibTerminal
 		m_world.state.layer = layer_index;
 		m_vars[TK_LAYER] = layer_index;
 
-		std::lock_guard<std::mutex> guard(m_lock);
 		while (m_world.stage.backbuffer.layers.size() <= m_world.state.layer)
 		{
 			m_world.stage.backbuffer.layers.emplace_back(m_world.stage.size);
@@ -674,73 +615,38 @@ namespace BearLibTerminal
 		m_vars[TK_COMPOSITION] = mode;
 	}
 
-	void Terminal::PutUnlocked(int x, int y, int dx, int dy, wchar_t code, Color* colors)
+	void Terminal::PutInternal(int x, int y, int dx, int dy, wchar_t code, Color* colors)
 	{
-		if (m_asynchronous)
+		if (x < 0 || y < 0 || x >= m_world.stage.size.width || y >= m_world.stage.size.height) return;
+
+		uint16_t u16code = (uint16_t)code;
+		if (m_world.tiles.slots.find(u16code) == m_world.tiles.slots.end())
 		{
-			//return;
-
-			uint16_t u16code = (uint16_t)code;
-			if (m_world.tiles.slots.find(u16code) == m_world.tiles.slots.end())
-			{
-				m_fresh_codes.push_back(u16code);
-			}
-
-			// NOTE: layer must be already allocated by SetLayer
-			int index = y*m_world.stage.size.width+x;
-			Cell& cell = m_world.stage.backbuffer.layers[m_world.state.layer].cells[index];
-
-			if (code != 0)
-			{
-				if (m_world.state.composition == TK_COMPOSITION_OFF)
-				{
-					cell.leafs.clear();
-				}
-
-				cell.leafs.emplace_back();
-				Leaf& leaf = cell.leafs.back();
-
-				// Character
-				leaf.code = u16code;
-
-				// Offset
-				leaf.dx = dx;
-				leaf.dy = dy;
-
-				// Foreground colors
-				if (colors)
-				{
-					for (int i=0; i<4; i++) leaf.color[i] = colors[i];
-					leaf.flags |= Leaf::CornerColored;
-				}
-				else
-				{
-					leaf.color[0] = m_world.state.color;
-				}
-
-				// Background color
-				if (m_world.state.layer == 0 && m_world.state.bkcolor)
-				{
-					m_world.stage.backbuffer.background[index] = m_world.state.bkcolor;
-				}
-			}
-			else
-			{
-				// Character code '0' means 'erase cell'
-				cell.leafs.clear();
-				if (m_world.state.layer == 0)
-				{
-					m_world.stage.backbuffer.background[index] = Color(); // Transparent color, no background
-				}
-			}
+			m_fresh_codes.push_back(u16code);
 		}
-		else
+
+		// NOTE: layer must be already allocated by SetLayer
+		int index = y*m_world.stage.size.width+x;
+		Cell& cell = m_world.stage.backbuffer.layers[m_world.state.layer].cells[index];
+
+		if (code != 0)
 		{
-			// TODO: easier leaf construct, more direct drawing procedure
-			Leaf leaf;
+			if (m_world.state.composition == TK_COMPOSITION_OFF)
+			{
+				cell.leafs.clear();
+			}
+
+			cell.leafs.emplace_back();
+			Leaf& leaf = cell.leafs.back();
+
+			// Character
+			leaf.code = u16code;
+
+			// Offset
 			leaf.dx = dx;
 			leaf.dy = dy;
 
+			// Foreground colors
 			if (colors)
 			{
 				for (int i=0; i<4; i++) leaf.color[i] = colors[i];
@@ -751,77 +657,35 @@ namespace BearLibTerminal
 				leaf.color[0] = m_world.state.color;
 			}
 
-			auto j = m_world.tiles.slots.find(code);
-			if (j == m_world.tiles.slots.end())
+			// Background color
+			if (m_world.state.layer == 0 && m_world.state.bkcolor)
 			{
-				LOG(Trace, "Trying to prepare character " << (int)code << " in synchronous mode");
-				LeaveDrawingBlock();
-				m_fresh_codes.emplace_back(code);
-				PrepareFreshCharacters();
-				m_world.tiles.atlas.Refresh();
-				j = m_world.tiles.slots.find(code);
+				m_world.stage.backbuffer.background[index] = m_world.state.bkcolor;
 			}
-
-			auto& slot = *(j->second);
-			if (slot.texture_id != m_current_texture)
+		}
+		else
+		{
+			// Character code '0' means 'erase cell'
+			cell.leafs.clear();
+			if (m_world.state.layer == 0)
 			{
-				LOG(Trace, "Wrong texture is currently bound, rebinding while in synchornous mode");
-				LeaveDrawingBlock();
-				slot.BindTexture();
-				m_current_texture = slot.texture_id;
+				m_world.stage.backbuffer.background[index] = Color(); // Transparent color, no background
 			}
-
-			EnterDrawingBlock();
-			slot.Draw
-			(
-				leaf,
-				m_world.state.cellsize.width * x,
-				m_world.state.cellsize.height * y,
-				m_world.state.half_cellsize.width,
-				m_world.state.half_cellsize.height
-			);
 		}
 	}
 
 	void Terminal::Put(int x, int y, wchar_t code)
 	{
-		std::lock_guard<std::mutex> guard(m_lock);
-		if (x < 0 || y < 0 || x >= m_world.stage.size.width || y >= m_world.stage.size.height) return;
-		PutUnlocked(x, y, 0, 0, code, nullptr);
+		PutInternal(x, y, 0, 0, code, nullptr);
 	}
 
 	void Terminal::PutExtended(int x, int y, int dx, int dy, wchar_t code, Color* corners)
 	{
-		std::lock_guard<std::mutex> guard(m_lock);
-		if (x < 0 || y < 0 || x >= m_world.stage.size.width || y >= m_world.stage.size.height) return;
-		PutUnlocked(x, y, dx, dy, code, corners);
-	}
-
-	void Terminal::CustomRendering(int mode)
-	{
-		if (m_asynchronous) return;
-
-		if (mode == 1)
-		{
-			// Enter custom rendering, stop current rendering block
-			LeaveDrawingBlock();
-		}
-		else
-		{
-			// Leave custom rendering, resume rendering block.
-			// Rebuild matrices and reapply blending modes.
-			ConfigureViewport();
-
-			// Texture must be reset so it can be properly reapplied later.
-			glEnable(GL_TEXTURE_2D);
-			m_current_texture = 0;
-		}
+		PutInternal(x, y, dx, dy, code, corners);
 	}
 
 	int Terminal::Print(int x0, int y0, const std::wstring& s)
 	{
-		std::lock_guard<std::mutex> guard(m_lock);
-
 		int x = x0, y = y0;
 		int printed = 0;
 		uint16_t base = 0;
@@ -837,34 +701,31 @@ namespace BearLibTerminal
 
 		const auto put_and_increment = [&](int code)
 		{
-			if (x >=0 && y >= 0 && x < size.width && y < size.height)
+			// Convert from unicode to tileset codepage
+			if (codepage) code = codepage->Convert((wchar_t)code);
+
+			// Offset tile index
+			code += base;
+
+			if (combine)
 			{
-				// Convert from unicode to tileset codepage
-				if (codepage) code = codepage->Convert((wchar_t)code);
-
-				// Offset tile index
-				code += base;
-
-				if (combine)
+				if (x >= x0+spacing.width)
 				{
-					if (x >= x0+spacing.width)
-					{
-						int composition = m_world.state.composition;
-						m_world.state.composition = TK_COMPOSITION_ON;
-						x -= spacing.width;
-						PutUnlocked(x, y, offset.x, offset.y, code, nullptr);
-						m_world.state.composition = composition;
-					}
-					combine = false;
+					int composition = m_world.state.composition;
+					m_world.state.composition = TK_COMPOSITION_ON;
+					x -= spacing.width;
+					PutInternal(x, y, offset.x, offset.y, code, nullptr);
+					m_world.state.composition = composition;
 				}
-				else
-				{
-					PutUnlocked(x, y, offset.x, offset.y, code, nullptr);
-				}
-
-				x += spacing.width;
-				printed += 1;
+				combine = false;
 			}
+			else
+			{
+				PutInternal(x, y, offset.x, offset.y, code, nullptr);
+			}
+
+			x += spacing.width;
+			printed += 1;
 		};
 
 		const auto apply_tag = [&](const std::wstring& s, size_t begin, size_t end)
@@ -1053,7 +914,7 @@ namespace BearLibTerminal
 
 	int Terminal::GetState(int code)
 	{
-		std::lock_guard<std::mutex> guard(m_lock);
+		std::lock_guard<std::mutex> guard(m_input_lock);
 		return (code >= 0 && code < (int)m_vars.size())? m_vars[code]: 0;
 	}
 
@@ -1101,9 +962,7 @@ namespace BearLibTerminal
 	 */
 	int Terminal::Read()
 	{
-		bool nonblocking = get_locked(m_options.input_nonblocking, m_lock);
-		if (!m_asynchronous) nonblocking = true;
-		Keystroke stroke = ReadKeystroke(nonblocking? 0: std::numeric_limits<int>::max());
+		Keystroke stroke = ReadKeystroke(m_options.input_nonblocking? 0: std::numeric_limits<int>::max());
 		int result = stroke.scancode;
 		if (stroke.released) result |= TK_FLAG_RELEASED;
 		return result;
@@ -1146,9 +1005,7 @@ namespace BearLibTerminal
 	 */
 	int Terminal::ReadChar()
 	{
-		bool nonblocking = get_locked(m_options.input_nonblocking, m_lock);
-		if (!m_asynchronous) nonblocking = true;
-		return ReadCharInternal(nonblocking? 0: std::numeric_limits<int>::max());
+		return ReadCharInternal(m_options.input_nonblocking? 0: std::numeric_limits<int>::max());
 	}
 
 	int Terminal::ReadStringInternalBlocking(int x, int y, wchar_t* buffer, int max)
@@ -1157,28 +1014,24 @@ namespace BearLibTerminal
 		int composition_mode = m_world.state.composition;
 		m_world.state.composition = TK_COMPOSITION_ON;
 
-		// Syncronously retrieve/adjust some values
+
+		if (buffer == nullptr || max <= 0)
 		{
-			std::lock_guard<std::mutex> guard(m_lock);
+			LOG(Error, "Invalid buffer parameters were passed to string reading function");
+			return 0;
+		}
 
-			if (buffer == nullptr || max <= 0)
-			{
-				LOG(Error, "Invalid buffer parameters were passed to string reading function");
-				return 0;
-			}
+		if (x < 0 || x >= m_world.stage.size.width || y < 0 || y >= m_world.stage.size.height)
+		{
+			LOG(Error, "Invalid location parameters were passed to string reading function");
+			return 0;
+		}
 
-			if (x < 0 || x >= m_world.stage.size.width || y < 0 || y >= m_world.stage.size.height)
-			{
-				LOG(Error, "Invalid location parameters were passed to string reading function");
-				return 0;
-			}
-
-			max = std::min(max, m_world.stage.size.width-x);
-			for (int i=0; i<max; i++)
-			{
-				Layer& layer = m_world.stage.backbuffer.layers[m_world.state.layer];
-				original.push_back(layer.cells[y*m_world.stage.size.width+x+i]);
-			}
+		max = std::min(max, m_world.stage.size.width-x);
+		for (int i=0; i<max; i++)
+		{
+			Layer& layer = m_world.stage.backbuffer.layers[m_world.state.layer];
+			original.push_back(layer.cells[y*m_world.stage.size.width+x+i]);
 		}
 
 		// Garbage string protection
@@ -1314,7 +1167,7 @@ namespace BearLibTerminal
 	 */
 	int Terminal::ReadString(int x, int y, wchar_t* buffer, int max)
 	{
-		return (m_options.input_nonblocking || !m_asynchronous)?
+		return m_options.input_nonblocking?
 			ReadStringInternalNonblocking(buffer, max):
 			ReadStringInternalBlocking(x, y, buffer, max);
 	}
@@ -1419,14 +1272,15 @@ namespace BearLibTerminal
 
 	int Terminal::OnWindowRedraw()
 	{
-		// Scene-based rendering function is used in asyncronous mode only
-		if (!m_asynchronous) return 0;//false;
-
+		/*
 		// Rendering callback will try to acquire the lock. Failing to  do so
 		// will mean that Terminal is currently busy. Calling window implementation
 		// SHOULD be prepared to reschedule paiting to a later time.
 		std::unique_lock<std::mutex> guard(m_lock, std::try_to_lock);
 		if (!guard.owns_lock()) return -1; // TODO: enum
+		/*/
+		std::unique_lock<std::mutex> guard(m_lock);
+		//*/
 
 		// Provide tile slots for newly added codes
 		if (!m_fresh_codes.empty())

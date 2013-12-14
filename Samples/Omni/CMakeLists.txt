@@ -46,7 +46,7 @@ set(SOURCE_FILES ./Source/Main.cpp
                  ./Source/ExtendedInterlayer.cpp
                  ./Source/ExtendedSmoothScroll.cpp
                  ./Source/DynamicSprites.cpp
-                 ./Source/SyncronousRender.cpp
+                 ./Source/Speed.cpp
                  ./Source/Keyboard.cpp
                  ./Source/Mouse.cpp
                  ./Source/TextInput.cpp)

@@ -36,7 +36,7 @@ void TestExtendedBasics();
 void TestExtendedInterlayer();
 void TestExtendedSmoothScroll();
 void TestDynamicSprites();
-void TestSynchronousRender();
+void TestSpeed();
 void TestKeyboard();
 void TestMouse();
 void TestTextInput();
