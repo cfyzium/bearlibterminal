@@ -35,7 +35,7 @@ namespace BearLibTerminal
 	class X11Window: public Window
 	{
 	public:
-		X11Window(Type type);
+		X11Window();
 		~X11Window();
 		bool ValidateIcon(const std::wstring& filename) override;
 		void SetTitle(const std::wstring& title) override;

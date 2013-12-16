@@ -144,8 +144,7 @@ namespace BearLibTerminal
 
 	// ------------------------------------------------------------------------
 
-	X11Window::X11Window(Type type):
-		Window(type),
+	X11Window::X11Window():
 		m_private(new Private()),
 		m_mouse_wheel(0)
 	{ }

@@ -124,48 +124,28 @@ namespace BearLibTerminal
 		}
 	}
 
-	/*
-	void Window::RunSynchronous()
-	{
-		try
-		{
-			Construct();
-		}
-		catch(std::exception& e)
-		{
-			LOG(Fatal, L"Window initialization routine has thrown an exception");
-			throw;
-		}
-	}
-	*/
-
 	void Window::Stop()
 	{
 		m_proceed = false;
 
-		if (/*m_type == Asynchronous &&*/ m_thread.joinable())
+		if (m_thread.joinable())
 		{
 			m_thread.join();
 		}
-		/*else if (m_type == Synchronous)
-		{
-			if (m_on_destroy) m_on_destroy();
-			Destroy();
-		}*/
 	}
 
-	std::unique_ptr<Window> Window::Create(/*Type type*/)
+	std::unique_ptr<Window> Window::Create()
 	{
 		std::unique_ptr<Window> result;
 
 #if defined(__linux)
-		result.reset(new X11Window(type));
+		result.reset(new X11Window());
 #endif
 #if defined(_WIN32)
-		result.reset(new WinApiWindow(/*type*/));
+		result.reset(new WinApiWindow());
 #endif
 
-		/*type == Asynchronous?*/ result->RunAsynchronous()/*: result->RunSynchronous()*/;
+		result->RunAsynchronous();
 		return std::move(result);
 	}
 }
