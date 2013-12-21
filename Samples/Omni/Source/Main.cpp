@@ -22,6 +22,7 @@ TERMINAL_TAKE_CARE_OF_WINMAIN
 int main()
 {
 	terminal_open();
+
 	auto reset = []()
 	{
 		terminal_set("window: size=80x25, cellsize=auto, title='Omni: menu'; font: default");

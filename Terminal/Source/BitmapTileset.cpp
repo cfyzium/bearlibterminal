@@ -274,6 +274,8 @@ namespace BearLibTerminal
 
 			m_container.atlas.Remove(i.second);
 		}
+
+		m_tiles.clear();
 	}
 
 	void BitmapTileset::Reload(BitmapTileset&& tileset)
@@ -299,6 +301,7 @@ namespace BearLibTerminal
 			Remove();
 			m_cache = std::move(tileset.m_cache);
 			m_tile_size = tileset.m_tile_size;
+			m_grid_size = tileset.m_grid_size;
 			m_codepage = std::move(tileset.m_codepage);
 			Save();
 		}

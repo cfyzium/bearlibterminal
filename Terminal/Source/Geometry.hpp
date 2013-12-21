@@ -10,11 +10,19 @@
 
 #include "Size.hpp"
 #include "Point.hpp"
+#include "Rectangle.hpp"
 #include <istream>
 #include <ostream>
 
 namespace BearLibTerminal
 {
+	// stream << Rectangle
+	template<typename char_t, typename T> std::basic_ostream<char_t>& operator<< (std::basic_ostream<char_t>& stream, const BasicRectangle<T>& s)
+	{
+			stream << s.left << "," << s.top << "-" << s.width << "x" << s.height;
+			return stream;
+	}
+
 	// stream << Size
 	template<typename char_t, typename T> std::basic_ostream<char_t>& operator<< (std::basic_ostream<char_t>& stream, const BasicSize<T>& s)
 	{
