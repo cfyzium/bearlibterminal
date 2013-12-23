@@ -50,7 +50,7 @@ namespace BearLibTerminal
 	}
 
 	Log::Log():
-		m_level(Level::Trace),
+		m_level(Level::Error),
 		m_mode(Mode::Truncate),
 		m_filename(L"bearlibterminal.log"),
 		m_truncated(false)
