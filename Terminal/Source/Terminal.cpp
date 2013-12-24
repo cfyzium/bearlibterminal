@@ -957,55 +957,66 @@ namespace BearLibTerminal
 		}
 	}
 
+	void Terminal::PutBack(const Keystroke& stroke)
+	{
+		std::unique_lock<std::mutex> lock(m_input_lock);
+		m_input_queue.push_front(stroke);
+		ConsumeIrrelevantInput();
+	}
+
 	/**
 	 * Read any non-filtered input event
 	 */
-	int Terminal::Read()
+	int Terminal::ReadVirtualCode(int flags)
 	{
 		Keystroke stroke = ReadKeystroke(m_options.input_nonblocking? 0: std::numeric_limits<int>::max());
+		if (flags & TK_READ_NOREMOVE) PutBack(stroke);
 		int result = stroke.scancode;
 		if (stroke.released) result |= TK_FLAG_RELEASED;
 		return result;
 	}
 
 	/**
-	 * Reads the next unicode character from input
-	 * @param timeout in milliseconds
-	 * @return character code / TK_INPUT_NONE / TK_INPUT_CALL_AGAIN
+	 * Read first character event
 	 */
-	int Terminal::ReadCharInternal(int timeout)
+	int Terminal::ReadCharacter(int flags)
 	{
+		int timeout = m_options.input_nonblocking? 0: std::numeric_limits<int>::max();
+
 		do
 		{
 			Keystroke stroke = ReadKeystroke(timeout);
 			if (stroke.character > 0 && !stroke.released)
 			{
 				// Unicode character available
-				return stroke.character;
+				if (flags & TK_READ_NOREMOVE) PutBack(stroke);
+				return m_encoding->Convert((wchar_t)stroke.character); // Convert Unicode to user codepage
 			}
 			else if (stroke.scancode == 0)
 			{
-				// No input available right now (nonblocking mode only)
+				// No input available right now (can happen in nonblocking mode only)
 				return TK_INPUT_NONE;
 			}
 			else
 			{
-				// Push keystroke back
-				std::unique_lock<std::mutex> lock(m_input_lock);
-				m_input_queue.push_front(stroke);
-				ConsumeIrrelevantInput();
+				// Only non-character stroke available, push keystroke back
+				PutBack(stroke);
 				return TK_INPUT_CALL_AGAIN;
 			}
 		}
 		while (true);
 	}
 
-	/**
-	 * Read first character event
-	 */
-	int Terminal::ReadChar()
+	int Terminal::ReadExtended(int flags)
 	{
-		return ReadCharInternal(m_options.input_nonblocking? 0: std::numeric_limits<int>::max());
+		if (flags & TK_READ_CHAR)
+		{
+			return ReadCharacter(flags);
+		}
+		else
+		{
+			return ReadVirtualCode(flags);
+		}
 	}
 
 	int Terminal::ReadStringInternalBlocking(int x, int y, wchar_t* buffer, int max)

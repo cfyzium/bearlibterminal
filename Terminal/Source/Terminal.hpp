@@ -54,8 +54,7 @@ namespace BearLibTerminal
 		int Print(int x, int y, const std::wstring& str);
 		int HasInput();
 		int GetState(int code);
-		int Read();
-		int ReadChar();
+		int ReadExtended(int flags);
 		int ReadString(int x, int y, wchar_t* buffer, int max);
 		const Encoding<char>& GetEncoding() const;
 	private:
@@ -73,7 +72,9 @@ namespace BearLibTerminal
 		void ConsumeIrrelevantInput();
 		void ConsumeStroke(const Keystroke& stroke);
 		Keystroke ReadKeystroke(int timeout);
-		int ReadCharInternal(int timeout);
+		void PutBack(const Keystroke& stroke);
+		int ReadVirtualCode(int flags);
+		int ReadCharacter(int flags);
 		int ReadStringInternalBlocking(int x, int y, wchar_t* buffer, int max);
 		int ReadStringInternalNonblocking(wchar_t* buffer, int max);
 		void OnWindowClose();

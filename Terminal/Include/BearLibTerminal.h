@@ -179,6 +179,12 @@
 #define TK_INPUT_CALL_AGAIN  -2
 
 /*
+ * Extended reading flags
+ */
+#define TK_READ_CHAR          1 /* Read an Unicode character, not a virtual key code */
+#define TK_READ_NOREMOVE      2 /* Do not remove the event from input queue */
+
+/*
  * Terminal use unsigned 32-bit value for color representation in ARGB order (0xAARRGGBB), e. g.
  * a) solid red is 0xFFFF0000
  * b) half-transparent green is 0x8000FF00
@@ -223,7 +229,7 @@ TERMINAL_API int terminal_print32(int x, int y, const int32_t* s);
 TERMINAL_API int terminal_has_input();
 TERMINAL_API int terminal_state(int code);
 TERMINAL_API int terminal_read();
-TERMINAL_API int terminal_read_char();
+TERMINAL_API int terminal_read_ext(int flags);
 TERMINAL_API int terminal_read_str8(int x, int y, int8_t* buffer, int max);
 TERMINAL_API int terminal_read_str16(int x, int y, int16_t* buffer, int max);
 TERMINAL_API int terminal_read_str32(int x, int y, int32_t* buffer, int max);
