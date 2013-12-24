@@ -32,8 +32,7 @@
 
 namespace BearLibTerminal
 {
-	Window::Window(/*Type type*/):
-		/*m_type(type),*/
+	Window::Window():
 		m_synchronous_redraw(false),
 		m_proceed(false)
 	{ }
@@ -51,6 +50,12 @@ namespace BearLibTerminal
 	{
 		std::lock_guard<std::mutex> guard(m_lock);
 		m_on_input = callback;
+	}
+
+	void Window::SetOnResize(ResizeEventHandler callback)
+	{
+		std::lock_guard<std::mutex> guard(m_lock);
+		m_on_resize = callback;
 	}
 
 	void Window::SetOnDeactivate(EventHandler callback)

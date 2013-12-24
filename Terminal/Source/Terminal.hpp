@@ -80,6 +80,7 @@ namespace BearLibTerminal
 		void OnWindowClose();
 		int OnWindowRedraw();
 		void OnWindowInput(Keystroke keystroke);
+		void OnWindowResize(Size client_size);
 		void OnWindowActivate();
 	private:
 		enum state_t {kHidden, kVisible, kClosed} m_state;

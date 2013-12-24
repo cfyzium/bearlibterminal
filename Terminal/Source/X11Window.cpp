@@ -492,8 +492,17 @@ namespace BearLibTerminal
 			}
 			else if (e.type == ConfigureNotify)
 			{
+				/*
 				// OnResize
 				// See: e.xconfigure.width, e.xconfigure.height
+				int w = e.xconfigure.width;
+				int h = e.xconfigure.height;
+				if (w != m_client_size.width || h != m_client_size.height)
+				{
+					m_client_size = Size(w, h);
+					if (m_on_resize) m_on_resize(m_client_size);
+				}
+				*/
 			}
 			else if (e.type == MotionNotify)
 			{

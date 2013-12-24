@@ -65,7 +65,6 @@ namespace BearLibTerminal
 		Semaphore m_redraw_barrier;
 		Point m_mouse_position;
 		int m_mouse_wheel;
-		Size m_client_size;
 	};
 }
 

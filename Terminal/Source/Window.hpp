@@ -41,6 +41,7 @@ namespace BearLibTerminal
 	using EventHandler = std::function<void()>;
 	using DrawEventHandler = std::function<int()>;
 	using InputEventHandler = std::function<void(Keystroke)>;
+	using ResizeEventHandler = std::function<void(Size)>;
 
 	class Window
 	{
@@ -48,6 +49,7 @@ namespace BearLibTerminal
 		virtual ~Window();
 		void SetOnRedraw(DrawEventHandler callback);
 		void SetOnInput(InputEventHandler callback);
+		void SetOnResize(ResizeEventHandler callback);
 		void SetOnDeactivate(EventHandler callback);
 		void SetOnActivate(EventHandler callback);
 		void SetOnDestroy(EventHandler callback);
@@ -78,10 +80,12 @@ namespace BearLibTerminal
 		EventHandler m_on_activate;
 		EventHandler m_on_destroy;
 		InputEventHandler m_on_input;
+		ResizeEventHandler m_on_resize;
 		bool m_synchronous_redraw;
 		std::mutex m_lock;
 		std::thread m_thread;
 		std::atomic<bool> m_proceed;
+		Size m_client_size;
 	};
 }
 

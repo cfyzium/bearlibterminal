@@ -4,7 +4,7 @@ project(BearLibTerminal)
 
 file(GLOB TERMINAL_SOURCES ./Source/*.cpp) # FIXME: manual selection
 
-#set(CF "-std=c++11 -O3 -flto")
+#set(CF "-std=c++11 -O3 -g3 -flto")
 #set(LF "-flto -fvisibility=hidden")
 
 set(CF "-std=c++11 -O3 -g0 -flto")

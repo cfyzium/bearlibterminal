@@ -36,9 +36,10 @@ namespace BearLibTerminal
 		g_logger = std::unique_ptr<Log>(new Log());
 
 		// Try to create window
-		m_window = Window::Create(/*Window::Asynchronous*/);
+		m_window = Window::Create();
 		m_window->SetOnDestroy(std::bind(&Terminal::OnWindowClose, this));
 		m_window->SetOnInput(std::bind(&Terminal::OnWindowInput, this, std::placeholders::_1));
+		m_window->SetOnResize(std::bind(&Terminal::OnWindowResize, this, std::placeholders::_1));
 		m_window->SetOnRedraw(std::bind(&Terminal::OnWindowRedraw, this));
 		m_window->SetOnActivate(std::bind(&Terminal::OnWindowActivate, this));
 
@@ -1283,12 +1284,12 @@ namespace BearLibTerminal
 
 	int Terminal::OnWindowRedraw()
 	{
-		/*
+		//*
 		// Rendering callback will try to acquire the lock. Failing to  do so
 		// will mean that Terminal is currently busy. Calling window implementation
-		// SHOULD be prepared to reschedule paiting to a later time.
+		// SHOULD be prepared to reschedule painting to a later time.
 		std::unique_lock<std::mutex> guard(m_lock, std::try_to_lock);
-		if (!guard.owns_lock()) return -1; // TODO: enum
+		if (!guard.owns_lock()) return -1; // TODO: enum TODO: timed try
 		/*/
 		std::unique_lock<std::mutex> guard(m_lock);
 		//*/
@@ -1406,6 +1407,19 @@ namespace BearLibTerminal
 		}
 
 		return 1;
+	}
+
+	void Terminal::OnWindowResize(Size client_size)
+	{
+		/*
+		int columns = (int)std::floor(client_size.width / (float)m_world.state.cellsize.width);
+		int rows = (int)std::floor(client_size.height / (float)m_world.state.cellsize.height);
+
+		int hp = (client_size.width - columns*m_world.state.cellsize.width) / 2;
+		int vp = (client_size.height - rows*m_world.state.cellsize.height) / 2;
+
+		LOG(Error, "Resized to " << client_size << ": " << columns << "x" << rows << " cells, padding " << hp << ", " << vp);
+		*/
 	}
 
 	void Terminal::OnWindowInput(Keystroke keystroke)
