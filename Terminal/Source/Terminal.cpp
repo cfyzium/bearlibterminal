@@ -1283,7 +1283,7 @@ namespace BearLibTerminal
 
 	int Terminal::OnWindowRedraw()
 	{
-		/*
+		//*
 		// Rendering callback will try to acquire the lock. Failing to  do so
 		// will mean that Terminal is currently busy. Calling window implementation
 		// SHOULD be prepared to reschedule paiting to a later time.
