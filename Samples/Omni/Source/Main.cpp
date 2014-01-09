@@ -47,7 +47,8 @@ int main()
 		{"Speed", TestSpeed}, // NYI
 		{"Input 1: keyboard", TestKeyboard},
 		{"Input 2: mouse", TestMouse},
-		{"Input 3: text input", TestTextInput}
+		{"Input 3: text input", TestTextInput},
+		{"Window resizing", TestWindowResize}
 	};
 
 	reset();

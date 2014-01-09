@@ -76,6 +76,11 @@ namespace BearLibTerminal
 		m_on_destroy = callback;
 	}
 
+	Size Window::GetClientSize()
+	{
+		return m_client_size;
+	}
+
 	void Window::RunAsynchronous()
 	{
 		auto thread_function = [&](std::promise<bool> promise)

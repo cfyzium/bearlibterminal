@@ -144,8 +144,9 @@
 /*
  * Specific input events
  */
-#define TK_MOUSE_MOVE		0xD3 /* Mouse movement event */
-#define TK_MOUSE_SCROLL		0xD4 /* Mouse wheel scroll event */
+#define TK_MOUSE_MOVE       0xD3 /* Mouse movement event */
+#define TK_MOUSE_SCROLL     0xD4 /* Mouse wheel scroll event */
+#define TK_WINDOW_RESIZE    0xDF /* Window resize event */
 
 /*
  * Virtual key-codes for internal terminal states/variables. These can be

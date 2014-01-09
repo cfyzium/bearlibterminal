@@ -20,16 +20,6 @@ endif()
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CF}")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${LF}")
 
-#set(SOURCE_FILES ./src/Main.cpp
-#				 ./src/Common.cpp
-#                 ./src/BasicOutput.cpp
-#                 ./src/Fonts.cpp
-#                 ./src/Speed.cpp
-#                 ./src/Keyboard.cpp
-#                 ./src/Mouse.cpp
-#                 ./src/Sprites.cpp
-#                 ./src/GetString.cpp)
-
 set(SOURCE_FILES ./Source/Main.cpp
                  ./Source/Common.cpp
                  ./Source/WindowsGlyphList4.cpp
@@ -49,7 +39,8 @@ set(SOURCE_FILES ./Source/Main.cpp
                  ./Source/Speed.cpp
                  ./Source/Keyboard.cpp
                  ./Source/Mouse.cpp
-                 ./Source/TextInput.cpp)
+                 ./Source/TextInput.cpp
+                 ./Source/WindowResize.cpp)
 
 include_directories(${CMAKE_SOURCE_DIR}/Terminal/Include)
 add_executable(SampleOmni ${SOURCE_FILES})

@@ -15,6 +15,10 @@
 #include <cmath>
 #include <future>
 
+// Internal usage
+#define TK_CLIENT_WIDTH  0xF0
+#define TK_CLIENT_HEIGHT 0xF1
+
 //#define DEBUG_TIMING
 
 #if defined(DEBUG_TIMING)
@@ -30,7 +34,8 @@ namespace BearLibTerminal
 	Terminal::Terminal():
 		m_state{kHidden},
 		m_vars{},
-		m_show_grid(false)
+		m_show_grid{false},
+		m_viewport_modified{false}
 	{
 		// Reset logger (this is terrible)
 		g_logger = std::unique_ptr<Log>(new Log());
@@ -227,6 +232,11 @@ namespace BearLibTerminal
 			m_window->SetIcon(updated.window_icon);
 		}
 
+		if (updated.window_resizeable != m_options.window_resizeable)
+		{
+			m_window->SetResizeable(updated.window_resizeable);
+		}
+
 		// If the size of cell has changed -OR- new basic tileset has been specified
 		if (updated.window_cellsize != m_options.window_cellsize || new_tilesets.count(0))
 		{
@@ -274,8 +284,11 @@ namespace BearLibTerminal
 		{
 			// Resize window object
 			Size viewport_size = m_world.stage.size * m_world.state.cellsize;
+			m_vars[TK_CLIENT_WIDTH] = viewport_size.width;
+			m_vars[TK_CLIENT_HEIGHT] = viewport_size.height;
 			m_window->SetClientSize(viewport_size);
-			m_window->Invoke([=](){ConfigureViewport();});
+			m_viewport_modified = true;
+			//m_window->Invoke([=](){ConfigureViewport();});
 		}
 
 		// Briefly grab input lock so that input routines do not contend for m_options
@@ -345,6 +358,11 @@ namespace BearLibTerminal
 			}
 
 			options.window_icon = group.attributes[L"icon"];
+		}
+
+		if (group.attributes.count(L"resizeable") && !try_parse(group.attributes[L"resizeable"], options.window_resizeable))
+		{
+			throw std::runtime_error("window.resizeable value cannot be parsed");
 		}
 	}
 
@@ -1191,7 +1209,10 @@ namespace BearLibTerminal
 
 	void Terminal::ConfigureViewport()
 	{
-		Size viewport_size = m_world.stage.size * m_world.state.cellsize;
+		Size viewport_size = Size(m_vars[TK_CLIENT_WIDTH], m_vars[TK_CLIENT_HEIGHT]);
+		Size stage_size = m_world.stage.size * m_world.state.cellsize;
+		int hp = (viewport_size.width-stage_size.width)/2;
+		int vp = (viewport_size.height-stage_size.height)/2;
 
 		glDisable(GL_DEPTH_TEST);
 
@@ -1200,13 +1221,23 @@ namespace BearLibTerminal
 
 		glMatrixMode(GL_PROJECTION);
 		glLoadIdentity();
-		glOrtho(0, viewport_size.width, viewport_size.height, 0, -1, +1);
+		//glOrtho(-hp-1, viewport_size.width-hp-1, viewport_size.height-vp-1, -vp-1, -1, +1);
+		glOrtho(-hp, viewport_size.width-hp, viewport_size.height-vp, -vp, -1, +1);
 
 		glMatrixMode(GL_MODELVIEW);
 		glLoadIdentity();
 
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+		if (viewport_size != stage_size)
+		{
+			m_viewport_scissors = Rectangle(hp, viewport_size.height-stage_size.height-vp, stage_size.width, stage_size.height);
+		}
+		else
+		{
+			m_viewport_scissors = Rectangle();
+		}
 	}
 
 	void Terminal::PrepareFreshCharacters()
@@ -1300,7 +1331,27 @@ namespace BearLibTerminal
 			PrepareFreshCharacters();
 		}
 
+		if (m_viewport_modified)
+		{
+			ConfigureViewport();
+			m_viewport_modified = false;
+		}
+
+		// Clear must be done between scissoring test switch
+		glDisable(GL_SCISSOR_TEST);
 		glClear(GL_COLOR_BUFFER_BIT);
+
+		if (m_viewport_scissors.Area() > 0)
+		{
+			glEnable(GL_SCISSOR_TEST);
+			glScissor
+			(
+				m_viewport_scissors.left,
+				m_viewport_scissors.top,
+				m_viewport_scissors.width,
+				m_viewport_scissors.height
+			);
+		}
 
 		Texture::Disable();
 		glBegin(GL_QUADS);
@@ -1389,15 +1440,17 @@ namespace BearLibTerminal
 			glDisable(GL_TEXTURE_2D);
 			glBlendFunc(GL_ONE_MINUS_DST_COLOR, GL_ZERO);
 			glBegin(GL_LINES);
-			for (int i=0; i<m_world.stage.size.width; i++)
+			for (int i=0; i<=m_world.stage.size.width; i++)
 			{
 				int x = i*m_world.state.cellsize.width;
+				//if (i == m_world.stage.size.width) x -= 1;
 				glVertex2i(x, 0);
 				glVertex2i(x, height);
 			}
-			for (int i=0; i<m_world.stage.size.height; i++)
+			for (int i=0; i<=m_world.stage.size.height; i++)
 			{
 				int y = i*m_world.state.cellsize.height;
+				//if (i == m_world.stage.size.height) y -= 1;
 				glVertex2i(0, y);
 				glVertex2i(width, y);
 			}
@@ -1411,15 +1464,7 @@ namespace BearLibTerminal
 
 	void Terminal::OnWindowResize(Size client_size)
 	{
-		/*
-		int columns = (int)std::floor(client_size.width / (float)m_world.state.cellsize.width);
-		int rows = (int)std::floor(client_size.height / (float)m_world.state.cellsize.height);
-
-		int hp = (client_size.width - columns*m_world.state.cellsize.width) / 2;
-		int vp = (client_size.height - rows*m_world.state.cellsize.height) / 2;
-
-		LOG(Error, "Resized to " << client_size << ": " << columns << "x" << rows << " cells, padding " << hp << ", " << vp);
-		*/
+		// ...
 	}
 
 	void Terminal::OnWindowInput(Keystroke keystroke)
@@ -1493,6 +1538,13 @@ namespace BearLibTerminal
 					must_be_consumed = true;
 				}
 			}
+			else if (stroke.scancode == TK_WINDOW_RESIZE)
+			{
+				if (stroke.x == m_vars[TK_CLIENT_WIDTH] && stroke.y == m_vars[TK_CLIENT_HEIGHT])
+				{
+					must_be_consumed = true;
+				}
+			}
 			else
 			{
 				if (!stroke.released)
@@ -1535,6 +1587,33 @@ namespace BearLibTerminal
 		{
 			// Mouse scroll event, update wheel position
 			m_vars[TK_MOUSE_WHEEL] = stroke.z;
+		}
+		else if (stroke.scancode == TK_WINDOW_RESIZE)
+		{
+			// Window being resized
+			if (stroke.x != m_vars[TK_CLIENT_WIDTH] || stroke.y != m_vars[TK_CLIENT_HEIGHT])
+			{
+				// Client size changed, must redraw
+				std::lock_guard<std::mutex> guard(m_lock);
+
+				m_vars[TK_CLIENT_WIDTH] = stroke.x;
+				m_vars[TK_CLIENT_HEIGHT] = stroke.y;
+				m_viewport_modified = true;
+
+				if (m_options.window_resizeable)
+				{
+					int w = std::floor(stroke.x / (float)m_world.state.cellsize.width);
+					int h = std::floor(stroke.y / (float)m_world.state.cellsize.height);
+					if (w != m_world.stage.size.width || h != m_world.stage.size.height)
+					{
+						// Stage size changed, must reallocate and reconstruct scene
+						m_options.window_size = Size(w, h);
+						m_world.stage.Resize(m_options.window_size);
+						m_vars[TK_WIDTH] = w;
+						m_vars[TK_HEIGHT] = h;
+					}
+				}
+			}
 		}
 		else if (stroke.scancode == TK_CLOSE)
 		{

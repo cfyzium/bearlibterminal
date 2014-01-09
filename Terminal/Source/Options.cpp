@@ -14,6 +14,7 @@ namespace BearLibTerminal
 		window_cellsize(0, 0),
 		window_title(L"BearLibTerminal"),
 		window_icon(L":default_icon"),
+		window_resizeable(false),
 		output_postformatting(true),
 		output_asynchronous(true),
 		output_vsync(true),

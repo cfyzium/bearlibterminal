@@ -193,6 +193,11 @@ namespace BearLibTerminal
 		XResizeWindow(m_private->display, m_private->window, size.width, size.height);
 	}
 
+	void X11Window::SetResizeable(bool resizeable)
+	{
+		// Do nothing, linux DMs usually do not allow border control
+	}
+
 	void X11Window::Redraw()
 	{
 		std::unique_lock<std::mutex> guard(m_lock);
@@ -492,17 +497,20 @@ namespace BearLibTerminal
 			}
 			else if (e.type == ConfigureNotify)
 			{
-				/*
 				// OnResize
-				// See: e.xconfigure.width, e.xconfigure.height
-				int w = e.xconfigure.width;
-				int h = e.xconfigure.height;
-				if (w != m_client_size.width || h != m_client_size.height)
+				Size new_size(e.xconfigure.width, e.xconfigure.height);
+				if (new_size.width != m_client_size.width || new_size.height != m_client_size.height)
 				{
-					m_client_size = Size(w, h);
-					if (m_on_resize) m_on_resize(m_client_size);
+					m_client_size = new_size;
+					if (m_on_input)
+					{
+						Keystroke stroke;
+						stroke.scancode = TK_WINDOW_RESIZE;
+						stroke.x = m_client_size.width;
+						stroke.y = m_client_size.height;
+						m_on_input(stroke);
+					}
 				}
-				*/
 			}
 			else if (e.type == MotionNotify)
 			{

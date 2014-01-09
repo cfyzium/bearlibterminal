@@ -50,6 +50,7 @@ namespace BearLibTerminal
 		void SwapBuffers() override;
 		void SetVSync(bool enabled) override;
 		bool PumpEvents() override;
+		void SetResizeable(bool resizeable) override;
 	protected:
 		void ThreadFunction() override;
 		bool Construct() override;

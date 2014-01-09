@@ -53,7 +53,7 @@ namespace BearLibTerminal
 		void SetOnDeactivate(EventHandler callback);
 		void SetOnActivate(EventHandler callback);
 		void SetOnDestroy(EventHandler callback);
-		void SetSynchronousRedraw(bool flag);
+		Size GetClientSize();
 		virtual bool ValidateIcon(const std::wstring& filename) = 0;
 		virtual void SetTitle(const std::wstring& title) = 0;
 		virtual void SetIcon(const std::wstring& filename) = 0;
@@ -66,6 +66,7 @@ namespace BearLibTerminal
 		virtual bool ReleaseRC() = 0;
 		virtual void SwapBuffers() = 0;
 		virtual void SetVSync(bool enabled) = 0;
+		virtual void SetResizeable(bool resizeable) = 0;
 		static std::unique_ptr<Window> Create();
 	protected:
 		Window();

@@ -40,5 +40,6 @@ void TestSpeed();
 void TestKeyboard();
 void TestMouse();
 void TestTextInput();
+void TestWindowResize();
 
 #endif /* COMMON_HPP_ */
