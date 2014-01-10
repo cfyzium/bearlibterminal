@@ -533,10 +533,6 @@ namespace BearLibTerminal
 
 	void Terminal::Clear()
 	{
-		/*
-		std::lock_guard<std::mutex> guard(m_lock);
-		m_world.stage.Resize(m_world.stage.size);
-		/*/
 		if (m_world.stage.backbuffer.background.size() != m_world.stage.size.Area())
 		{
 			LOG(Trace, "World resize");
@@ -552,11 +548,11 @@ namespace BearLibTerminal
 					cell.leafs.clear();
 				}
 			}
+		}
 
-			for (auto& color: m_world.stage.backbuffer.background)
-			{
-				color = Color();
-			}
+		for (auto& color: m_world.stage.backbuffer.background)
+		{
+			color = m_world.state.bkcolor;
 		}
 	}
 
