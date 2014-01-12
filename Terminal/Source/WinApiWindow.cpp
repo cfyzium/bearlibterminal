@@ -168,6 +168,43 @@ namespace BearLibTerminal
 		if ( m_handle ) PostMessage(m_handle, WM_CUSTOM_SETSIZE, (WPARAM)NULL, (LPARAM)new Size(size));
 	}
 
+	void WinApiWindow::SetResizeable(bool resizeable)
+	{
+		if (!m_handle) return;
+
+		auto change_window_style = [=]()
+		{
+			if (!resizeable)
+			{
+				WINDOWPLACEMENT placement;
+				GetWindowPlacement(m_handle, &placement);
+				if (placement.showCmd & SW_MAXIMIZE)
+				{
+					ShowWindow(m_handle, SW_RESTORE);
+				}
+			}
+
+			DWORD style = GetWindowLongW(m_handle, GWL_STYLE);
+			DWORD flags = WS_THICKFRAME | WS_MAXIMIZEBOX;
+			style = resizeable? style|flags: style^flags;
+			SetWindowLongW(m_handle, GWL_STYLE, style);
+
+			RECT rectangle = {0, 0, m_client_size.width, m_client_size.height};
+			AdjustWindowRect(&rectangle, style, FALSE);
+			BOOL rc = SetWindowPos
+			(
+				m_handle,
+				HWND_NOTOPMOST,
+				0, 0,
+				rectangle.right-rectangle.left,
+				rectangle.bottom-rectangle.top,
+				SWP_NOMOVE
+			);
+		};
+
+		Invoke(change_window_style);
+	}
+
 	void WinApiWindow::Redraw()
 	{
 		std::lock_guard<std::mutex> guard(m_lock);
@@ -733,6 +770,17 @@ namespace BearLibTerminal
 				if ( m_on_activate ) m_on_activate();
 			}
 		}
+		else if ( uMsg == WM_SIZE || uMsg == WM_SIZING )
+		{
+			RECT rect;
+			GetClientRect(m_handle, &rect);
+
+			Keystroke stroke;
+			stroke.scancode = TK_WINDOW_RESIZE;
+			stroke.x = rect.right - rect.left;
+			stroke.y = rect.bottom - rect.top;
+			if (m_on_input) m_on_input(stroke);
+		}
 		else if ( uMsg == WM_CUSTOM_SETSIZE )
 		{
 			auto size = (Size*)lParam;
@@ -752,6 +800,7 @@ namespace BearLibTerminal
 			{
 				LOG(Error, L"Failed to update window size (" << GetLastErrorStr() << ")");
 			}
+			m_client_size = *size;
 
 			delete size;
 			return 0;
