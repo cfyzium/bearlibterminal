@@ -227,7 +227,27 @@ namespace BearLibTerminal
 
 	void X11Window::SetResizeable(bool resizeable)
 	{
-		// TODO: if maximized, restore first
+		if (m_resizeable && !resizeable)
+		{
+			// Try to demaximize just in case
+			XEvent xev;
+			memset(&xev, 0, sizeof(xev));
+			Atom wm_state  =  XInternAtom(m_private->display, "_NET_WM_STATE", False);
+			Atom max_horz  =  XInternAtom(m_private->display, "_NET_WM_STATE_MAXIMIZED_HORZ", False);
+			Atom max_vert  =  XInternAtom(m_private->display, "_NET_WM_STATE_MAXIMIZED_VERT", False);
+
+			memset(&xev, 0, sizeof(xev));
+			xev.type = ClientMessage;
+			xev.xclient.window = m_private->window;
+			xev.xclient.message_type = wm_state;
+			xev.xclient.format = 32;
+			xev.xclient.data.l[0] = 0;//_NET_WM_STATE_REMOVE;
+			xev.xclient.data.l[1] = max_horz;
+			xev.xclient.data.l[2] = max_vert;
+
+			Status st = XSendEvent(m_private->display, DefaultRootWindow(m_private->display), False, SubstructureNotifyMask, &xev);
+		}
+
 		m_resizeable = resizeable;
 		UpdateSizeHints();
 	}
