@@ -39,6 +39,7 @@ namespace BearLibTerminal
 	struct X11Window::Private
 	{
 		Private();
+		~Private();
 
 		Display* display;
 		::Window window;
@@ -48,6 +49,7 @@ namespace BearLibTerminal
 		XIM im;
 		XIC ic;
 		Atom close_message;
+		XSizeHints* size_hints;
 
 		typedef void (*PFN_GLXSWAPINTERVALEXT)(Display *dpy, GLXDrawable drawable, int interval);
 		typedef int (*PFN_GLXSWAPINTERVALMESA)(int interval);
@@ -74,8 +76,16 @@ namespace BearLibTerminal
 		ic(NULL),
 		close_message(),
 		glXSwapIntervalEXT(nullptr),
-		glXSwapIntervalMESA(nullptr)
-	{ }
+		glXSwapIntervalMESA(nullptr),
+		size_hints(nullptr)
+	{
+		size_hints = XAllocSizeHints();
+	}
+
+	X11Window::Private::~Private()
+	{
+		if (size_hints) XFree(size_hints);
+	}
 
 	// XXX: Salvaged from somewhere, format it
 	// ------------------------------------------------------------------------
@@ -146,7 +156,8 @@ namespace BearLibTerminal
 
 	X11Window::X11Window():
 		m_private(new Private()),
-		m_mouse_wheel(0)
+		m_mouse_wheel(0),
+		m_resizeable(false)
 	{ }
 
 	X11Window::~X11Window()
@@ -185,17 +196,40 @@ namespace BearLibTerminal
 		);
 	}
 
+	void X11Window::UpdateSizeHints()
+	{
+		auto hints = m_private->size_hints;
+
+		if (m_resizeable)
+		{
+			hints->flags = PMinSize | PResizeInc;
+			hints->min_width = hints->width_inc = m_cell_size.width;
+			hints->min_height = hints->height_inc = m_cell_size.height;
+		}
+		else
+		{
+			hints->flags = PMinSize | PMaxSize;
+			hints->min_width = hints->max_width = m_client_size.width;
+			hints->min_height = hints->max_height = m_client_size.height;
+		}
+
+		XSetWMNormalHints(m_private->display, m_private->window, hints);
+	}
+
 	void X11Window::SetClientSize(const Size& size)
 	{
 		std::lock_guard<std::mutex> guard(m_lock);
 		if ( m_private->window == 0 ) return;
 		m_client_size = size;
+		UpdateSizeHints();
 		XResizeWindow(m_private->display, m_private->window, size.width, size.height);
 	}
 
 	void X11Window::SetResizeable(bool resizeable)
 	{
-		// Do nothing, linux DMs usually do not allow border control
+		// TODO: if maximized, restore first
+		m_resizeable = resizeable;
+		UpdateSizeHints();
 	}
 
 	void X11Window::Redraw()

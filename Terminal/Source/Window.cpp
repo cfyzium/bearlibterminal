@@ -76,6 +76,11 @@ namespace BearLibTerminal
 		m_on_destroy = callback;
 	}
 
+	void Window::SetCellSize(const Size& size)
+	{
+		m_cell_size = size;
+	}
+
 	Size Window::GetClientSize()
 	{
 		return m_client_size;

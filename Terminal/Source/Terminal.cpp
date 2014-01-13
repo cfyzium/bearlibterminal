@@ -286,6 +286,7 @@ namespace BearLibTerminal
 			Size viewport_size = m_world.stage.size * m_world.state.cellsize;
 			m_vars[TK_CLIENT_WIDTH] = viewport_size.width;
 			m_vars[TK_CLIENT_HEIGHT] = viewport_size.height;
+			m_window->SetCellSize(m_world.state.cellsize);
 			m_window->SetClientSize(viewport_size);
 			m_viewport_modified = true;
 			//m_window->Invoke([=](){ConfigureViewport();});
