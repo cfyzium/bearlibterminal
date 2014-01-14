@@ -25,9 +25,7 @@ set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${LF}")
 
 find_package(OpenGL)
 
-#include_directories(./include)
-#include_directories(${OPENGL_INCLUDE_DIR})
-include_directories(./Include)
+include_directories(./Include/C)
 include_directories(../Dependencies/FreeType/Include)
 
 add_library(BearLibTerminal SHARED ${TERMINAL_SOURCES})
@@ -44,12 +42,6 @@ set_target_properties(BearLibTerminal PROPERTIES
 	RUNTIME_OUTPUT_DIRECTORY ${OUTPUT_DIR}
 	LIBRARY_OUTPUT_DIRECTORY ${OUTPUT_DIR}
 	ARCHIVE_OUTPUT_DIRECTORY ${OUTPUT_DIR})
-	
-add_custom_command(TARGET BearLibTerminal
-	POST_BUILD
-	COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/Include/${PROJECT_NAME}.h ${OUTPUT_DIR})
-
-set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES ${OUTPUT_DIR}/${PROJECT_NAME}.h)
 
 if (WIN32)
 	# Fix unix-like "lib" prefix and ".a" suffix

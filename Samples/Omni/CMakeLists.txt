@@ -42,7 +42,7 @@ set(SOURCE_FILES ./Source/Main.cpp
                  ./Source/TextInput.cpp
                  ./Source/WindowResize.cpp)
 
-include_directories(${CMAKE_SOURCE_DIR}/Terminal/Include)
+include_directories(${CMAKE_SOURCE_DIR}/Terminal/Include/C)
 add_executable(SampleOmni ${SOURCE_FILES})
 target_link_libraries(SampleOmni BearLibTerminal -Wl,-R.)
 if(WIN32)

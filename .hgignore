@@ -1,4 +1,4 @@
-syntax: regex
+syntax: regexp
 Build/.*
 Output/[a-zA-Z0-9_.]+
 .settings/.*
