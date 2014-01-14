@@ -9,7 +9,7 @@
 
 void TestWindowResize()
 {
-	terminal_set("window: title='Omni: window resizing', resizeable=true");
+	terminal_set("window: title='Omni: window resizing', resizeable=true, minimum-size=27x5");
 
 	const int symbol = 0x2588;
 
@@ -30,7 +30,7 @@ void TestWindowResize()
 				terminal_put(0, y, y%2? symbol: (int)'#');
 				terminal_put(w-1, y, y%2? symbol: (int)'#');
 			}
-			terminal_printf(2, 2, "Terminal size is %dx%d", w, h);
+			terminal_printf(3, 2, "Terminal size is %dx%d", w, h);
 			terminal_refresh();
 
 			int key = terminal_read();

@@ -203,8 +203,10 @@ namespace BearLibTerminal
 		if (m_resizeable)
 		{
 			hints->flags = PMinSize | PResizeInc;
-			hints->min_width = hints->width_inc = m_cell_size.width;
-			hints->min_height = hints->height_inc = m_cell_size.height;
+			hints->width_inc = m_cell_size.width;
+			hints->height_inc = m_cell_size.height;
+			hints->min_width = m_minimum_size.width * m_cell_size.width;
+			hints->min_height = m_minimum_size.height * m_cell_size.height;
 		}
 		else
 		{

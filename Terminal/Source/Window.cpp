@@ -34,7 +34,8 @@ namespace BearLibTerminal
 {
 	Window::Window():
 		m_synchronous_redraw(false),
-		m_proceed(false)
+		m_proceed(false),
+		m_minimum_size(1, 1)
 	{ }
 
 	Window::~Window()
@@ -76,9 +77,13 @@ namespace BearLibTerminal
 		m_on_destroy = callback;
 	}
 
-	void Window::SetCellSize(const Size& size)
+	void Window::SetSizeHints(Size increment, Size minimum_size)
 	{
-		m_cell_size = size;
+		m_cell_size = increment;
+		m_minimum_size = minimum_size;
+
+		if (m_minimum_size.width < 1) m_minimum_size.width = 1;
+		if (m_minimum_size.height < 1) m_minimum_size.height = 1;
 	}
 
 	Size Window::GetClientSize()

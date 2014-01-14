@@ -26,6 +26,7 @@ namespace BearLibTerminal
 		std::wstring window_title;
 		std::wstring window_icon;
 		bool window_resizeable;
+		Size window_minimum_size;
 
 		// Output
 		bool output_postformatting;

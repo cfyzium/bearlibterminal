@@ -57,7 +57,7 @@ namespace BearLibTerminal
 		virtual bool ValidateIcon(const std::wstring& filename) = 0;
 		virtual void SetTitle(const std::wstring& title) = 0;
 		virtual void SetIcon(const std::wstring& filename) = 0;
-		virtual void SetCellSize(const Size& size);
+		virtual void SetSizeHints(Size increment, Size minimum_size);
 		virtual void SetClientSize(const Size& size) = 0;
 		virtual void Redraw() = 0;
 		virtual void Show() = 0;
@@ -88,6 +88,7 @@ namespace BearLibTerminal
 		std::thread m_thread;
 		std::atomic<bool> m_proceed;
 		Size m_cell_size;
+		Size m_minimum_size;
 		Size m_client_size;
 	};
 }

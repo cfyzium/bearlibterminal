@@ -31,6 +31,7 @@
 #include "Log.hpp"
 #include "OpenGL.hpp"
 #include "Resource.hpp"
+#include "Geometry.hpp"
 
 #include <Mmsystem.h>
 
@@ -77,7 +78,9 @@ namespace BearLibTerminal
 		m_class_name(L"BearLibTerminal"),
 		m_handle(nullptr),
 		m_device_context(nullptr),
-		m_rendering_context(nullptr)
+		m_rendering_context(nullptr),
+		m_mouse_wheel(0),
+		m_wglSwapIntervalEXT(nullptr)
 	{ }
 
 	WinApiWindow::~WinApiWindow()
@@ -510,23 +513,11 @@ namespace BearLibTerminal
 
 	LRESULT WinApiWindow::HandleWmPaint(WPARAM wParam, LPARAM lParam)
 	{
-		int rc = 0;
-
 		try
 		{
-			if (m_on_redraw)
+			if (m_on_redraw && m_on_redraw() > 0)
 			{
-				rc = m_on_redraw();
-
-				if (rc > 0)
-				{
-					SwapBuffers();
-				}
-				else if (rc < 0)
-				{
-					// Reschedule
-					//PostMessageW(m_handle, WM_PAINT, 0, 0);
-				}
+				SwapBuffers();
 			}
 		}
 		catch ( std::exception& e )
@@ -535,13 +526,10 @@ namespace BearLibTerminal
 			m_proceed = false;
 		}
 
-		//if (rc >= 0)
-		{
-			// Mark window area as processed
-			RECT rect;
-			GetClientRect(m_handle, &rect); // TODO: May be cached
-			ValidateRect(m_handle, &rect);
-		}
+		// Mark window area as processed
+		RECT rect;
+		GetClientRect(m_handle, &rect); // TODO: May be cached
+		ValidateRect(m_handle, &rect);
 
 		// Open barrier
 		m_redraw_barrier.NotifyAtMost(1);
@@ -594,6 +582,38 @@ namespace BearLibTerminal
 		}();
 
 		return mapping[scancode];
+	}
+
+	BOOL UnadjustWindowRect(LPRECT prc, DWORD dwStyle, BOOL fMenu)
+	{
+		RECT rc;
+		SetRectEmpty(&rc);
+		BOOL fRc = AdjustWindowRect(&rc, dwStyle, fMenu);
+		if (fRc)
+		{
+			prc->left -= rc.left;
+			prc->top -= rc.top;
+			prc->right -= rc.right;
+			prc->bottom -= rc.bottom;
+		}
+
+		return fRc;
+	}
+
+	BOOL UnadjustWindowRectEx(LPRECT prc, DWORD dwStyle, BOOL fMenu, DWORD dwExStyle)
+	{
+		RECT rc;
+		SetRectEmpty(&rc);
+		BOOL fRc = AdjustWindowRectEx(&rc, dwStyle, fMenu, dwExStyle);
+		if (fRc)
+		{
+			prc->left -= rc.left;
+			prc->top -= rc.top;
+			prc->right -= rc.right;
+			prc->bottom -= rc.bottom;
+		}
+
+		return fRc;
 	}
 
 	LRESULT WinApiWindow::WindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -770,16 +790,76 @@ namespace BearLibTerminal
 				if ( m_on_activate ) m_on_activate();
 			}
 		}
-		else if ( uMsg == WM_SIZE || uMsg == WM_SIZING )
+		else if ( uMsg == WM_SIZE )
 		{
 			RECT rect;
 			GetClientRect(m_handle, &rect);
+			m_client_size.width = rect.right - rect.left;
+			m_client_size.height = rect.bottom - rect.top;
 
 			Keystroke stroke;
 			stroke.scancode = TK_WINDOW_RESIZE;
-			stroke.x = rect.right - rect.left;
-			stroke.y = rect.bottom - rect.top;
+			stroke.x = m_client_size.width;
+			stroke.y = m_client_size.height;
 			if (m_on_input) m_on_input(stroke);
+
+			return TRUE;
+		}
+		else if ( uMsg == WM_SIZING )
+		{
+			DWORD style = GetWindowLongW(m_handle, GWL_STYLE);
+			auto rect = (RECT*)lParam;
+			RECT client_rect = *rect;
+			UnadjustWindowRect(&client_rect, style, FALSE);
+			int client_width = client_rect.right - client_rect.left;
+			int client_height = client_rect.bottom - client_rect.top;
+
+			int projected_width = (int)std::round(client_width/(float)m_cell_size.width);
+			int projected_height = (int)std::round(client_height / (float)m_cell_size.height);
+			if (projected_width < m_minimum_size.width) projected_width = m_minimum_size.width;
+			if (projected_height < m_minimum_size.height) projected_height = m_minimum_size.height;
+
+			if (wParam == WMSZ_LEFT || wParam == WMSZ_TOPLEFT || wParam == WMSZ_BOTTOMLEFT)
+			{
+				int delta = projected_width*m_cell_size.width - client_width;
+				rect->left -= delta;
+			}
+
+			if (wParam == WMSZ_TOP || wParam == WMSZ_TOPLEFT || wParam == WMSZ_TOPRIGHT)
+			{
+				int delta = projected_height*m_cell_size.height - client_height;
+				rect->top -= delta;
+			}
+
+			if (wParam == WMSZ_RIGHT || wParam == WMSZ_TOPRIGHT || wParam == WMSZ_BOTTOMRIGHT)
+			{
+				int delta = projected_width*m_cell_size.width - client_width;
+				rect->right += delta;
+			}
+
+			if (wParam == WMSZ_BOTTOM || wParam == WMSZ_BOTTOMLEFT || wParam == WMSZ_BOTTOMRIGHT)
+			{
+				int delta = projected_height*m_cell_size.height - client_height;
+				rect->bottom += delta;
+			}
+
+			client_rect = *rect;
+			UnadjustWindowRect(&client_rect, style, FALSE);
+			client_width = client_rect.right - client_rect.left;
+			client_height = client_rect.bottom - client_rect.top;
+			if (client_width != m_client_size.width || client_height != m_client_size.height)
+			{
+				m_client_size.width = client_width;
+				m_client_size.height = client_height;
+
+				Keystroke stroke;
+				stroke.scancode = TK_WINDOW_RESIZE;
+				stroke.x = m_client_size.width;
+				stroke.y = m_client_size.height;
+				if (m_on_input) m_on_input(stroke);
+			}
+
+			return TRUE;
 		}
 		else if ( uMsg == WM_CUSTOM_SETSIZE )
 		{

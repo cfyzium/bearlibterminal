@@ -280,16 +280,20 @@ namespace BearLibTerminal
 			LOG(Debug, L"SetOptions: new window size is " << updated.window_size);
 		}
 
+		if (updated.window_minimum_size != m_options.window_minimum_size)
+		{
+			viewport_size_changed = true; // Hack
+		}
+
 		if (viewport_size_changed)
 		{
 			// Resize window object
 			Size viewport_size = m_world.stage.size * m_world.state.cellsize;
 			m_vars[TK_CLIENT_WIDTH] = viewport_size.width;
 			m_vars[TK_CLIENT_HEIGHT] = viewport_size.height;
-			m_window->SetCellSize(m_world.state.cellsize);
+			m_window->SetSizeHints(m_world.state.cellsize, updated.window_minimum_size);
 			m_window->SetClientSize(viewport_size);
 			m_viewport_modified = true;
-			//m_window->Invoke([=](){ConfigureViewport();});
 		}
 
 		// Briefly grab input lock so that input routines do not contend for m_options
@@ -364,6 +368,16 @@ namespace BearLibTerminal
 		if (group.attributes.count(L"resizeable") && !try_parse(group.attributes[L"resizeable"], options.window_resizeable))
 		{
 			throw std::runtime_error("window.resizeable value cannot be parsed");
+		}
+
+		if (group.attributes.count(L"minimum-size") && !try_parse(group.attributes[L"minimum-size"], options.window_minimum_size))
+		{
+			throw std::runtime_error("window.minimum-size value cannot be parsed");
+		}
+
+		if (options.window_minimum_size.width < 1 || options.window_minimum_size.height < 1)
+		{
+			throw std::runtime_error("window.minimum-size value is out of range");
 		}
 	}
 
