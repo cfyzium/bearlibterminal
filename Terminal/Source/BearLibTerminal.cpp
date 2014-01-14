@@ -187,7 +187,7 @@ template<typename char_t, typename enc_t> int read_str(int x, int y, char_t* buf
 	if (rc >= 0)
 	{
 		std::basic_string<char_t> result = encoding.Convert(wide_buffer.c_str());
-		memcpy(buffer, result.data(), sizeof(char_t)*result.length());
+		memcpy(buffer, result.data(), sizeof(char_t)*(result.length()+1));
 	}
 	return rc;
 }

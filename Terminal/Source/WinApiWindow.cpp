@@ -874,7 +874,7 @@ namespace BearLibTerminal
 				0, 0,
 				rectangle.right-rectangle.left,
 				rectangle.bottom-rectangle.top,
-				SWP_NOMOVE|SWP_NOREDRAW
+				SWP_NOMOVE//|SWP_NOREDRAW
 			);
 			if ( !rc )
 			{
