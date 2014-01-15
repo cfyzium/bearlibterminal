@@ -135,6 +135,7 @@ const
   // Specific input events
   TK_MOUSE_MOVE     = $D3; // Mouse movement event
   TK_MOUSE_SCROLL   = $D4; // Mouse wheel scroll event
+  TK_WINDOW_RESIZE  = $DF; // Window resize event
 
   // Virtual codes for various virtual states:
   TK_MOUSE_X        = $D0; // Mouse cursor position in cells

@@ -136,8 +136,9 @@ namespace BearLib
         
         public struct Events
         {
-        	public const int MouseMove      = 0xD3; // Mouse movement event
+            public const int MouseMove      = 0xD3; // Mouse movement event
             public const int MouseScroll    = 0xD4; // Mouse wheel scroll event
+            public const int WindowResize   = 0xDF; // Window resize
         }
 
         public struct States
