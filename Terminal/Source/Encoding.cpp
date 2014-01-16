@@ -168,6 +168,47 @@ namespace BearLibTerminal
 
 	// ------------------------------------------------------------------------
 
+	static const wchar_t kSurrogateHighStart	= 0xD800;
+	static const wchar_t kSurrogateHighEnd		= 0xDBFF;
+	static const wchar_t kUnicodeMaxBmp			= 0xFFFF;
+
+	// Number of trailing bytes that are supposed to follow the first byte
+	// of a UTF-8 sequence
+	static const uint8_t kTrailingBytesForUTF8[256] =
+	{
+		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+		1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+		1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+		2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,
+		3,3,3,3,3,3,3,3,4,4,4,4,5,5,5,5
+	};
+
+	// Magic values subtracted from a buffer value during UTF8 conversion.
+	// This table contains as many values as there might be trailing bytes
+	// in a UTF-8 sequence.
+	static const uint32_t kOffsetsFromUTF8[6] =
+	{
+		0x00000000UL,
+		0x00003080UL,
+		0x000E2080UL,
+		0x03C82080UL,
+		0xFA082080UL,
+		0x82082080UL
+	};
+
+	static const wchar_t kReplacementChar = 0x1A; // ASCII 'replacement' character
+
 	struct UTF8Encoding: Encoding<char>
 	{
 		wchar_t Convert(int value) const override;
@@ -190,14 +231,75 @@ namespace BearLibTerminal
 	std::wstring UTF8Encoding::Convert(const std::string& value) const
 	{
 		std::wstring result;
-		for (auto c: value) result += (wchar_t)c;
+
+		size_t index = 0;
+		while (index < value.length())
+		{
+			size_t extraBytesToRead = kTrailingBytesForUTF8[(uint8_t)value[index]];
+			if (index+extraBytesToRead >= value.length())
+			{
+				// Stop here
+				return result;
+			}
+
+			// TODO: Do UTF-8 check
+
+			uint32_t ch = 0;
+			switch (extraBytesToRead)
+			{
+				case 5: ch += (uint8_t)value[index++]; ch <<= 6; // illegal UTF-8
+				case 4: ch += (uint8_t)value[index++]; ch <<= 6; // illegal UTF-8
+				case 3: ch += (uint8_t)value[index++]; ch <<= 6;
+				case 2: ch += (uint8_t)value[index++]; ch <<= 6;
+				case 1: ch += (uint8_t)value[index++]; ch <<= 6;
+				case 0: ch += (uint8_t)value[index++];
+			}
+			ch -= kOffsetsFromUTF8[extraBytesToRead];
+
+			if (ch <= kUnicodeMaxBmp)
+			{
+				// Target is a character <= 0xFFFF
+				if (ch >= kSurrogateHighStart && ch <= kSurrogateHighEnd)
+				{
+					result.push_back(kReplacementChar);
+				}
+				else
+				{
+					result.push_back((wchar_t)ch); // Normal case
+				}
+			}
+			else // Above 0xFFFF
+			{
+				result.push_back(kReplacementChar);
+			}
+		}
+
 		return result;
 	}
 
 	std::string UTF8Encoding::Convert(const std::wstring& value) const
 	{
 		std::string result;
-		for (auto c: value) result += (char)c;
+
+		for (wchar_t c: value)
+		{
+			if (c < 0x80)
+			{
+				result.push_back(c & 0x7F);
+			}
+			else if (c < 0x0800)
+			{
+				result.push_back(((c >> 6) & 0x1F) | 0xC0);
+				result.push_back(((c >> 0) & 0x3F) | 0x80);
+			}
+			else if (c < 0x10000)
+			{
+				result.push_back(((c >> 12) & 0x0F) | 0xE0);
+				result.push_back(((c >>  6) & 0x3F) | 0x80);
+				result.push_back(((c >>  0) & 0x3F) | 0x80);
+			}
+		}
+
 		return result;
 	}
 
