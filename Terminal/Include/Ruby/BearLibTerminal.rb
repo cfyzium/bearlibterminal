@@ -268,10 +268,19 @@ module Terminal
 	include Constants
 end
 
-# Mixin simplifying loading sprites from memory (from arrays of integer color codes)
+# Mixin simplifying loading sprites from memory
+# Retrieves an address of array of integer color codes suitable for library
 class Array
-	def to_s_addr
+	def to_addr_s
 		@to_s_addr_cache = self.pack "l"+self.length.to_s
 		return "0x"+Terminal::Ptr[@to_s_addr_cache].to_i.to_s(16)
+	end
+end
+
+# Mixin simplifying put/char methods
+# Retrieves a UTF-16 code of the first character in a string
+class String
+	def to_u16_i
+		return self.encode("utf-16le").unpack("S")[0]
 	end
 end
