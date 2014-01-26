@@ -75,6 +75,7 @@ namespace BearLibTerminal
 		HGLRC m_rendering_context;
 		Semaphore m_redraw_barrier;
 		int m_mouse_wheel;
+		bool m_maximized;
 
 		typedef BOOL (*PFN_WGLSWAPINTERVALEXT)(int interval);
 		PFN_WGLSWAPINTERVALEXT m_wglSwapIntervalEXT;

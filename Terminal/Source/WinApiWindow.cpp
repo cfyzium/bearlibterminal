@@ -80,6 +80,7 @@ namespace BearLibTerminal
 		m_device_context(nullptr),
 		m_rendering_context(nullptr),
 		m_mouse_wheel(0),
+		m_maximized(false),
 		m_wglSwapIntervalEXT(nullptr)
 	{ }
 
@@ -336,7 +337,7 @@ namespace BearLibTerminal
 
 		WNDCLASSW wc;
 		memset(&wc, 0, sizeof(wc));
-		wc.style			= CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
+		wc.style			= /*CS_HREDRAW | CS_VREDRAW |*/ CS_OWNDC;
 		wc.lpfnWndProc		= (WNDPROC)SharedWindowProc;
 		wc.hInstance		= app_instance;
 		wc.hIcon			= LoadIcon(NULL, IDI_WINLOGO);
@@ -511,10 +512,25 @@ namespace BearLibTerminal
 	uint64_t tt_num = 0;
 	uint64_t tt_las = 0;
 
+
 	LRESULT WinApiWindow::HandleWmPaint(WPARAM wParam, LPARAM lParam)
 	{
 		try
 		{
+			RECT rect;
+			GetClientRect(m_handle, &rect);
+			Size client_size(rect.right - rect.left, rect.bottom - rect.top);
+
+			if (client_size != m_client_size)
+			{
+				m_client_size = client_size;
+				glViewport(0, 0, client_size.width, client_size.height);
+				glMatrixMode(GL_PROJECTION);
+				glLoadIdentity();
+				glOrtho(0, client_size.width, client_size.height, 0, -1, +1);
+				glMatrixMode(GL_MODELVIEW);
+			}
+
 			if (m_on_redraw && m_on_redraw() > 0)
 			{
 				SwapBuffers();
@@ -630,7 +646,7 @@ namespace BearLibTerminal
 		}
 		else if ( uMsg == WM_ERASEBKGND )
 		{
-			return 0;//TRUE;
+			return TRUE;
 		}
 		else if ( uMsg == WM_CHAR )
 		{
@@ -792,6 +808,26 @@ namespace BearLibTerminal
 		}
 		else if ( uMsg == WM_SIZE )
 		{
+			if (wParam == SIZE_MAXIMIZED || (wParam == SIZE_RESTORED && m_maximized))
+			{
+				m_maximized = (wParam == SIZE_MAXIMIZED);
+
+				RECT rect;
+				GetClientRect(m_handle, &rect);
+				m_client_size.width = rect.right - rect.left;
+				m_client_size.height = rect.bottom - rect.top;
+
+				Keystroke stroke;
+				stroke.scancode = TK_WINDOW_RESIZE;
+				stroke.x = m_client_size.width;
+				stroke.y = m_client_size.height;
+				if (m_on_input) m_on_input(stroke);
+			}
+
+			return TRUE;
+		}
+		else if (uMsg == WM_EXITSIZEMOVE)
+		{
 			RECT rect;
 			GetClientRect(m_handle, &rect);
 			m_client_size.width = rect.right - rect.left;
@@ -803,12 +839,13 @@ namespace BearLibTerminal
 			stroke.y = m_client_size.height;
 			if (m_on_input) m_on_input(stroke);
 
-			return TRUE;
+			return FALSE;
 		}
 		else if ( uMsg == WM_SIZING )
 		{
 			DWORD style = GetWindowLongW(m_handle, GWL_STYLE);
 			auto rect = (RECT*)lParam;
+
 			RECT client_rect = *rect;
 			UnadjustWindowRect(&client_rect, style, FALSE);
 			int client_width = client_rect.right - client_rect.left;
@@ -841,22 +878,6 @@ namespace BearLibTerminal
 			{
 				int delta = projected_height*m_cell_size.height - client_height;
 				rect->bottom += delta;
-			}
-
-			client_rect = *rect;
-			UnadjustWindowRect(&client_rect, style, FALSE);
-			client_width = client_rect.right - client_rect.left;
-			client_height = client_rect.bottom - client_rect.top;
-			if (client_width != m_client_size.width || client_height != m_client_size.height)
-			{
-				m_client_size.width = client_width;
-				m_client_size.height = client_height;
-
-				Keystroke stroke;
-				stroke.scancode = TK_WINDOW_RESIZE;
-				stroke.x = m_client_size.width;
-				stroke.y = m_client_size.height;
-				if (m_on_input) m_on_input(stroke);
 			}
 
 			return TRUE;
