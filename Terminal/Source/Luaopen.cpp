@@ -21,6 +21,7 @@
 #include <vector>
 #include <type_traits>
 #include <stddef.h>
+#include <string.h>
 
 #if defined(_WIN32)
 typedef HMODULE ModuleHandle;
@@ -89,9 +90,14 @@ ModuleHandle GetLuaModule()
 	return dlopen(0, RTLD_NOW|RTLD_GLOBAL);
 }
 
-FunctionHandle GetLuaFunction(ModuleHandle module, const char* name)
+FunctionHandle GetLuaFunction(ModuleHandle module, const char* name, bool may_fail=false)
 {
-	return dlsym(module, name);
+	FunctionHandle result = dlsym(module, name);
+	if (result == nullptr && !may_fail)
+	{
+		LOG(Error, "Can't get address of function \"" << name << "\"");
+	}
+	return result;
 }
 #endif
 
@@ -146,25 +152,25 @@ typedef void (*PFNLUAPUSHBOOLEAN)(lua_State *L, int b); // lua_pushboolean
 typedef void (*PFNLUAGETTABLE)(lua_State *L, int idx); // lua_gettable
 typedef const char* (*PFNLUAPUSHSTRING)(lua_State *L, const char *s); // lua_pushstring
 
-PFNLUAGETTOP lua_gettop;
-PFNLUACREATETABLE lua_createtable;
-PFNLUALCHECKSTACK luaL_checkstack;
-PFNLUAPUSHVALUE lua_pushvalue;
-PFNLUAPUSHCCLOSURE lua_pushcclosure;
-PFNLUASETFIELD lua_setfield;
-PFNLUASETTOP lua_settop;
-PFNLUAPUSHNUMBER lua_pushnumber;
-PFNLUAPUSHINTEGER lua_pushinteger;
-PFNLUATOSTRING lua_tolstring;
-PFNLUATONUMBER lua_tonumber;
-PFNLUATONUMBERX lua_tonumberx;
-PFNLUATOINTEGER lua_tointeger;
-PFNLUATOINTEGERX lua_tointegerx;
-PFNLUARAWGETI lua_rawgeti;
-PFNLUATYPE lua_type;
-PFNLUAPUSHBOOLEAN lua_pushboolean;
-PFNLUAGETTABLE lua_gettable;
-PFNLUAPUSHSTRING lua_pushstring;
+static PFNLUAGETTOP lua_gettop = 0;
+static PFNLUACREATETABLE lua_createtable = 0;
+static PFNLUALCHECKSTACK luaL_checkstack = 0;
+static PFNLUAPUSHVALUE lua_pushvalue = 0;
+static PFNLUAPUSHCCLOSURE lua_pushcclosure = 0;
+static PFNLUASETFIELD lua_setfield = 0;
+static PFNLUASETTOP lua_settop = 0;
+static PFNLUAPUSHNUMBER lua_pushnumber = 0;
+static PFNLUAPUSHINTEGER lua_pushinteger = 0;
+static PFNLUATOSTRING lua_tolstring = 0;
+static PFNLUATONUMBER lua_tonumber = 0;
+static PFNLUATONUMBERX lua_tonumberx = 0;
+static PFNLUATOINTEGER lua_tointeger = 0;
+static PFNLUATOINTEGERX lua_tointegerx = 0;
+static PFNLUARAWGETI lua_rawgeti = 0;
+static PFNLUATYPE lua_type = 0;
+static PFNLUAPUSHBOOLEAN lua_pushboolean = 0;
+static PFNLUAGETTABLE lua_gettable = 0;
+static PFNLUAPUSHSTRING lua_pushstring = 0;
 
 #define lua_pop(L,n)			lua_settop(L, -(n)-1)
 #define luaL_newlibtable(L,l)	lua_createtable(L, 0, sizeof(l)/sizeof((l)[0]) - 1)
