@@ -119,7 +119,7 @@ namespace BearLibTerminal
 					// Color is in decimal numeric format
 
 					size_t idx;
-					uint32_t value = (uint32_t)std::stol(name, &idx, 10);
+					uint32_t value = (uint32_t)std::stoll(name, &idx, 10);
 					if ( (value & 0xFF000000) == 0 ) value |= 0xFF000000;
 					return Color(value);
 				}
