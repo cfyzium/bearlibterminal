@@ -324,7 +324,7 @@ int luaterminal_put_ext(lua_State* L)
 		color_t corners[4];
 		for (int i=0; i<4; i++)
 		{
-			lua_pushinteger(L, i);
+			lua_pushinteger(L, i+1);
 			lua_gettable(L, -2);
 			corners[i] = lua_tonumber(L, -1);
 			lua_pop(L, 1);
