@@ -126,7 +126,6 @@ struct luaL_Reg
 #define LUA_INTEGER             ptrdiff_t
 typedef LUA_INTEGER             lua_Integer;
 
-
 extern "C"
 {
 	TERMINAL_API int luaopen_BearLibTerminal(lua_State* L);
@@ -151,6 +150,14 @@ typedef int (*PFNLUATYPE)(lua_State *L, int idx); // lua_type
 typedef void (*PFNLUAPUSHBOOLEAN)(lua_State *L, int b); // lua_pushboolean
 typedef void (*PFNLUAGETTABLE)(lua_State *L, int idx); // lua_gettable
 typedef const char* (*PFNLUAPUSHSTRING)(lua_State *L, const char *s); // lua_pushstring
+typedef int (*PFNLUAPCALL)(lua_State *L, int nargs, int nresults, int errfunc); // lua_pcall
+typedef int (*PFNLUAPCALLK)(lua_State *L, int nargs, int nresults, int errfunc, int ctx, lua_CFunction k); // lua_pcallk
+typedef void (*PFNLUAGETFIELD)(lua_State *L, int idx, const char *k); // lua_getfield
+typedef void (*PFNLUAINSERT)(lua_State *L, int idx); // lua_insert
+typedef void (*PFNLUAREPLACE)(lua_State *L, int index); // lua_replace
+typedef int (*PFNLUAERROR)(lua_State *L); // lua_error
+typedef size_t (*PFNLUAOBJLEN)(lua_State *L, int index); // lua_objlen
+typedef size_t (*PFNLUARAWLEN)(lua_State *L, int idx); // lua_rawlen
 
 static PFNLUAGETTOP lua_gettop = 0;
 static PFNLUACREATETABLE lua_createtable = 0;
@@ -171,6 +178,14 @@ static PFNLUATYPE lua_type = 0;
 static PFNLUAPUSHBOOLEAN lua_pushboolean = 0;
 static PFNLUAGETTABLE lua_gettable = 0;
 static PFNLUAPUSHSTRING lua_pushstring = 0;
+static PFNLUAPCALL lua_pcall = 0;
+static PFNLUAPCALLK lua_pcallk = 0;
+static PFNLUAGETFIELD lua_getfield = 0;
+static PFNLUAINSERT lua_insert = 0;
+static PFNLUAREPLACE lua_replace = 0;
+static PFNLUAERROR lua_error = 0;
+static PFNLUAOBJLEN lua_objlen = 0;
+static PFNLUARAWLEN lua_rawlen = 0;
 
 #define lua_pop(L,n)			lua_settop(L, -(n)-1)
 #define luaL_newlibtable(L,l)	lua_createtable(L, 0, sizeof(l)/sizeof((l)[0]) - 1)
@@ -185,6 +200,16 @@ lua_Number lua_tonumber_52(lua_State* L, int index)
 lua_Integer lua_tointeger_52(lua_State* L, int index)
 {
 	return lua_tointegerx(L, index, nullptr);
+}
+
+int lua_pcall_52(lua_State *L, int nargs, int nresults, int errfunc)
+{
+	return lua_pcallk(L, nargs, nresults, errfunc, 0, nullptr);
+}
+
+size_t lua_objlen_52(lua_State* L, int index)
+{
+	return lua_rawlen(L, index);
 }
 
 void luaL_setfuncs (lua_State *L, const luaL_Reg *l, int nup)
@@ -219,6 +244,59 @@ int luaterminal_close(lua_State* L)
 
 int luaterminal_set(lua_State* L)
 {
+	const char* s = lua_tostring(L, 1);
+	lua_pushinteger(L, terminal_set8((const int8_t*)s));
+	return 1;
+}
+
+int luaterminal_setf(lua_State* L)
+{
+	// Stack: [s, arg1, arg2, arg3, ...]
+	int nargs = lua_gettop(L);
+	if (nargs < 1) // Because Lua won't be as lenient with argument type errors here
+	{
+		lua_pushstring(L, "luaterminal_setf: not enough arguments");
+		lua_error(L);
+		return 0;
+	}
+	else if (lua_type(L, 1) != LUA_TSTRING)
+	{
+		lua_pushstring(L, "luaterminal_setf: first argument is not a string");
+		lua_error(L);
+		return 0;
+	}
+
+	lua_getfield(L, 1, "format"); // Gets the "format" field from the first (bottom) stack element which is string
+	lua_insert(L, 1); // Shift retrieved function to the bottom of the stack
+
+	// Special case: replace tables with addresses of cached bitmaps
+	std::vector<std::vector<color_t>> cached;
+	// Now stack looks like [format, s, arg1, arg2, arg3, ...]
+	for (int i=3; i<=nargs+1; i++)
+	{
+		if (lua_type(L, i) == LUA_TTABLE)
+		{
+			// Cache
+			size_t size = lua_objlen(L, i);
+			cached.emplace_back(size, 0);
+			for (int j=0; j<size; j++)
+			{
+				lua_pushinteger(L, j+1);
+				lua_gettable(L, i);
+				cached.back()[j] = lua_tonumber(L, -1);
+				lua_pop(L, 1);
+			}
+
+			// Replace with address
+			std::ostringstream ss;
+			ss << "0x" << std::hex << (uint64_t)cached.back().data();
+			lua_pushstring(L, ss.str().c_str());
+			lua_replace(L, i);
+		}
+	}
+
+	lua_pcall(L, nargs, 1, 0);
+
 	const char* s = lua_tostring(L, 1);
 	lua_pushinteger(L, terminal_set8((const int8_t*)s));
 	return 1;
@@ -353,9 +431,36 @@ int luaterminal_print(lua_State* L)
 	return 1;
 }
 
+int luaterminal_printf(lua_State* L)
+{
+	// Stack: [x, y, s, arg1, arg2, arg3, ...]
+	int nargs = lua_gettop(L);
+	if (nargs < 3) // Because Lua won't be as lenient with argument type errors here
+	{
+		lua_pushstring(L, "luaterminal_printf: not enough arguments");
+		lua_error(L);
+		return 0;
+	}
+	else if (lua_type(L, 3) != LUA_TSTRING)
+	{
+		lua_pushstring(L, "luaterminal_printf: third argument is not a string");
+		lua_error(L);
+		return 0;
+	}
+
+	lua_getfield(L, 3, "format"); // Gets the "format" field from the first (bottom) stack element which is string
+	lua_insert(L, 3); // Shift retrieved function to the bottom of the stack
+
+	lua_pcall(L, nargs-2, 1, 0);
+
+	int rc = terminal_print8(lua_tonumber(L, 1), lua_tonumber(L, 2), (const int8_t*)lua_tostring(L, 3));
+	lua_pushnumber(L, rc);
+	return 1;
+}
+
 int luaterminal_has_input(lua_State* L)
 {
-	lua_pushnumber(L, terminal_has_input());
+	lua_pushboolean(L, terminal_has_input());
 	return 1;
 }
 
@@ -431,18 +536,12 @@ int luaterminal_color_from_argb(lua_State* L)
 	return 1;
 }
 
-int luaterminal_address_of_image(lua_State* L)
-{
-	// Just cache the image
-
-	return 0;
-}
-
 static const luaL_Reg luaterminal_lib[] =
 {
 	{"open", luaterminal_open},
 	{"close", luaterminal_close},
 	{"set", luaterminal_set},
+	{"setf", luaterminal_setf},
 	{"refresh", luaterminal_refresh},
 	{"clear", luaterminal_clear},
 	{"clear_area", luaterminal_clear_area},
@@ -453,6 +552,7 @@ static const luaL_Reg luaterminal_lib[] =
 	{"put", luaterminal_put},
 	{"put_ext", luaterminal_put_ext},
 	{"print", luaterminal_print},
+	{"printf", luaterminal_printf},
 	{"has_input", luaterminal_has_input},
 	{"state", luaterminal_state},
 	{"read", luaterminal_read},
@@ -460,7 +560,6 @@ static const luaL_Reg luaterminal_lib[] =
 	{"read_str", luaterminal_read_str},
 	{"color_from_name", luaterminal_color_from_name},
 	{"color_from_argb", luaterminal_color_from_argb},
-	{"address_of_image", luaterminal_address_of_image},
 	{NULL, NULL}
 };
 
@@ -619,6 +718,10 @@ int luaopen_BearLibTerminal(lua_State* L)
 	lua_pushboolean = (PFNLUAPUSHBOOLEAN)GetLuaFunction(module, "lua_pushboolean");
 	lua_gettable = (PFNLUAGETTABLE)GetLuaFunction(module, "lua_gettable");
 	lua_pushstring = (PFNLUAPUSHSTRING)GetLuaFunction(module, "lua_pushstring");
+	lua_getfield = (PFNLUAGETFIELD)GetLuaFunction(module, "lua_getfield");
+	lua_insert = (PFNLUAINSERT)GetLuaFunction(module, "lua_insert");
+	lua_replace = (PFNLUAREPLACE)GetLuaFunction(module, "lua_replace");
+	lua_error = (PFNLUAERROR)GetLuaFunction(module, "lua_error");
 
 	if (version_52)
 	{
@@ -629,11 +732,19 @@ int luaopen_BearLibTerminal(lua_State* L)
 
 		lua_tointegerx = (PFNLUATOINTEGERX)GetLuaFunction(module, "lua_tointegerx");
 		lua_tointeger = &lua_tointeger_52;
+
+		lua_pcallk = (PFNLUAPCALLK)GetLuaFunction(module, "lua_pcallk");
+		lua_pcall = &lua_pcall_52;
+
+		lua_rawlen = (PFNLUARAWLEN)GetLuaFunction(module, "lua_rawlen");
+		lua_objlen = &lua_objlen_52;
 	}
 	else
 	{
 		lua_tonumber = (PFNLUATONUMBER)GetLuaFunction(module, "lua_tonumber", true);
 		lua_tointeger = (PFNLUATOINTEGER)GetLuaFunction(module, "lua_tointeger", true);
+		lua_pcall = (PFNLUAPCALL)GetLuaFunction(module, "lua_pcall");
+		lua_objlen = (PFNLUAOBJLEN)GetLuaFunction(module, "lua_objlen");
 	}
 
 	// Make module table

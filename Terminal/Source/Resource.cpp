@@ -74,7 +74,7 @@ namespace BearLibTerminal
 #endif
 			if (result->fail())
 			{
-				throw std::runtime_error("Resource %name cannot be opened"); // FIXME: formatting
+				throw std::runtime_error("resource \"" + UTF8->Convert(name) + "\" cannot be opened");
 				result.reset();
 			}
 			return result;
