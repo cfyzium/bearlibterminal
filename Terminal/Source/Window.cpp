@@ -29,6 +29,7 @@
 #endif
 #include "Log.hpp"
 #include <future>
+#include <stdexcept>
 
 namespace BearLibTerminal
 {
@@ -95,29 +96,27 @@ namespace BearLibTerminal
 	{
 		auto thread_function = [&](std::promise<bool> promise)
 		{
-			// NOTE: this lambda will be executed on a new thread
-			// (so any uncaught exception becomes fatal)
-
 			try
 			{
-				Construct();
-				promise.set_value(true);
-			}
-			catch ( std::exception& e )
-			{
-				// TODO: Log
-				promise.set_value(false);
-				return;
-			}
+				try
+				{
+					Construct();
+					promise.set_value(true);
+				}
+				catch(...)
+				{
+					promise.set_exception(std::current_exception());
+					return;
+				}
 
-			try
-			{
 				ThreadFunction();
-				if ( m_on_destroy ) m_on_destroy();
+				if (m_on_destroy) m_on_destroy();
 			}
-			catch ( std::exception& e )
+			catch (std::exception& e)
 			{
-				// TODO: Log
+				// By the time execution falls here, Run method has already finished.
+				// So there is no one to relay exception to.
+				LOG(Error, "Window thread has thrown an exception: " << e.what());
 			}
 
 			Destroy();
@@ -128,19 +127,13 @@ namespace BearLibTerminal
 		try
 		{
 			std::promise<bool> promise;
-			std::future<bool> result = promise.get_future();
+			auto result = promise.get_future();
 			m_thread = std::thread(thread_function, std::move(promise));
-
-			if ( !result.get() )
-			{
-				throw std::runtime_error("Failed to create a window");
-			}
+			result.get(); // This will either get 'true' or throw an exception
 		}
-		catch( std::exception& e )
+		catch(std::exception& e)
 		{
-			LOG(Fatal, L"Window initialization routine has thrown an exception: " << e.what());
-			// TODO: chain the exception
-			throw;
+			throw std::runtime_error(std::string("window initialization has failed: ") + e.what());
 		}
 	}
 

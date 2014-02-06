@@ -301,21 +301,7 @@ namespace BearLibTerminal
 
 		try
 		{
-			if (m_on_redraw)
-			{
-				rc = m_on_redraw();
-
-				if (rc > 0)
-				{
-					SwapBuffers();
-				}
-				else if (rc < 0)
-				{
-					// FIXME: reschedule painting to a later time
-					// XSendEvent or XClearArea or custom event
-					LOG(Debug, "Redraw later?");
-				}
-			}
+			if (m_on_redraw && m_on_redraw() > 0) SwapBuffers();
 		}
 		catch (std::exception& e)
 		{

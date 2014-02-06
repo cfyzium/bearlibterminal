@@ -88,11 +88,6 @@ namespace BearLibTerminal
 			throw std::runtime_error("invalid bitmap");
 		}
 
-		/*
-		// Clear OpenGL error stack
-		while ( glGetError() != GL_NO_ERROR );
-		//*/
-
 		if (m_handle == 0)
 		{
 			// Allocate a fresh texture object
@@ -121,20 +116,6 @@ namespace BearLibTerminal
 				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, m_size.width, m_size.height, 0, color_format, GL_UNSIGNED_BYTE, (uint8_t*)bitmap.GetData());
 			}
 		}
-
-		/*
-		bool error_occured = false;
-		GLenum error_code = GL_NO_ERROR;
-		while ( (error_code = glGetError()) != GL_NO_ERROR )
-		{
-			// TODO: Log
-		}
-
-		if ( error_occured )
-		{
-			throw std::runtime_error("Texture::Update: OpenGL error");
-		}
-		//*/
 	}
 
 	Bitmap Texture::Download()

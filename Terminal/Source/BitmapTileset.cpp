@@ -108,8 +108,7 @@ namespace BearLibTerminal
 
 		if (group.attributes.count(L"codepage"))
 		{
-			// TODO: check for error
-			m_codepage = GetUnibyteEncoding(group.attributes[L"codepage"]);
+			m_codepage = GetUnibyteEncoding(group.attributes[L"codepage"]); // Should either return an encoding or throw
 		}
 
 		if (!m_codepage)

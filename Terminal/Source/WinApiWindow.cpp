@@ -89,12 +89,11 @@ namespace BearLibTerminal
 		Stop();
 	}
 
-	// TODO: check if this works under Wine.
 	HMODULE GetCurrentModule()
 	{
 		// NB: XP+ solution!
 		HMODULE hModule = NULL;
-		GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCTSTR)GetCurrentModule,&hModule);
+		GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCTSTR)GetCurrentModule, &hModule);
 		return hModule;
 	}
 
@@ -523,6 +522,7 @@ namespace BearLibTerminal
 
 			if (client_size != m_client_size)
 			{
+				// This handles viewport size change allowing scene to stay in place during window resize
 				m_client_size = client_size;
 				glViewport(0, 0, client_size.width, client_size.height);
 				glMatrixMode(GL_PROJECTION);
@@ -544,7 +544,7 @@ namespace BearLibTerminal
 
 		// Mark window area as processed
 		RECT rect;
-		GetClientRect(m_handle, &rect); // TODO: May be cached
+		GetClientRect(m_handle, &rect);
 		ValidateRect(m_handle, &rect);
 
 		// Open barrier

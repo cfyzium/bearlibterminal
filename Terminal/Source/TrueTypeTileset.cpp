@@ -46,8 +46,7 @@ namespace BearLibTerminal
 
 		if (group.attributes.count(L"codepage"))
 		{
-			// TODO: check for error
-			m_codepage = GetUnibyteEncoding(group.attributes[L"codepage"]);
+			m_codepage = GetUnibyteEncoding(group.attributes[L"codepage"]); // Should either return an encoding or throw
 		}
 		else
 		{
@@ -100,7 +99,7 @@ namespace BearLibTerminal
 
 			if (m_tile_size.width < 0 || m_tile_size.height < 1)
 			{
-				throw std::runtime_error("TrueTypeTileset: size %size is out of acceptable range"); // TODO: formatting
+				throw std::runtime_error("TrueTypeTileset: size " + UTF8->Convert(group.attributes[L"size"]) + " is out of acceptable range");
 			}
 		}
 		else
@@ -118,7 +117,7 @@ namespace BearLibTerminal
 		std::string filename_u8 = UTF8->Convert(group.attributes[L"name"]);
 		if (FT_New_Face(m_font_library, filename_u8.c_str(), 0, &m_font_face))
 		{
-			throw std::runtime_error("TrueTypeTileset: can't load font from file");
+			throw std::runtime_error("TrueTypeTileset: can't load font from file \"" + filename_u8 + "\"");
 		}
 
 		int hres = 64;
