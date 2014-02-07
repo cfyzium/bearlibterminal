@@ -1,6 +1,6 @@
 {*
 * BearLibTerminal
-* Copyright (C) 2013 Cfyz
+* Copyright (C) 2013-2014 Cfyz
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -170,7 +170,7 @@ type
   PColor = ^Color;
 
 // Open
-function terminal_open(): Integer;
+function terminal_open(): LongBool;
   cdecl; external 'BearLibTerminal' name 'terminal_open';
 
 // Close
@@ -178,15 +178,15 @@ procedure terminal_close();
   cdecl; external 'BearLibTerminal' name 'terminal_close';
 
 // Set
-function terminal_set(const Options: PChar): Integer;
+function terminal_set(const Options: PChar): LongBool;
   cdecl; external 'BearLibTerminal' name 'terminal_set8';
 
-function terminal_set(const Options: String): Integer;
+function terminal_set(const Options: String): LongBool;
 
-function terminal_set(const Options: PUnicodeChar): Integer;
+function terminal_set(const Options: PUnicodeChar): LongBool;
   cdecl; external 'BearLibTerminal' name 'terminal_set16';
 
-function terminal_set(const Options: UnicodeString): Integer;
+function terminal_set(const Options: UnicodeString): LongBool;
 
 // Refresh
 procedure terminal_refresh();
@@ -248,12 +248,14 @@ function terminal_print(X, Y: Integer; const s: PUnicodeChar): Cardinal;
 function terminal_print(X, Y: Integer; const S: UnicodeString): Cardinal;
 
 // HasInput
-function terminal_has_input(): Integer;
+function terminal_has_input(): LongBool;
   cdecl; external 'BearLibTerminal' name 'terminal_has_input';
 
 // State
 function terminal_state(Code: Integer): Integer;
   cdecl; external 'BearLibTerminal' name 'terminal_state';
+  
+function terminal_check_state(Code: Integer): Boolean;
 
 // Read
 function terminal_read(): Integer;
@@ -279,12 +281,12 @@ function color_from_argb(a, r, g, b: Integer): Color;
 
 implementation
 
-function terminal_set(const Options: String): Integer;
+function terminal_set(const Options: String): LongBool;
 begin
     terminal_set := terminal_set(PChar(Options));
 end;
 
-function terminal_set(const Options: UnicodeString): Integer;
+function terminal_set(const Options: UnicodeString): LongBool;
 begin
     terminal_set := terminal_set(PUnicodeChar(Options));
 end;
@@ -326,7 +328,12 @@ end;
 
 function terminal_print(X, Y: Integer; const S: UnicodeString): Cardinal;
 begin
-     terminal_print := terminal_print(X, Y, PUnicodeChar(S));
+	terminal_print := terminal_print(X, Y, PUnicodeChar(S));
+end;
+
+function terminal_check_state(Code: Integer): Boolean;
+begin
+	terminal_check_state := terminal_state(Code) = 1;
 end;
 
 function color_from_name(const Name: string): Color;

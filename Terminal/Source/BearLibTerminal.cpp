@@ -35,17 +35,17 @@ namespace
 
 int terminal_open()
 {
-	if (g_instance) return -1;
+	if (g_instance) return 0;
 
 	try
 	{
 		g_instance.reset(new BearLibTerminal::Terminal());
-		return 0;
+		return 1;
 	}
 	catch (std::exception& e)
 	{
 		LOG(Fatal, "Failed to initialize terminal instance: " << e.what());
-		return -1;
+		return 0;
 	}
 }
 

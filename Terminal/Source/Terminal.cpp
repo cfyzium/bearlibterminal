@@ -63,12 +63,12 @@ namespace BearLibTerminal
 		try
 		{
 			SetOptionsInternal(value);
-			return 0;
+			return 1;
 		}
 		catch (std::exception& e)
 		{
 			LOG(Error, "Failed to set some options: " << e.what());
-			return -1;
+			return 0;
 		}
 	}
 

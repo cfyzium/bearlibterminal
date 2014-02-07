@@ -232,7 +232,7 @@ void luaL_setfuncs (lua_State *L, const luaL_Reg *l, int nup)
 
 int luaterminal_open(lua_State* L)
 {
-	lua_pushinteger(L, terminal_open());
+	lua_pushboolean(L, terminal_open());
 	return 1;
 }
 
@@ -245,7 +245,7 @@ int luaterminal_close(lua_State* L)
 int luaterminal_set(lua_State* L)
 {
 	const char* s = lua_tostring(L, 1);
-	lua_pushinteger(L, terminal_set8((const int8_t*)s));
+	lua_pushboolean(L, terminal_set8((const int8_t*)s));
 	return 1;
 }
 
@@ -298,7 +298,7 @@ int luaterminal_setf(lua_State* L)
 	lua_pcall(L, nargs, 1, 0);
 
 	const char* s = lua_tostring(L, 1);
-	lua_pushinteger(L, terminal_set8((const int8_t*)s));
+	lua_pushboolean(L, terminal_set8((const int8_t*)s));
 	return 1;
 }
 
@@ -470,6 +470,12 @@ int luaterminal_state(lua_State* L)
 	return 1;
 }
 
+int luaterminal_check_state(lua_State* L)
+{
+	lua_pushboolean(L, terminal_state(lua_tonumber(L, 1)) == 1);
+	return 1;
+}
+
 int luaterminal_read(lua_State* L)
 {
 	int code = terminal_read();
@@ -555,6 +561,7 @@ static const luaL_Reg luaterminal_lib[] =
 	{"printf", luaterminal_printf},
 	{"has_input", luaterminal_has_input},
 	{"state", luaterminal_state},
+	{"check_state", luaterminal_check_state},
 	{"read", luaterminal_read},
 	{"read_ext", luaterminal_read_ext},
 	{"read_str", luaterminal_read_str},

@@ -1,6 +1,6 @@
 ﻿/*
 * BearLibTerminal C# wrapper
-* Copyright (C) 2013 Cfyz
+* Copyright (C) 2013-2014 Cfyz
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -178,7 +178,7 @@ namespace BearLib
         }
 
         [DllImport("BearLibTerminal.dll", EntryPoint = "terminal_open", CallingConvention=CallingConvention.Cdecl)]
-        public static extern int Open();
+        public static extern bool Open();
 
         [DllImport("BearLibTerminal.dll", EntryPoint = "terminal_close", CallingConvention = CallingConvention.Cdecl)]
         public static extern void Close();
@@ -187,9 +187,9 @@ namespace BearLib
         public static extern void Refresh();
 
         [DllImport("BearLibTerminal.dll", CharSet = CharSet.Unicode, EntryPoint = "terminal_set16", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int Set(string options);
+        public static extern bool Set(string options);
 
-        public static int Set(string options, params object[] args)
+        public static bool Set(string options, params object[] args)
         {
         	Dictionary<Bitmap, BitmapData> bitmaps = new Dictionary<Bitmap, BitmapData>();
         	for (int i=0; i<args.Length; i++)
@@ -207,12 +207,12 @@ namespace BearLib
 					args[i] = string.Format("0x{0:X}", (System.UInt64)data.Scan0.ToInt64());
         		}
         	}
-        	int rc = Set(string.Format(options, args));
+        	bool result = Set(string.Format(options, args));
         	foreach(KeyValuePair<Bitmap, BitmapData> i in bitmaps)
         	{
         		i.Key.UnlockBits(i.Value);
         	}
-            return rc;
+            return result;
         }
 
         [DllImport("BearLibTerminal.dll", EntryPoint = "terminal_clear", CallingConvention = CallingConvention.Cdecl)]
@@ -299,6 +299,11 @@ namespace BearLib
         
         [DllImport("BearLibTerminal.dll", EntryPoint = "terminal_state", CallingConvention = CallingConvention.Cdecl)]
         public static extern int State(int code);
+        
+        public static bool CheckState(int code)
+        {
+            return State(code) == 1;
+        }
 
         [DllImport("BearLibTerminal.dll", EntryPoint = "terminal_read", CallingConvention = CallingConvention.Cdecl)]
         public static extern int Read();

@@ -81,9 +81,11 @@ module Terminal
 	ColorFromName = Fiddle::Function.new(Lib['color_from_name8'], [Fiddle::TYPE_VOIDP], -Fiddle::TYPE_INT)
 	
 	# Wrappers
-	def self.open; return Open.call; end
+	def self.open?; return Open.call == 1; end
+	def self.open; open?; end
 	def self.close; Close.call; end
-	def self.set s; return Set.call Ptr[s];	end
+	def self.set? s; return Set.call(Ptr[s]) == 1; end
+	def self.set s; set? s; end
 	def self.refresh; Refresh.call; end
 	def self.clear; Clear.call; end
 	def self.clear_area x, y, w, h; ClearArea.call x, y, w, h; end
@@ -106,8 +108,9 @@ module Terminal
 		end
 	end
 	def self.print x, y, s; return Print.call x, y, Ptr[s]; end
-	def self.has_input; return HasInput.call; end
+	def self.has_input?; return HasInput.call == 1; end
 	def self.state code; return State.call code; end
+	def self.state? code; return state(code) == 1; end
 	def self.read; return Read.call; end
 	def self.read_ext flags; return ReadExt.call flags; end
 	def self.read_str x, y, s, max
