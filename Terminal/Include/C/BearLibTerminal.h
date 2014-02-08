@@ -420,6 +420,14 @@ static inline color_t color_from_argb(uint8_t a, uint8_t r, uint8_t g, uint8_t b
 }
 
 /*
+ * Other functional sugar
+ */
+static inline int terminal_check(int code)
+{
+	return terminal_state(code) == 1;
+}
+
+/*
  * WinMain entry point handling macro. This allows easier entry point definition.
  * The macro will expand to proper WinMain stub regardless of header include order.
  */

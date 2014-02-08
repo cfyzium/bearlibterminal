@@ -255,7 +255,7 @@ function terminal_has_input(): LongBool;
 function terminal_state(Code: Integer): Integer;
   cdecl; external 'BearLibTerminal' name 'terminal_state';
   
-function terminal_check_state(Code: Integer): Boolean;
+function terminal_check(Code: Integer): Boolean;
 
 // Read
 function terminal_read(): Integer;
@@ -331,9 +331,9 @@ begin
 	terminal_print := terminal_print(X, Y, PUnicodeChar(S));
 end;
 
-function terminal_check_state(Code: Integer): Boolean;
+function terminal_check(Code: Integer): Boolean;
 begin
-	terminal_check_state := terminal_state(Code) = 1;
+	terminal_check := terminal_state(Code) = 1;
 end;
 
 function color_from_name(const Name: string): Color;

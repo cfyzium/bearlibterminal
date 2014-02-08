@@ -470,7 +470,7 @@ int luaterminal_state(lua_State* L)
 	return 1;
 }
 
-int luaterminal_check_state(lua_State* L)
+int luaterminal_check(lua_State* L)
 {
 	lua_pushboolean(L, terminal_state(lua_tonumber(L, 1)) == 1);
 	return 1;
@@ -561,7 +561,7 @@ static const luaL_Reg luaterminal_lib[] =
 	{"printf", luaterminal_printf},
 	{"has_input", luaterminal_has_input},
 	{"state", luaterminal_state},
-	{"check_state", luaterminal_check_state},
+	{"check", luaterminal_check},
 	{"read", luaterminal_read},
 	{"read_ext", luaterminal_read_ext},
 	{"read_str", luaterminal_read_str},

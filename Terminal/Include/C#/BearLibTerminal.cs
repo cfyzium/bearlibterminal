@@ -300,7 +300,7 @@ namespace BearLib
         [DllImport("BearLibTerminal.dll", EntryPoint = "terminal_state", CallingConvention = CallingConvention.Cdecl)]
         public static extern int State(int code);
         
-        public static bool CheckState(int code)
+        public static bool Check(int code)
         {
             return State(code) == 1;
         }
