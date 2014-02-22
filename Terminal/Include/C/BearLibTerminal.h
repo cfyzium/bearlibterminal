@@ -177,7 +177,6 @@
  */
 #define TK_INPUT_NONE         0
 #define TK_INPUT_CANCELLED   -1
-//#define TK_INPUT_CALL_AGAIN  -2
 
 /*
  * Extended reading flags
