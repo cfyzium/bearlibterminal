@@ -29,46 +29,42 @@ namespace BearLibTerminal
 {
 	struct Keystroke
 	{
-		Keystroke():
-			scancode(0),
-			released(false),
+		static const std::uint32_t
+			None        = 0,
+			KeyPress    = (1<<0),
+			KeyRelease  = (1<<1),
+			MouseMove   = (1<<2),
+			MouseScroll = (1<<3),
+			Unicode     = (1<<4),
+			All = KeyPress|KeyRelease|MouseMove|MouseScroll|Unicode;
+
+		typedef std::uint32_t Type;
+
+		Keystroke(Type type, std::uint8_t scancode): // keypress/keyrelease events
+			type(type),
+			scancode(scancode),
 			character(0),
-			x(0),
-			y(0),
-			z(0)
+			x(0), y(0), z(0)
 		{ }
 
-		Keystroke(std::uint8_t scancode):
+		Keystroke(Type type, std::uint8_t scancode, char16_t character): // character-producing keypress event
+			type(type),
 			scancode(scancode),
-			released(false),
-			character(0),
-			x(0),
-			y(0),
-			z(0)
-		{ }
-
-		Keystroke(std::uint8_t scancode, bool released):
-			scancode(scancode),
-			released(released),
-			character(0),
-			x(0),
-			y(0),
-			z(0)
-		{ }
-
-		Keystroke(std::uint8_t scancode, char16_t character, bool released):
-			scancode(scancode),
-			released(released),
 			character(character),
-			x(0),
-			y(0),
-			z(0)
+			x(0), y(0), z(0)
 		{ }
 
+		Keystroke(Type type, std::uint8_t scancode, int x, int y, int z): // mouse events
+			type(type),
+			scancode(scancode),
+			character(0),
+			x(x), y(y), z(z)
+		{ }
+
+		Type type;
 		std::uint8_t scancode;
-		bool released;
 		char16_t character;
-		std::int16_t x, y, z;
+		int x, y, z;
 	};
 }
 

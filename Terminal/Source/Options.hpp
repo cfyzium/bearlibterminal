@@ -34,7 +34,6 @@ namespace BearLibTerminal
 		bool output_vsync;
 
 		// Input
-		bool input_nonblocking;
 		uint32_t input_events;
 		bool input_precise_mouse;
 		bool input_sticky_close;
@@ -47,17 +46,6 @@ namespace BearLibTerminal
 		Log::Mode log_mode;
 
 		Options();
-	};
-
-	struct InputEvents
-	{
-		static const uint32_t
-			None		= 0x00,
-			KeyPress	= 0x01,
-			KeyRelease 	= 0x02,
-			MouseMove 	= 0x04,
-			MouseScroll	= 0x08,
-			All			= 0x0F;
 	};
 }
 

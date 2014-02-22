@@ -6,6 +6,7 @@
  */
 
 #include "Options.hpp"
+#include "Keystroke.hpp"
 
 namespace BearLibTerminal
 {
@@ -19,8 +20,7 @@ namespace BearLibTerminal
 		output_postformatting(true),
 		output_asynchronous(true),
 		output_vsync(true),
-		input_nonblocking(false),
-		input_events(InputEvents::KeyPress),
+		input_events(Keystroke::KeyPress),
 		input_precise_mouse(false),
 		input_sticky_close(true),
 		input_cursor_symbol((uint16_t)'_'),

@@ -89,7 +89,7 @@ void TestTextInput()
 
 		terminal_print(2, 3, "[color=orange]1.[/color] terminal_read_str");
 		DrawFrame(5, 4, max_chars+2, 3);
-		terminal_printf(6, 5, "%ls", buffer);
+		terminal_printf(6, 5, L"%ls", buffer);
 		terminal_printf(5+max_chars+2+1, 5, "[color=gray] %s", result >=0? "OK": "Cancelled");
 
 		terminal_print(2, 8, "[color=orange]2.[/color] terminal_read_char");
@@ -139,6 +139,7 @@ void TestTextInput()
 					char_result = 0;
 				}
 				/*/
+
 				int symbol = terminal_read_ext(TK_READ_CHAR|TK_READ_NOREMOVE);
 				char_result = terminal_read();
 				if (char_result == TK_ESCAPE || char_result == TK_CLOSE || char_result == TK_RETURN)

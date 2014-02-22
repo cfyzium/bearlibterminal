@@ -54,12 +54,6 @@ namespace BearLibTerminal
 		m_on_input = callback;
 	}
 
-	void Window::SetOnResize(ResizeEventHandler callback)
-	{
-		std::lock_guard<std::mutex> guard(m_lock);
-		m_on_resize = callback;
-	}
-
 	void Window::SetOnDeactivate(EventHandler callback)
 	{
 		std::lock_guard<std::mutex> guard(m_lock);

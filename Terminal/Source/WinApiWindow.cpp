@@ -637,7 +637,7 @@ namespace BearLibTerminal
 		if ( uMsg == WM_CLOSE )
 		{
 			// Emulate pressing virtual VK_CLOSE button
-			ReportInput(Keystroke(TK_CLOSE, false));
+			ReportInput(Keystroke(Keystroke::KeyPress, TK_CLOSE));
 			return FALSE;
 		}
 		else if ( uMsg == WM_PAINT )
@@ -670,7 +670,7 @@ namespace BearLibTerminal
 					  scancode == VK_BACK ||
 					  scancode == VK_RETURN )
 			{
-				ReportInput(Keystroke(scancode));
+				ReportInput(Keystroke(Keystroke::KeyPress, scancode));
 			}
 			else
 			{
@@ -684,7 +684,7 @@ namespace BearLibTerminal
 
 				if ( scancode == VK_OEM_102 ) scancode = VK_OEM_5;
 
-				ReportInput(Keystroke(scancode, charcode, false));
+				ReportInput(Keystroke(Keystroke::KeyPress|Keystroke::Unicode, scancode, charcode));
 			}
 
 			return FALSE;
@@ -713,7 +713,7 @@ namespace BearLibTerminal
 				(scancode >= VK_F1 && scancode <= VK_F12) ||
 				(scancode >= VK_NUMPAD0 && scancode <= VK_DIVIDE) )
 			{
-				ReportInput(Keystroke(scancode, !pressed));
+				ReportInput(Keystroke(pressed? Keystroke::KeyPress: Keystroke::KeyRelease, scancode));
 			}
 			else if ( scancode == VK_CLEAR ||
 					  scancode == VK_INSERT ||
@@ -721,7 +721,7 @@ namespace BearLibTerminal
 					 (scancode >= VK_PRIOR && scancode <= VK_DOWN) )
 			{
 				if ( !extended ) scancode = MapNavigationScancodeToNumpad(scancode);
-				ReportInput(Keystroke(scancode, !pressed));
+				ReportInput(Keystroke(pressed? Keystroke::KeyPress: Keystroke::KeyRelease, scancode));
 			}
 			else if ( !pressed )
 			{
@@ -740,7 +740,7 @@ namespace BearLibTerminal
 
 				if ( scancode == VK_OEM_102 ) scancode = VK_OEM_5;
 
-				ReportInput(Keystroke(scancode, charcode, !pressed));
+				ReportInput(Keystroke((pressed? Keystroke::KeyPress|Keystroke::Unicode: Keystroke::KeyRelease), scancode, charcode));
 			}
 
 			return FALSE;
@@ -752,10 +752,7 @@ namespace BearLibTerminal
 			if ( precise_position.x < 0 ) precise_position.x = 0;
 			if ( precise_position.y < 0 ) precise_position.y = 0;
 
-			Keystroke stroke;
-			stroke.scancode = TK_MOUSE_MOVE;
-			stroke.x = precise_position.x;
-			stroke.y = precise_position.y;
+			Keystroke stroke(Keystroke::MouseMove, TK_MOUSE_MOVE, precise_position.x, precise_position.y, 0);
 			ReportInput(stroke);
 
 			return 0;
@@ -765,36 +762,28 @@ namespace BearLibTerminal
 			int delta = GET_WHEEL_DELTA_WPARAM(wParam) / WHEEL_DELTA;
 			m_mouse_wheel += delta;
 
-			Keystroke stroke;
-			stroke.scancode = TK_MOUSE_SCROLL;
-			stroke.z = m_mouse_wheel;
+			Keystroke stroke(Keystroke::MouseScroll, TK_MOUSE_SCROLL, 0, 0, m_mouse_wheel);
 			ReportInput(stroke);
 
 			return 0;
 		}
 		else if ( uMsg == WM_LBUTTONDOWN || uMsg == WM_LBUTTONUP )
 		{
-			Keystroke stroke;
-			stroke.scancode = TK_LBUTTON;
-			stroke.released = uMsg == WM_LBUTTONUP;
+			Keystroke stroke(uMsg == WM_LBUTTONUP? Keystroke::KeyRelease: Keystroke::KeyPress, TK_LBUTTON);
 			ReportInput(stroke);
 
 			return 0;
 		}
 		else if ( uMsg == WM_RBUTTONDOWN || uMsg == WM_RBUTTONUP )
 		{
-			Keystroke stroke;
-			stroke.scancode = TK_RBUTTON;
-			stroke.released = uMsg == WM_RBUTTONUP;
+			Keystroke stroke(uMsg == WM_RBUTTONUP? Keystroke::KeyRelease: Keystroke::KeyPress, TK_RBUTTON);
 			ReportInput(stroke);
 
 			return 0;
 		}
 		else if ( uMsg == WM_MBUTTONDOWN || uMsg == WM_MBUTTONUP )
 		{
-			Keystroke stroke;
-			stroke.scancode = TK_MBUTTON;
-			stroke.released = uMsg == WM_MBUTTONUP;
+			Keystroke stroke(uMsg == WM_MBUTTONUP? Keystroke::KeyRelease: Keystroke::KeyPress, TK_MBUTTON);
 			ReportInput(stroke);
 
 			return 0;
@@ -817,10 +806,7 @@ namespace BearLibTerminal
 				m_client_size.width = rect.right - rect.left;
 				m_client_size.height = rect.bottom - rect.top;
 
-				Keystroke stroke;
-				stroke.scancode = TK_WINDOW_RESIZE;
-				stroke.x = m_client_size.width;
-				stroke.y = m_client_size.height;
+				Keystroke stroke(Keystroke::KeyPress, TK_WINDOW_RESIZE, m_client_size.width, m_client_size.height, 0);
 				if (m_on_input) m_on_input(stroke);
 			}
 
@@ -833,10 +819,7 @@ namespace BearLibTerminal
 			m_client_size.width = rect.right - rect.left;
 			m_client_size.height = rect.bottom - rect.top;
 
-			Keystroke stroke;
-			stroke.scancode = TK_WINDOW_RESIZE;
-			stroke.x = m_client_size.width;
-			stroke.y = m_client_size.height;
+			Keystroke stroke(Keystroke::KeyPress, TK_WINDOW_RESIZE, m_client_size.width, m_client_size.height, 0);
 			if (m_on_input) m_on_input(stroke);
 
 			return FALSE;

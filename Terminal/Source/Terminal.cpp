@@ -44,7 +44,6 @@ namespace BearLibTerminal
 		m_window = Window::Create();
 		m_window->SetOnDestroy(std::bind(&Terminal::OnWindowClose, this));
 		m_window->SetOnInput(std::bind(&Terminal::OnWindowInput, this, std::placeholders::_1));
-		m_window->SetOnResize(std::bind(&Terminal::OnWindowResize, this, std::placeholders::_1));
 		m_window->SetOnRedraw(std::bind(&Terminal::OnWindowRedraw, this));
 		m_window->SetOnActivate(std::bind(&Terminal::OnWindowActivate, this));
 
@@ -385,11 +384,6 @@ namespace BearLibTerminal
 	{
 		// Possible options: nonblocking, events, precise_mouse, sticky_close, cursor_symbol, cursor_blink_rate
 
-		if (group.attributes.count(L"nonblocking") && !try_parse(group.attributes[L"nonblocking"], options.input_nonblocking))
-		{
-			throw std::runtime_error("input.nonblocking cannot be parsed");
-		}
-
 		if (group.attributes.count(L"precise-mousemove") && !try_parse(group.attributes[L"precise-mousemove"], options.input_precise_mouse))
 		{
 			throw std::runtime_error("input.precise-mouse cannot be parsed");
@@ -405,12 +399,12 @@ namespace BearLibTerminal
 			const std::wstring& s = group.attributes[L"events"];
 			std::map<std::wstring, uint32_t> flags
 			{
-				{L"all", (uint32_t)InputEvents::All},
-				{L"keypress", (uint32_t)InputEvents::KeyPress},
-				{L"keyrelease", (uint32_t)InputEvents::KeyRelease},
-				{L"mousemove", (uint32_t)InputEvents::MouseMove},
-				{L"mousescroll", (uint32_t)InputEvents::MouseScroll},
-				{L"none", (uint32_t)InputEvents::None}
+				{L"all", Keystroke::All},
+				{L"keypress", Keystroke::KeyPress},
+				{L"keyrelease", Keystroke::KeyRelease},
+				{L"mousemove", Keystroke::MouseMove},
+				{L"mousescroll", Keystroke::MouseScroll},
+				{L"none", Keystroke::None}
 			};
 
 			uint32_t result = 0;
@@ -422,6 +416,11 @@ namespace BearLibTerminal
 					uint32_t value = i.second;
 					if (n > 0 && s[n-1] == L'-') result &= ~value; else result |= value;
 				}
+			}
+
+			if (s != L"none")
+			{
+				result |= Keystroke::KeyPress;
 			}
 
 			options.input_events = result;
@@ -934,12 +933,22 @@ namespace BearLibTerminal
 		return printed;
 	}
 
+	bool Terminal::HasInputInternalUnlocked(std::uint32_t mask)
+	{
+		for (auto& i: m_input_queue)
+		{
+			if (i.type & mask) return true;
+		}
+
+		return false;
+	}
+
 	int Terminal::HasInput()
 	{
 		std::lock_guard<std::mutex> guard(m_input_lock);
 		if (m_state == kClosed) return 1;
 		if (m_vars[TK_CLOSE] && m_options.input_sticky_close) return 1; // sticky VK_CLOSE, once set, can't be undone
-		return !m_input_queue.empty();
+		return HasInputInternalUnlocked(m_options.input_events);
 	}
 
 	int Terminal::GetState(int code)
@@ -948,108 +957,105 @@ namespace BearLibTerminal
 		return (code >= 0 && code < (int)m_vars.size())? m_vars[code]: 0;
 	}
 
-	Keystroke Terminal::ReadKeystroke(int timeout)
+	Keystroke Terminal::ReadKeystroke(int flags, int timeout)
 	{
 		std::unique_lock<std::mutex> lock(m_input_lock);
 
 		// Sticky close cannot be undone once set
-		if (m_vars[TK_CLOSE] && m_options.input_sticky_close)
+		if (m_state == kClosed || (m_vars[TK_CLOSE] && m_options.input_sticky_close))
 		{
-			return Keystroke(TK_CLOSE);
+			return Keystroke(Keystroke::KeyPress, TK_CLOSE);
 		}
 
 		// Keep terminal from blocking accidentally if input.events is None
-		if (m_options.input_events == InputEvents::None)
+		if (m_options.input_events == Keystroke::None)
 		{
-			return Keystroke(0);
+			return Keystroke(Keystroke::None, TK_INPUT_NONE);
 		}
+
+		std::uint32_t mask = m_options.input_events;
+		if (flags & TK_READ_CHAR)
+		{
+			mask = Keystroke::KeyPress|Keystroke::Unicode;
+		}
+
+		if (flags & TK_READ_NOBLOCK)
+		{
+			timeout = 0;
+		}
+
+		bool timed_out = false;
 
 		if (timeout > 0)
 		{
-			auto predicate = [&]() -> bool {return !m_input_queue.empty() || (m_state == kClosed);};
-			m_input_condvar.wait_for(lock, std::chrono::milliseconds(timeout), predicate);
+			timed_out = !m_input_condvar.wait_for
+			(
+				lock,
+				std::chrono::milliseconds(timeout),
+				[&](){return HasInputInternalUnlocked(mask);}
+			);
 		}
 
-		if (!m_input_queue.empty())
+		if ((timeout > 0 && !timed_out) || (timeout == 0 && HasInputInternalUnlocked(mask)))
 		{
-			Keystroke stroke = m_input_queue.front();
-			m_input_queue.pop_front();
-			ConsumeStroke(stroke);
-			return stroke;
+			return DequeueKeystroke(mask, flags);
 		}
-		else if (m_state == kClosed)
+		else if (m_state == kClosed) // State may change while waiting for a condvar
 		{
-			return Keystroke(TK_CLOSE);
+			return Keystroke(Keystroke::KeyPress, TK_CLOSE);
 		}
 		else
 		{
-			return Keystroke(0);
+			// Instance is not closed and input either timed out or was not present from the start
+			return Keystroke(Keystroke::None, TK_INPUT_NONE);
 		}
 	}
 
-	void Terminal::PutBack(const Keystroke& stroke)
+	Keystroke Terminal::DequeueKeystroke(std::uint32_t mask, int flags)
 	{
-		std::unique_lock<std::mutex> lock(m_input_lock);
-		m_input_queue.push_front(stroke);
-		ConsumeIrrelevantInput();
-	}
-
-	/**
-	 * Read any non-filtered input event
-	 */
-	int Terminal::ReadVirtualCode(int flags)
-	{
-		Keystroke stroke = ReadKeystroke(m_options.input_nonblocking? 0: std::numeric_limits<int>::max());
-		if (flags & TK_READ_NOREMOVE) PutBack(stroke);
-		int result = stroke.scancode;
-		if (stroke.released) result |= TK_FLAG_RELEASED;
-		return result;
-	}
-
-	/**
-	 * Read first character event
-	 */
-	int Terminal::ReadCharacter(int flags)
-	{
-		int timeout = m_options.input_nonblocking? 0: std::numeric_limits<int>::max();
-
-		do
+		while (!m_input_queue.empty())
 		{
-			Keystroke stroke = ReadKeystroke(timeout);
-			if (stroke.character > 0 && !stroke.released)
+			Keystroke stroke = m_input_queue.front();
+			ConsumeStroke(stroke);
+
+			bool matching = stroke.type & mask;
+			bool noremove = flags & TK_READ_NOREMOVE;
+			bool readchar = flags & TK_READ_CHAR;
+			bool unicode = stroke.type & Keystroke::Unicode;
+			bool keep_stroke = matching && (noremove || (readchar && !unicode));
+
+			if (!keep_stroke) m_input_queue.pop_front();
+
+			if (stroke.type & mask)
 			{
-				// Unicode character available
-				if (flags & TK_READ_NOREMOVE) PutBack(stroke);
-				return m_encoding->Convert((wchar_t)stroke.character); // Convert Unicode to user codepage
-			}
-			else if (stroke.scancode == 0)
-			{
-				// No input available right now (can happen in nonblocking mode only)
-				return TK_INPUT_NONE;
-			}
-			else
-			{
-				// Only non-character stroke available, push keystroke back
-				PutBack(stroke);
-				return TK_INPUT_CALL_AGAIN;
+				return stroke;
 			}
 		}
-		while (true);
+
+		// SHOULD NOT happen
+		return Keystroke(Keystroke::None, TK_INPUT_NONE);
 	}
 
 	int Terminal::ReadExtended(int flags)
 	{
+		auto stroke = ReadKeystroke(flags, std::numeric_limits<int32_t>::max());
+
 		if (flags & TK_READ_CHAR)
 		{
-			return ReadCharacter(flags);
+			return stroke.character;
 		}
 		else
 		{
-			return ReadVirtualCode(flags);
+			int result = stroke.scancode;
+			if (stroke.type & Keystroke::KeyRelease) result |= TK_FLAG_RELEASED;
+			return result;
 		}
 	}
 
-	int Terminal::ReadStringInternalBlocking(int x, int y, wchar_t* buffer, int max)
+	/**
+	 * Reads whole string. Operates vastly differently in blocking and non-blocking modes
+	 */
+	int Terminal::ReadString(int x, int y, wchar_t* buffer, int max)
 	{
 		std::vector<Cell> original;
 		int composition_mode = m_world.state.composition;
@@ -1105,21 +1111,22 @@ namespace BearLibTerminal
 			put_buffer(show_cursor);
 			Refresh();
 
-			auto key = ReadKeystroke(m_options.input_cursor_blink_rate);
-			if (key.scancode == 0)
+			auto key = ReadKeystroke(TK_READ_CHAR, m_options.input_cursor_blink_rate);
+			if (key.character)
 			{
-				// Timed out
-				show_cursor = !show_cursor;
-			}
-			else if (!key.released)
-			{
-				if (key.character > 0)
+				if (cursor < max)
 				{
-					if (cursor < max)
-					{
-						buffer[cursor++] = key.character;
-						show_cursor = true;
-					}
+					buffer[cursor++] = key.character;
+					show_cursor = true;
+				}
+			}
+			else
+			{
+				key = ReadKeystroke(TK_READ_NOBLOCK, 0);
+				if (key.scancode == 0)
+				{
+					// Timed out
+					show_cursor = !show_cursor;
 				}
 				else if (key.scancode == TK_RETURN)
 				{
@@ -1147,70 +1154,6 @@ namespace BearLibTerminal
 		m_world.state.composition = composition_mode;
 
 		return rc;
-	}
-
-	int Terminal::ReadStringInternalNonblocking(wchar_t* buffer, int max)
-	{
-		if (buffer == nullptr || max <= 0)
-		{
-			LOG(Error, "Invalid buffer parameters were passed to string reading function");
-			return 0;
-		}
-
-		// Garbage string protection
-		for (int i=0, f=0; i<max+1; i++) if (f) buffer[i] = 0; else f = !buffer[i];
-		buffer[max] = 0;
-		int cursor = std::wcslen(buffer);
-		int rc = 0;
-
-		while (true)
-		{
-			auto key = ReadKeystroke(0);
-			if (key.scancode == 0)
-			{
-				rc = TK_INPUT_CALL_AGAIN;
-				break;
-			}
-			else if (!key.released)
-			{
-				if (key.character > 0)
-				{
-					if (cursor < max)
-					{
-						buffer[cursor++] = key.character;
-					}
-				}
-				else if (key.scancode == TK_RETURN)
-				{
-					rc = wcslen(buffer);
-					break;
-				}
-				else if (key.scancode == TK_ESCAPE || key.scancode == TK_CLOSE)
-				{
-					rc = TK_INPUT_CANCELLED;
-					break;
-				}
-				else if (key.scancode == TK_BACK)
-				{
-					if (cursor > 0)
-					{
-						buffer[--cursor] = 0;
-					}
-				}
-			}
-		}
-
-		return rc;
-	}
-
-	/**
-	 * Reads whole string. Operates vastly differently in blocking and non-blocking modes
-	 */
-	int Terminal::ReadString(int x, int y, wchar_t* buffer, int max)
-	{
-		return m_options.input_nonblocking?
-			ReadStringInternalNonblocking(buffer, max):
-			ReadStringInternalBlocking(x, y, buffer, max);
 	}
 
 	const Encoding<char>& Terminal::GetEncoding() const
@@ -1473,112 +1416,73 @@ namespace BearLibTerminal
 		return 1;
 	}
 
-	void Terminal::OnWindowResize(Size client_size)
-	{
-		// ...
-	}
-
 	void Terminal::OnWindowInput(Keystroke keystroke)
 	{
 		std::lock_guard<std::mutex> guard(m_input_lock);
 
-		if (keystroke.scancode == TK_F12 && !keystroke.released && m_vars[TK_SHIFT] && m_vars[TK_CONTROL])
+		if ((keystroke.type & Keystroke::KeyPress) && keystroke.scancode == TK_F12 && m_vars[TK_SHIFT] && m_vars[TK_CONTROL])
 		{
 			LOG(Info, "Ctrl+Shift+F12 was caught, dumping texture atlas on disk");
 			std::lock_guard<std::mutex> guard(m_lock);
 			m_world.tiles.atlas.Dump();
 			return;
 		}
-		else if (keystroke.scancode == TK_F11 && !keystroke.released && m_vars[TK_SHIFT] && m_vars[TK_CONTROL])
+		else if ((keystroke.type & Keystroke::KeyPress) && keystroke.scancode == TK_F11 && m_vars[TK_SHIFT] && m_vars[TK_CONTROL])
 		{
 			LOG(Info, "Ctrl+Shift+F11 was caught, toggling grid");
 			m_show_grid = !m_show_grid;
 
-			// Redraw must be called from separate thread since calling it
-			// from user thread is impossible and calling from window thread
-			// will deadblock.
+			// Redraw must be called from separate thread since calling it from user thread is impossible
+			// and calling from window thread will simply deadblock.
 			std::thread([=]{m_window->Redraw();}).detach();
 			return;
 		}
 
+		// Consume queue immediately if user is not interested
+		if (m_options.input_events == Keystroke::None)
+		{
+			ConsumeStroke(keystroke);
+			return;
+		}
+
+		// Ignore fine mouse movements if user is not interested
+		if (keystroke.scancode == TK_MOUSE_MOVE && !m_options.input_precise_mouse)
+		{
+			// Check if mouse cursor changed cell location
+			float cell_width = m_vars[TK_CELL_WIDTH];
+			float cell_height = m_vars[TK_CELL_HEIGHT];
+			int mx = (int)std::floor(keystroke.x/cell_width);
+			int my = (int)std::floor(keystroke.y/cell_height);
+			if (mx == m_vars[TK_MOUSE_X] && my == m_vars[TK_MOUSE_Y])
+			{
+				// Mouse is still within the same cell
+				return;
+			}
+		}
+		else if (keystroke.scancode == TK_WINDOW_RESIZE)
+		{
+			if (keystroke.x == m_vars[TK_CLIENT_WIDTH] && keystroke.y == m_vars[TK_CLIENT_HEIGHT])
+			{
+				// No changes to the client area
+				return;
+			}
+		}
+
+		// Compact irrelevant input between relevant events
+		if (!m_input_queue.empty())
+		{
+			Keystroke& last = m_input_queue.back();
+			if (keystroke.type == last.type && !(m_options.input_events & keystroke.type))
+			{
+				m_input_queue.pop_back();
+			}
+		}
+
 		m_input_queue.push_back(keystroke);
-		ConsumeIrrelevantInput();
 
 		if (!m_input_queue.empty())
 		{
 			m_input_condvar.notify_all();
-		}
-	}
-
-	void Terminal::ConsumeIrrelevantInput()
-	{
-		auto filter = m_options.input_events;
-
-		while (!m_input_queue.empty())
-		{
-			Keystroke& stroke = m_input_queue.front();
-			bool must_be_consumed = false;
-
-			if (filter == InputEvents::None)
-			{
-				must_be_consumed = true;
-			}
-			else if (stroke.scancode == TK_MOUSE_MOVE)
-			{
-				if (!(filter & InputEvents::MouseMove))
-				{
-					must_be_consumed = true;
-				}
-				else if (!m_options.input_precise_mouse)
-				{
-					// Check if mouse cursor changed cell location
-					float cell_width = m_vars[TK_CELL_WIDTH];
-					float cell_height = m_vars[TK_CELL_HEIGHT];
-					int mx = (int)std::floor(stroke.x/cell_width);
-					int my = (int)std::floor(stroke.y/cell_height);
-					if (mx == m_vars[TK_MOUSE_X] && my == m_vars[TK_MOUSE_Y])
-					{
-						must_be_consumed = true;
-					}
-				}
-			}
-			else if (stroke.scancode == TK_MOUSE_SCROLL)
-			{
-				if (!(filter & InputEvents::MouseScroll))
-				{
-					must_be_consumed = true;
-				}
-			}
-			else if (stroke.scancode == TK_WINDOW_RESIZE)
-			{
-				if (stroke.x == m_vars[TK_CLIENT_WIDTH] && stroke.y == m_vars[TK_CLIENT_HEIGHT])
-				{
-					must_be_consumed = true;
-				}
-			}
-			else
-			{
-				if (!stroke.released)
-				{
-					if (!(filter & InputEvents::KeyPress))
-					{
-						must_be_consumed = true;
-					}
-				}
-				else
-				{
-					if (!(filter & InputEvents::KeyRelease))
-					{
-						must_be_consumed = true;
-					}
-				}
-			}
-
-			if (!must_be_consumed) break;
-
-			ConsumeStroke(stroke);
-			m_input_queue.pop_front();
-			continue;
 		}
 	}
 
@@ -1628,24 +1532,24 @@ namespace BearLibTerminal
 		}
 		else if (stroke.scancode == TK_CLOSE)
 		{
-			if (m_options.input_sticky_close || !(m_options.input_events & InputEvents::KeyPress))
+			if (m_options.input_sticky_close || !(m_options.input_events & Keystroke::KeyPress))
 			{
 				m_vars[TK_CLOSE] = 1;
 			}
 		}
 		else
 		{
-			m_vars[stroke.scancode] = (int)!stroke.released;
+			m_vars[stroke.scancode] = stroke.type & Keystroke::KeyPress;
 		}
 	}
 
 	void Terminal::OnWindowActivate()
 	{
 		// Cancel all pressed keys
-		for ( int i = 0; i <= TK_F12; i++ ) // NOTE: TK_F12 is the last physical key index
+		for (int i = 0; i <= TK_F12; i++) // NOTE: TK_F12 is the last physical key index
 		{
 			if (i == TK_CLOSE) continue;
-			if (m_vars[i]) OnWindowInput(Keystroke(i, true));
+			if (m_vars[i]) OnWindowInput(Keystroke(Keystroke::KeyRelease, i));
 		}
 	}
 }

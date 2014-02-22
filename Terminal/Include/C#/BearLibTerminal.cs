@@ -162,6 +162,7 @@ namespace BearLib
         {
         	public const int Character      = 1;
         	public const int NoRemove       = 2;
+        	public const int NoBlock        = 4;
         }
 
         public struct CompositionMode
@@ -174,7 +175,6 @@ namespace BearLib
         {
         	public const int None           =  0;
         	public const int Cancelled      = -1;
-        	public const int CallAgain      = -2;
         }
 
         [DllImport("BearLibTerminal.dll", EntryPoint = "terminal_open", CallingConvention=CallingConvention.Cdecl)]

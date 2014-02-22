@@ -71,7 +71,9 @@ namespace BearLibTerminal
 		void PrepareFreshCharacters();
 		void ConsumeIrrelevantInput();
 		void ConsumeStroke(const Keystroke& stroke);
-		Keystroke ReadKeystroke(int timeout);
+		bool HasInputInternalUnlocked(std::uint32_t mask);
+		Keystroke ReadKeystroke(int flags, int timeout);
+		Keystroke DequeueKeystroke(std::uint32_t mask, int flags);
 		void PutBack(const Keystroke& stroke);
 		int ReadVirtualCode(int flags);
 		int ReadCharacter(int flags);
@@ -80,7 +82,6 @@ namespace BearLibTerminal
 		void OnWindowClose();
 		int OnWindowRedraw();
 		void OnWindowInput(Keystroke keystroke);
-		void OnWindowResize(Size client_size);
 		void OnWindowActivate();
 	private:
 		enum state_t {kHidden, kVisible, kClosed} m_state;

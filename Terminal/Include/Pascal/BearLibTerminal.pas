@@ -159,11 +159,11 @@ const
   // Input result codes for terminal_read, terminal_read_char and terminal_read_str.
   TK_INPUT_NONE       =  0;
   TK_INPUT_CANCELLED  = -1;
-  TK_INPUT_CALL_AGAIN = -2;
   
   // Extended reading flags
   TK_READ_CHAR        = 1; // Read an Unicode character, not a virtual key code
   TK_READ_NOREMOVE    = 2; // Do not remove the event from input queue
+  TK_READ_NOBLOCK     = 4; // Do not block execution if input is not ready
 
 type
   Color = CUInt32;

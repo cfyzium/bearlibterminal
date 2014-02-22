@@ -236,6 +236,7 @@ namespace BearLibTerminal
 		if (m_render_mode == FT_RENDER_MODE_LCD)
 		{
 			FT_Library_SetLcdFilter(m_font_library, FT_LCD_FILTER_DEFAULT);
+			FT_Library_SetLcdFilterWeights(m_font_library, (unsigned char*)"\x20\x70\x70\x70\x20");
 		}
 
 		if (m_alignment == Tile::Alignment::Unknown)
@@ -395,7 +396,7 @@ namespace BearLibTerminal
 				}
 				else if (slot->bitmap.pixel_mode == FT_PIXEL_MODE_LCD)
 				{
-					Color c(255, p[2], p[1], p[0]);
+					Color c(255, p[0], p[1], p[2]);
 					glyph(x, y) = c;
 				}
 				else if (slot->bitmap.pixel_mode == FT_PIXEL_MODE_MONO)

@@ -177,13 +177,14 @@
  */
 #define TK_INPUT_NONE         0
 #define TK_INPUT_CANCELLED   -1
-#define TK_INPUT_CALL_AGAIN  -2
+//#define TK_INPUT_CALL_AGAIN  -2
 
 /*
  * Extended reading flags
  */
 #define TK_READ_CHAR          1 /* Read an Unicode character, not a virtual key code */
 #define TK_READ_NOREMOVE      2 /* Do not remove the event from input queue */
+#define TK_READ_NOBLOCK       4 /* Do not block execution if input is not ready */
 
 /*
  * Terminal use unsigned 32-bit value for color representation in ARGB order (0xAARRGGBB), e. g.
