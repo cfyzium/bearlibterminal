@@ -34,6 +34,12 @@
 #include "BearLibTerminal.h"
 #include <future>
 
+// X11 hack because X.h #defines these names without any regards to others
+#define XlibKeyPress 2
+#define XlibKeyRelease 3
+#undef KeyPress
+#undef KeyRelease
+
 namespace BearLibTerminal
 {
 	struct X11Window::Private
@@ -513,7 +519,7 @@ namespace BearLibTerminal
 			{
 				HandleRepaint();
 			}
-			else if (e.type == KeyPress || e.type == KeyRelease)
+			else if (e.type == XlibKeyPress || e.type == XlibKeyRelease)
 			{
 				wchar_t buffer[255] = {0};
 				KeySym key;
@@ -524,11 +530,16 @@ namespace BearLibTerminal
 				unsigned int keycode = e.xkey.keycode;
 				int code = X11_TranslateKeycode(m_private->display, keycode);
 
-				Keystroke stroke(e.type == KeyPress? Keystroke::KeyPress|Keystroke::Unicode: Keystroke::KeyRelease, code, buffer[0]);
+                std::uint32_t mask = (e.type == XlibKeyPress)? Keystroke::KeyPress: Keystroke::KeyRelease;
+				Keystroke stroke(mask, code, buffer[0]);
 				if (code != TK_SPACE && ((code >= TK_LBUTTON && code <= TK_DELETE) || rc == 0))
 				{
 					stroke.character = 0;
 				}
+                else if (mask == Keystroke::KeyPress && buffer[0] > 0)
+                {
+                    stroke.type |= Keystroke::Unicode;
+                }
 
 				std::lock_guard<std::mutex> guard(m_lock);
 				if (m_on_input) m_on_input(stroke);
@@ -570,12 +581,12 @@ namespace BearLibTerminal
 					// RMB
 					stroke.scancode = TK_RBUTTON;
 				}
-				else if (e.xbutton.button == 4 && !stroke.released)
+				else if (e.xbutton.button == 4 && e.type == ButtonPress)
 				{
 					m_mouse_wheel -= 1;
 					stroke.scancode = TK_MOUSE_SCROLL;
 				}
-				else if (e.xbutton.button == 5 && !stroke.released)
+				else if (e.xbutton.button == 5 && e.type == ButtonPress)
 				{
 					m_mouse_wheel += 1;
 					stroke.scancode = TK_MOUSE_SCROLL;
