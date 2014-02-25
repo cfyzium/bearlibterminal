@@ -1456,6 +1456,7 @@ namespace BearLibTerminal
 			if (mx == m_vars[TK_MOUSE_X] && my == m_vars[TK_MOUSE_Y])
 			{
 				// Mouse is still within the same cell
+				ConsumeStroke(keystroke);
 				return;
 			}
 		}
