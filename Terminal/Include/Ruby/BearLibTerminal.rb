@@ -122,6 +122,9 @@ module Terminal
 		return rc
 	end
 	def self.color_from_name name; return ColorFromName.call Ptr[name]; end
+	def self.color_from_argb a, r, g, b
+		return (a << 24) | (r << 16) | (g << 8) | b
+	end
 	
 	module Constants
 		# Mouse buttons
