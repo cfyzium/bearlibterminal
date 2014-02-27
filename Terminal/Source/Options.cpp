@@ -20,7 +20,7 @@ namespace BearLibTerminal
 		output_postformatting(true),
 		output_asynchronous(true),
 		output_vsync(true),
-		input_events(Keystroke::KeyPress),
+		input_events(Keystroke::KeyPress|Keystroke::KeyRelease),
 		input_precise_mouse(false),
 		input_sticky_close(true),
 		input_cursor_symbol((uint16_t)'_'),
