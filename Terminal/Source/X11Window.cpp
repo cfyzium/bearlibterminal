@@ -55,6 +55,7 @@ namespace BearLibTerminal
 		XIM im;
 		XIC ic;
 		Atom close_message;
+		Atom invoke_message;
 		XSizeHints* size_hints;
 
 		typedef void (*PFN_GLXSWAPINTERVALEXT)(Display *dpy, GLXDrawable drawable, int interval);
@@ -494,10 +495,11 @@ namespace BearLibTerminal
 		event.format = 32;
 
 		// XXX: bitness-agnostic event marking hack
-		event.data.l[0] = 0;
-		uint64_t* l64 = (uint64_t*)event.data.l;
-		l64[0] = (uint64_t)this;
-		l64[1] = (uint64_t)&sentry;
+		event.data.l[0] = (long)m_private->invoke_message;
+
+		uint64_t p = (uint64_t)&sentry;
+		event.data.l[1] = p & 0xFFFFFFFF; // low
+		event.data.l[2] = (p >> 32) & 0xFFFFFFFF; // high
 
 		XSendEvent(m_private->display, m_private->window, 0, 0, (XEvent*)&event);
 		XFlush(m_private->display);
@@ -601,10 +603,12 @@ namespace BearLibTerminal
 				stroke.z = m_mouse_wheel;
 				ReportInput(stroke);
 			}
-			else if (e.type == ClientMessage && e.xclient.format == 32 && ((uint64_t*)e.xclient.data.l)[0] == (uint64_t)this)
+			else if (e.type == ClientMessage && e.xclient.format == 32 && e.xclient.data.l[0] == (long)m_private->invoke_message)
 			{
-				uint64_t* l64 = (uint64_t*)e.xclient.data.l;
-				auto sentry = *(std::shared_ptr<InvokationSentry2>*)l64[1];
+				uint64_t low = e.xclient.data.l[1] & 0xFFFFFFFF;
+				uint64_t high = e.xclient.data.l[2] & 0xFFFFFFFF;
+				uint64_t p = (high << 32) | low;
+				auto sentry = *(std::shared_ptr<InvokationSentry2>*)p;
 				sentry->task();
 			}
 			else if (e.type == ClientMessage && e.xclient.data.l[0] == (long)m_private->close_message)
@@ -805,6 +809,8 @@ namespace BearLibTerminal
 
 		m_private->close_message = XInternAtom(m_private->display, "WM_DELETE_WINDOW", False);
 		XSetWMProtocols(m_private->display, m_private->window, &m_private->close_message, 1);
+
+		m_private->invoke_message = XInternAtom(m_private->display, "WM_CUSTOM_INVOKE", False);
 
 		X11_InitKeymap();
 

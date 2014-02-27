@@ -29,7 +29,7 @@ namespace BearLibTerminal
 {
 	struct Keystroke
 	{
-		static const std::uint32_t
+		static constexpr std::uint32_t
 			None        = 0,
 			KeyPress    = (1<<0),
 			KeyRelease  = (1<<1),

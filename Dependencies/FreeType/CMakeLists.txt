@@ -19,5 +19,5 @@ set(SOURCES ./Source/autofit/autofit.c
             ./Source/truetype/truetype.c)
 
 include_directories(./Include)
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DFT2_BUILD_LIBRARY")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DFT2_BUILD_LIBRARY -fPIC")
 add_library(freetype2-minimal-static STATIC ${SOURCES})
