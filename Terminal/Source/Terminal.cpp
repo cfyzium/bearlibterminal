@@ -402,8 +402,10 @@ namespace BearLibTerminal
 				{L"all", Keystroke::All},
 				{L"keypress", Keystroke::KeyPress},
 				{L"keyrelease", Keystroke::KeyRelease},
+				{L"keys", Keystroke::Keys},
 				{L"mousemove", Keystroke::MouseMove},
 				{L"mousescroll", Keystroke::MouseScroll},
+				{L"mouse", Keystroke::Mouse},
 				{L"none", Keystroke::None}
 			};
 
@@ -1024,12 +1026,19 @@ namespace BearLibTerminal
 			bool unicode = stroke.type & Keystroke::Unicode;
 			bool keep_stroke = matching && (noremove || (readchar && !unicode));
 
-			if (!keep_stroke) m_input_queue.pop_front();
-
-			if (stroke.type & mask)
+			if (!keep_stroke)
 			{
-				return stroke;
+				m_input_queue.pop_front();
+
+				// Also consume everything until the next matching the mask event
+				while (!m_input_queue.empty() && !(m_input_queue.front().type & mask))
+				{
+					ConsumeStroke(m_input_queue.front());
+					m_input_queue.pop_front();
+				}
 			}
+
+			if (matching) return stroke;
 		}
 
 		// SHOULD NOT happen
@@ -1445,6 +1454,13 @@ namespace BearLibTerminal
 			return;
 		}
 
+		// Same with irrelevant input
+		if (m_input_queue.empty() && !(keystroke.type & m_options.input_events))
+		{
+			ConsumeStroke(keystroke);
+			return;
+		}
+
 		// Ignore fine mouse movements if user is not interested
 		if (keystroke.scancode == TK_MOUSE_MOVE && !m_options.input_precise_mouse)
 		{
@@ -1464,7 +1480,7 @@ namespace BearLibTerminal
 		{
 			if (keystroke.x == m_vars[TK_CLIENT_WIDTH] && keystroke.y == m_vars[TK_CLIENT_HEIGHT])
 			{
-				// No changes to the client area
+				// No changes to the client area, ignore
 				return;
 			}
 		}
@@ -1473,7 +1489,7 @@ namespace BearLibTerminal
 		if (!m_input_queue.empty())
 		{
 			Keystroke& last = m_input_queue.back();
-			if (keystroke.type == last.type && !(m_options.input_events & keystroke.type))
+			if (keystroke.type == last.type && !(m_options.input_events & keystroke.type) && !(keystroke.type & m_options.input_events))
 			{
 				m_input_queue.pop_back();
 			}

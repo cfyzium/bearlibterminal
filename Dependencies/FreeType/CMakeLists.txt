@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8)
 
-project(freetype2-minimal)
+project(freetype2)
 
 set(SOURCES ./Source/autofit/autofit.c
             ./Source/base/ftbase.c
@@ -19,5 +19,10 @@ set(SOURCES ./Source/autofit/autofit.c
             ./Source/truetype/truetype.c)
 
 include_directories(./Include)
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DFT2_BUILD_LIBRARY -fPIC")
-add_library(freetype2-minimal-static STATIC ${SOURCES})
+
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DFT2_BUILD_LIBRARY")
+if (UNIX)
+	set(CMAKE_C_FLAGS, "${CMAKE_C_FLAGS} -fPIC") 
+endif()
+
+add_library(freetype2 STATIC ${SOURCES})

@@ -2,23 +2,20 @@ project(SampleOmni)
 
 set(CMAKE_SKIP_RPATH TRUE)
 
-#set(CF "-O3 -g3 -std=c++11")
-#set(LF "")
+# Release flags
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -g0")
+set(CMAKE_EXE_LINKER_FLAGS_RELEASE "-s")
 
-set(CF "-O3 -g0 -std=c++11")
-set(LF "-s")
+# Debug flags
+set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g3")
 
-#set(CF "-O0 -g3 -std=c++11")
-#set(LF "")
-
+# Common flags
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 if(WIN32)
-	set(LF "${LF} -static -mwindows")
+	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static -mwindows")
 else()
-	set(LF "${LF} -static-libgcc -static-libstdc++")
+	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++")
 endif()
-
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CF}")
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${LF}")
 
 set(SOURCE_FILES ./Source/Main.cpp
                  ./Source/Common.cpp

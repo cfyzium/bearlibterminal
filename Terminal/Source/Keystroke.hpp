@@ -33,33 +33,18 @@ namespace BearLibTerminal
 			None        = 0,
 			KeyPress    = (1<<0),
 			KeyRelease  = (1<<1),
+			Keys        = KeyPress|KeyRelease,
 			MouseMove   = (1<<2),
 			MouseScroll = (1<<3),
+			Mouse       = MouseMove|MouseScroll,
 			Unicode     = (1<<4),
-			All = KeyPress|KeyRelease|MouseMove|MouseScroll|Unicode;
+			All = Keys|Mouse|Unicode;
 
 		typedef std::uint32_t Type;
 
-		Keystroke(Type type, std::uint8_t scancode): // keypress/keyrelease events
-			type(type),
-			scancode(scancode),
-			character(0),
-			x(0), y(0), z(0)
-		{ }
-
-		Keystroke(Type type, std::uint8_t scancode, char16_t character): // character-producing keypress event
-			type(type),
-			scancode(scancode),
-			character(character),
-			x(0), y(0), z(0)
-		{ }
-
-		Keystroke(Type type, std::uint8_t scancode, int x, int y, int z): // mouse events
-			type(type),
-			scancode(scancode),
-			character(0),
-			x(x), y(y), z(z)
-		{ }
+		Keystroke(Type type, std::uint8_t scancode); // keypress/keyrelease events
+		Keystroke(Type type, std::uint8_t scancode, char16_t character); // character-producing keypress event
+		Keystroke(Type type, std::uint8_t scancode, int x, int y, int z); // mouse events
 
 		Type type;
 		std::uint8_t scancode;
