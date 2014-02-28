@@ -29,7 +29,8 @@ namespace BearLibTerminal
 
 		gettimeofday(&tv, NULL);
 #if defined(_WIN32)
-		temp_tm = localtime(&tv.tv_sec);
+		time_t seconds = (time_t)tv.tv_sec;
+		temp_tm = localtime(&seconds);
 		if (temp_tm) tm = *temp_tm;
 #else
 		localtime_r(&tv.tv_sec, &tm);
