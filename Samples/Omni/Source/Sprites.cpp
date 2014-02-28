@@ -11,15 +11,9 @@ void TestSprites()
 {
 	terminal_set("window.title='Omni: sprites'");
 
-	//*
-	terminal_set("U+E000: ./Media/Background.jpg");
-	/*/
-	int screen_width = terminal_state(TK_WIDTH)*terminal_state(TK_CELL_WIDTH);
-	int screen_height = terminal_state(TK_HEIGHT)*terminal_state(TK_CELL_HEIGHT);
-	terminal_setf("0xE000: ./Fallen_bg.png, resize=%dx%d, resize-mode=crop", screen_width, screen_height);
-	//*/
-	terminal_set("U+E001: ./Media/EasternDragon.png, resize=128x128, resize-filter=nearest");
-	terminal_set("U+E002: ./Media/FiveElements.bmp, resize=128x128, resize-filter=bilinear");
+	terminal_set("U+E000: ../Media/Background.jpg");
+	terminal_set("U+E001: ../Media/EasternDragon.png, resize=128x128, resize-filter=nearest");
+	terminal_set("U+E002: ../Media/FiveElements.bmp, resize=128x128, resize-filter=bilinear");
 
 	color_t c[] =
 	{

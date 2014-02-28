@@ -56,7 +56,7 @@ std::map<wchar_t, symbol_t> palette =
 void TestDynamicSprites()
 {
 	terminal_set("window.title='Omni: dynamic sprites'");
-	terminal_set("U+E000: ./Media/Tiles.png, size=32x32, align=top-left");
+	terminal_set("U+E000: ../Media/Tiles.png, size=32x32, align=top-left");
 
 	int map_width = map[0].length();
 	int map_height = map.size();

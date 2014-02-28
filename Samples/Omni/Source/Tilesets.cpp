@@ -14,11 +14,10 @@ void TestTilesets()
 	terminal_composition(TK_COMPOSITION_ON);
 
 	// Load tilesets
-	//terminal_set("U+E000: ./Media/fontawesome-webfont.ttf, size=16x16, bbox=2x1, codepage=./Media/fontawesome-codepage.txt");
-	terminal_set("U+E100: ./Media/Runic.png, size=8x16");
-	terminal_set("U+E200: ./Media/Tiles.png, size=32x32, align=top-left");
-	terminal_set("U+E300: ./Media/fontawesome-webfont.ttf, size=24x24, align=top-left, codepage=./Media/fontawesome-codepage.txt");
-	terminal_set("U+E400: ./Media/Zodiac-S.ttf, size=24x24, align=top-left, codepage=437");
+	terminal_set("U+E100: ../Media/Runic.png, size=8x16");
+	terminal_set("U+E200: ../Media/Tiles.png, size=32x32, align=top-left");
+	terminal_set("U+E300: ../Media/fontawesome-webfont.ttf, size=24x24, bbox=3x2, codepage=../Media/fontawesome-codepage.txt");
+	terminal_set("U+E400: ../Media/Zodiac-S.ttf, size=24x24, bbox=3x2, codepage=437");
 
 	terminal_clear();
 	terminal_color("white");

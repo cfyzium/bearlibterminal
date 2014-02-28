@@ -55,23 +55,7 @@ void TestMouse()
 
 		terminal_color("white");
 		terminal_printf(1, 1, "Modify input events filter by setting/clearing following flags:");
-		/*
-		terminal_color("gray");
-		terminal_printf(1, 2, "[[*]] Key press");
-		terminal_color("white");
-		terminal_printf(1, 3, "[[ ]] Key release");
-		terminal_printf(1, 4, "[[ ]] Mouse movement");
-		terminal_printf(1, 5, "[[ ]] Mouse scroll");
 
-		terminal_printf(1, 7, "Additional input options:");
-		terminal_printf(1, 8, "[[ ]] Precise mouse movement");
-
-		terminal_color("yellow");
-		if (keyrelease) terminal_put(2, 3, '*');
-		if (mousemove) terminal_put(2, 4, '*');
-		if (mousescroll) terminal_put(2, 5, '*');
-		if (precise_mouse) terminal_put(2, 8, '*');
-		/*/
 		terminal_color("orange");
 		terminal_put(2, 2, 0x25CF);
 		if (keyrelease) terminal_put(2, 3, 0x25CF);
@@ -85,7 +69,6 @@ void TestMouse()
 		terminal_printf(1, 4, " [U+25CB] Mouse movement");
 		terminal_printf(1, 5, " [U+25CB] Mouse scroll");
 		terminal_printf(1, 6, " [U+25CB] Precise mouse movement");
-		//*/
 
 		terminal_color("white");
 		terminal_printf(1, 10, "Received [color=orange]%d[/color] %s", counter, counter == 1? "event": "events");
@@ -116,15 +99,9 @@ void TestMouse()
 
 		if (mousemove)
 		{
-			//*
 			terminal_color(0x80FFFFFF);
 			for ( int x = 0; x < 80; x++ ) terminal_put(x, my, 0x2588);
 			for ( int y = 0; y < 25; y++ ) if ( y != my ) terminal_put(mx, y, 0x2588);
-			/*/
-			terminal_color(0x80FFFFFF);
-			for ( int x = 0; x < 80; x++ ) terminal_put(x, my, L'─');
-			for ( int y = 0; y < 25; y++ ) terminal_put(mx, y, L'│');
-			//*/
 		}
 
 		terminal_color(0x8000FF00);

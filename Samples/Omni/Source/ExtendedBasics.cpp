@@ -15,7 +15,7 @@ void TestExtendedBasics()
 {
 	// Setup
 	terminal_set("window.title='Omni: extended output / basics'");
-	terminal_set("0xE000: ./Media/Tiles.png, size=32x32, align=top-left");
+	terminal_set("0xE000: ../Media/Tiles.png, size=32x32, align=top-left");
 	terminal_composition(TK_COMPOSITION_ON);
 
 	int cx = 10, cy = 5;
@@ -66,27 +66,6 @@ void TestExtendedBasics()
 		terminal_put_ext(x1+9, y1+0, 0, 0, 0xE000+8, m12);
 		terminal_put_ext(x1+5, y1+2, 0, 0, 0xE000+8, m21);
 		terminal_put_ext(x1+9, y1+2, 0, 0, 0xE000+8, m22);
-
-		/*
-		terminal_put_ext(80-cx-5-17, cy+2, 0, 0, 0xE000, nullptr);
-		terminal_put(80-cx-5-13, cy+2, 0x2192);
-
-		color_t c1[] = {opaque, opaque, transparent, transparent};
-		color_t c2[] = {transparent, opaque, opaque, transparent};
-		terminal_put_ext(80-cx-5-9, cy+2, 0, 0, 0xE000, c1);
-		terminal_put_ext(80-cx-5-4, cy+2, 0, 0, 0xE000, c2);
-
-		int x1 = 80-cx-5-9;
-		int y1 = cy+5;
-		terminal_put(x1+0, y1+0, 0xE000+0);
-		terminal_put(x1+4, y1+0, 0xE000+0);
-		terminal_put(x1+0, y1+2, 0xE000+0);
-		terminal_put(x1+4, y1+2, 0xE000+0);
-		terminal_put_ext(x1+0, y1+0, 0, 0, 0xE000+8, std::vector<color_t>{transparent, transparent, opaque, transparent}.data());
-		terminal_put_ext(x1+4, y1+0, 0, 0, 0xE000+8, std::vector<color_t>{transparent, opaque, transparent, transparent}.data());
-		terminal_put_ext(x1+0, y1+2, 0, 0, 0xE000+8, std::vector<color_t>{transparent, transparent, transparent, opaque}.data());
-		terminal_put_ext(x1+4, y1+2, 0, 0, 0xE000+8, std::vector<color_t>{opaque, transparent, transparent, transparent}.data());
-		*/
 
 		terminal_refresh();
 

@@ -123,23 +123,6 @@ void TestTextInput()
 				terminal_printf(5+3+2+1, 10, "[color=gray]%s", (key_names.count(char_result)? key_names[char_result]: to_string(char_result)).c_str());
 				terminal_refresh();
 
-				/*
-				char_result = terminal_read_ext(TK_READ_CHAR);
-				if (char_result == TK_INPUT_NONE)
-				{
-					char_result = terminal_read();
-					if (char_result == TK_ESCAPE || char_result == TK_CLOSE || char_result == TK_RETURN)
-					{
-						break;
-					}
-				}
-				else if (char_result > 0)
-				{
-					character = char_result;
-					char_result = 0;
-				}
-				/*/
-
 				int symbol = terminal_read_ext(TK_READ_CHAR|TK_READ_NOREMOVE);
 				char_result = terminal_read();
 				if (char_result == TK_ESCAPE || char_result == TK_CLOSE || char_result == TK_RETURN)
@@ -151,7 +134,6 @@ void TestTextInput()
 					character = symbol;
 					char_result = 0;
 				}
-				//*/
 			}
 			while (true);
 		}

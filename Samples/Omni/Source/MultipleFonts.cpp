@@ -12,10 +12,10 @@ void TestMultipleFonts()
 	terminal_set("window.title='Omni: multiple fonts in scene'");
 
 	// Load several fonts
-	terminal_set("font: ./Media/VeraMono.ttf, size=8x16");
-	terminal_set("U+E100: ./Media/VeraMoIt.ttf, size=8x16");
-	terminal_set("U+E200: ./Media/VeraMoBd.ttf, size=8x16");
-	terminal_set("U+E300: ./Media/VeraMono.ttf, size=16x32, bbox=2x2");
+	terminal_set("font: ../Media/VeraMono.ttf, size=8x16");
+	terminal_set("U+E100: ../Media/VeraMoIt.ttf, size=8x16");
+	terminal_set("U+E200: ../Media/VeraMoBd.ttf, size=8x16");
+	terminal_set("U+E300: ../Media/VeraMono.ttf, size=16x32, bbox=2x2");
 
 	terminal_clear();
 	terminal_color("white");

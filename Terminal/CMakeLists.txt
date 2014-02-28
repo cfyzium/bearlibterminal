@@ -5,6 +5,9 @@ add_subdirectory(Dependencies/PicoPNG)
 
 project(BearLibTerminal)
 
+# Detect system bitness
+math(EXPR BITNESS "8*${CMAKE_SIZEOF_VOID_P}")
+
 file(GLOB TERMINAL_SOURCES ./Source/*.cpp) # FIXME: manual selection
 
 # Release flags
@@ -38,11 +41,10 @@ target_link_libraries(BearLibTerminal picopng)
 target_link_libraries(BearLibTerminal ${OPENGL_gl_LIBRARY})
 if(WIN32)
 	target_link_libraries(BearLibTerminal winmm.lib)
-	math(EXPR BITNESS "8*${CMAKE_SIZEOF_VOID_P}")
 	target_link_libraries(BearLibTerminal ${PROJECT_SOURCE_DIR}/Resource/Terminal-${BITNESS}bit.res)
 endif()
 
-set(OUTPUT_DIR ${CMAKE_SOURCE_DIR}/Output)
+set(OUTPUT_DIR ${CMAKE_SOURCE_DIR}/Output/${CMAKE_SYSTEM_NAME}${BITNESS})
 set_target_properties(BearLibTerminal PROPERTIES
 	RUNTIME_OUTPUT_DIRECTORY ${OUTPUT_DIR}
 	LIBRARY_OUTPUT_DIRECTORY ${OUTPUT_DIR}
