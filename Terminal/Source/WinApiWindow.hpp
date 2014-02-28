@@ -30,9 +30,11 @@
 #include "Window.hpp"
 #include "Semaphore.hpp"
 
-// Force SDK version to XP SP3 
+// Force SDK version to XP SP3
+#if !defined(WINVER)
 #define WINVER 0x502
 #define _WIN32_WINNT 0x502
+#endif
 
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>

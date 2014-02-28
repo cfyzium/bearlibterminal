@@ -8,6 +8,8 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 	set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release")
 endif()
 
-add_subdirectory(./Dependencies/FreeType)
 add_subdirectory(./Terminal)
-add_subdirectory(./Samples/Omni)
+
+if(IS_DIRECTORY "${CMAKE_SOURCE_DIR}/Samples")
+    add_subdirectory(./Samples/Omni)
+endif()

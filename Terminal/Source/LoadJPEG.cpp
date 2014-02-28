@@ -20,13 +20,13 @@
 * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include <NanoJPEG.h>
 #include <functional>
 #include <algorithm>
 #include <stdexcept>
 #include <istream>
 #include <vector>
 #include <memory>
-#include "NanoJPEG.hpp"
 #include "Geometry.hpp"
 #include "Utility.hpp"
 #include "Bitmap.hpp"

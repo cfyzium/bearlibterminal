@@ -33,13 +33,13 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <stddef.h>
 
 #ifdef _MSC_VER
     #pragma warning(push)
     #pragma warning(disable: 4127) // conditional expression is constant
     #pragma warning(disable: 4706) // assignment within conditional
 #endif
-
 
 namespace Jpeg
 {

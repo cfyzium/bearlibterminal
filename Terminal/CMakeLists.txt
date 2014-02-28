@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 2.8)
 
+add_subdirectory(Dependencies/FreeType)
+add_subdirectory(Dependencies/PicoPNG)
+
 project(BearLibTerminal)
 
 file(GLOB TERMINAL_SOURCES ./Source/*.cpp) # FIXME: manual selection
@@ -24,11 +27,14 @@ endif()
 find_package(OpenGL)
 
 include_directories(./Include/C)
-include_directories(../Dependencies/FreeType/Include)
+include_directories(./Dependencies/FreeType/Include)
+include_directories(./Dependencies/PicoPNG/Include)
+include_directories(./Dependencies/NanoJPEG/Include)
 
 add_library(BearLibTerminal SHARED ${TERMINAL_SOURCES})
 
 target_link_libraries(BearLibTerminal freetype2)
+target_link_libraries(BearLibTerminal picopng)
 target_link_libraries(BearLibTerminal ${OPENGL_gl_LIBRARY})
 if(WIN32)
 	target_link_libraries(BearLibTerminal winmm.lib)

@@ -23,13 +23,13 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 Libraries used by BearLibTerminal
 ---------------------------------
 1. FreeType2 -- http://www.freetype.org/freetype2/
-   Modified source code is in ./Dependencies/FreeType
+   Modified source code is in ./Terminal/Dependencies/FreeType
    Licensed under the FreeType License
 
 2. PicoPNG -- http://lodev.org/lodepng/
-   Source code is in ./Terminal/Source/PicoPNG.cpp
+   Source code is in ./Terminal/Dependencies/PicoPNG
    Licensed under the zlib license
 
-3. NanoJPEG -- http://keyj.emphy.de/nanojpeg/
-   Source code is in ./Terminal/Source/NanoJPEG.hpp
-   Licensed under the custom permissive license (see source).
+3. NanoJPEG C++ port -- http://h4ck3r.net/2009/12/02/mini-jpeg-decoder/
+   Source code is in ./Terminal/Dependencies/NanoJPEG
+   Licensed under the custom permissive license (see source)
