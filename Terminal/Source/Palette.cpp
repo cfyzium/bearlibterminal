@@ -109,17 +109,14 @@ namespace BearLibTerminal
 					// Either #AARRGGBB or #RRGGBB
 
 					if ( length < 7 ) return m_items[L"white"];
-					size_t idx;
-					uint32_t value = std::stoul(name.substr(1), &idx, 16);
+					uint32_t value = parse<uint32_t>(name.substr(1), std::hex);
 					if ( (value & 0xFF000000) == 0 ) value |= 0xFF000000;
 					return Color(value);
 				}
 				else if ( c == L'-' || (c >= L'0' && c <= L'9') )
 				{
 					// Color is in decimal numeric format
-
-					size_t idx;
-					uint32_t value = (uint32_t)std::stoll(name, &idx, 10);
+					uint32_t value = (uint32_t)parse<int32_t>(name, std::dec);
 					if ( (value & 0xFF000000) == 0 ) value |= 0xFF000000;
 					return Color(value);
 				}

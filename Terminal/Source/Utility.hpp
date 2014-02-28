@@ -27,6 +27,26 @@ namespace BearLibTerminal
 		T temp;
 		return try_parse(s, temp);
 	}
+	
+	template<typename T, typename char_t> T parse(const std::basic_string<char_t>& s)
+	{
+		T result;
+		if (!try_parse(s, result)) result = T();
+		return result;
+	}
+	
+	template<typename T, typename char_t> bool try_parse(const std::basic_string<char_t>& s, T& out, std::ios_base& (*f)(std::ios_base&))
+	{
+		std::basic_istringstream<char_t> stream(s);
+		return !(stream >> f >> out).fail();
+	}
+	
+	template<typename T, typename char_t> T parse(const std::basic_string<char_t>& s, std::ios_base& (*f)(std::ios_base&))
+	{
+		T result;
+		if (!try_parse(s, result, f)) result = T();
+		return result;
+	}
 
 	bool try_parse(const std::wstring& s, bool& out);
 

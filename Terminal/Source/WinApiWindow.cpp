@@ -35,6 +35,10 @@
 
 #include <Mmsystem.h>
 
+#if !defined(MAPVK_VSC_TO_VK)
+#define MAPVK_VSC_TO_VK 1
+#endif
+
 #define WM_CUSTOM_SETSIZE (WM_APP+1)
 #define WM_CUSTOM_SETTITLE (WM_APP+2)
 #define WM_CUSTOM_SETICON (WM_APP+3)
