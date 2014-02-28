@@ -393,7 +393,7 @@ namespace BearLibTerminal
 		}
 
 		PIXELFORMATDESCRIPTOR pfd;
-		memset(&pfd, sizeof(pfd), 0);
+		memset(&pfd, 0, sizeof(pfd));
 		pfd.nSize = sizeof(pfd);
 		pfd.nVersion = 1;
 		pfd.dwFlags = PFD_DRAW_TO_WINDOW|PFD_SUPPORT_OPENGL|PFD_DOUBLEBUFFER;

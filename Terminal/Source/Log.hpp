@@ -43,7 +43,7 @@ namespace BearLibTerminal
 		void SetLevel(Level level);
 		void SetMode(Mode mode);
 		std::wstring GetFile() const;
-		inline Level GetLevel() const {return m_level;}
+		Level GetLevel() const {return m_level;}
 		Mode GetMode() const;
 	private:
 		mutable std::mutex m_lock;

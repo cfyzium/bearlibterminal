@@ -5,8 +5,8 @@ project(BearLibTerminal)
 file(GLOB TERMINAL_SOURCES ./Source/*.cpp) # FIXME: manual selection
 
 # Release flags
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -g0 -flto")
-set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "-s -flto")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -g0")
+set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "-s")
 
 # Debug flags
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g3")

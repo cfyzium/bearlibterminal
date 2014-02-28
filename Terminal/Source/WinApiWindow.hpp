@@ -77,7 +77,7 @@ namespace BearLibTerminal
 		int m_mouse_wheel;
 		bool m_maximized;
 
-		typedef BOOL (*PFN_WGLSWAPINTERVALEXT)(int interval);
+		typedef BOOL (WINAPI *PFN_WGLSWAPINTERVALEXT)(int interval);
 		PFN_WGLSWAPINTERVALEXT m_wglSwapIntervalEXT;
 	};
 }
