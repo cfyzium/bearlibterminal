@@ -378,7 +378,7 @@ namespace BearLibTerminal
 		}
 
 		// Hook custom WndProc
-		SetWindowLongPtrW(m_handle, GWL_USERDATA, (LONG_PTR)(void*)this);
+		SetWindowLongPtrW(m_handle, GWLP_USERDATA, (LONG_PTR)(void*)this);
 
 		return true;
 	}
@@ -500,7 +500,7 @@ namespace BearLibTerminal
 
 	LRESULT CALLBACK WinApiWindow::SharedWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	{
-		WinApiWindow* p = (WinApiWindow*)GetWindowLongPtrW(hwnd, GWL_USERDATA);
+		WinApiWindow* p = (WinApiWindow*)GetWindowLongPtrW(hwnd, GWLP_USERDATA);
 
 		return (p == nullptr)?
 			DefWindowProc(hwnd, uMsg, wParam, lParam):
@@ -903,7 +903,7 @@ namespace BearLibTerminal
 			HICON new_small_icon = LoadIconFromFile(*filename, true);
 			if ( new_small_icon != NULL )
 			{
-				HICON old_small_icon = (HICON)SetClassLong(m_handle, GCL_HICONSM, (LONG)new_small_icon);
+				HICON old_small_icon = (HICON)SetClassLongPtr(m_handle, GCLP_HICONSM, (LONG_PTR)new_small_icon);
 				DWORD rc = GetLastError();
 				if ( rc == 0 )
 				{
@@ -918,7 +918,7 @@ namespace BearLibTerminal
 			HICON new_large_icon = LoadIconFromFile(*filename, false);
 			if ( new_large_icon != NULL )
 			{
-				HICON old_large_icon = (HICON)SetClassLong(m_handle, GCL_HICON, (LONG)new_large_icon);
+				HICON old_large_icon = (HICON)SetClassLongPtr(m_handle, GCLP_HICON, (LONG_PTR)new_large_icon);
 				DWORD rc = GetLastError();
 				if ( rc == 0 )
 				{
