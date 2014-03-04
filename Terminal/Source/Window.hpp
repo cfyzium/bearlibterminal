@@ -38,9 +38,9 @@
 
 namespace BearLibTerminal
 {
-	using EventHandler = std::function<void()>;
-	using DrawEventHandler = std::function<int()>;
-	using InputEventHandler = std::function<void(Keystroke)>;
+	typedef std::function<void()> EventHandler;
+	typedef std::function<int()> DrawEventHandler;
+	typedef std::function<void(Keystroke)> InputEventHandler;
 
 	class Window
 	{

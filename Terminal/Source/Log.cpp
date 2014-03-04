@@ -86,7 +86,7 @@ namespace BearLibTerminal
 
 	void Log::SetLevel(Level level)
 	{
-		// Atomic
+		// Not atomic but close enough
 		m_level = level;
 	}
 
@@ -111,6 +111,12 @@ namespace BearLibTerminal
 	{
 		std::lock_guard<std::mutex> guard(m_lock);
 		return m_filename;
+	}
+
+	Log::Level Log::GetLevel() const
+	{
+		// Not atomic but close enough
+		return m_level;
 	}
 
 	Log::Mode Log::GetMode() const

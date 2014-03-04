@@ -88,18 +88,18 @@ namespace BearLibTerminal
 
 	void Window::RunAsynchronous()
 	{
-		auto thread_function = [&](std::promise<bool> promise)
+		auto thread_function = [&](std::shared_ptr<std::promise<bool>> promise)
 		{
 			try
 			{
 				try
 				{
 					Construct();
-					promise.set_value(true);
+					promise->set_value(true);
 				}
 				catch(...)
 				{
-					promise.set_exception(std::current_exception());
+					promise->set_exception(std::current_exception());
 					return;
 				}
 
@@ -120,9 +120,9 @@ namespace BearLibTerminal
 
 		try
 		{
-			std::promise<bool> promise;
-			auto result = promise.get_future();
-			m_thread = std::thread(thread_function, std::move(promise));
+			auto promise = std::make_shared<std::promise<bool>>();
+			auto result = promise->get_future();
+			m_thread = std::thread(thread_function, promise);
 			result.get(); // This will either get 'true' or throw an exception
 		}
 		catch(std::exception& e)

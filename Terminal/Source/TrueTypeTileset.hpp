@@ -22,13 +22,13 @@ namespace BearLibTerminal
 		TrueTypeTileset(TileContainer& container, OptionGroup& group);
 		~TrueTypeTileset();
 		void Dispose();
-		void Remove() override;
-		bool Save() override;
-		void Reload(TrueTypeTileset&& tileset) override;
-		Size GetBoundingBoxSize() override;
-		Type GetType() override;
-		bool Provides(uint16_t code) override;
-		void Prepare(uint16_t code) override;
+		void Remove();
+		bool Save();
+		void Reload(TrueTypeTileset&& tileset);
+		Size GetBoundingBoxSize();
+		Type GetType();
+		bool Provides(uint16_t code);
+		void Prepare(uint16_t code);
 	private:
 		uint16_t m_base_code;
 		Size m_tile_size;

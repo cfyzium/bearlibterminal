@@ -18,13 +18,13 @@ namespace BearLibTerminal
 	{
 	public:
 		BitmapTileset(TileContainer& container, OptionGroup& group);
-		void Remove() override;
-		bool Save() override;
-		void Reload(BitmapTileset&& tileset) override;
-		Size GetBoundingBoxSize() override;
-		Type GetType() override;
-		bool Provides(uint16_t code) override;
-		void Prepare(uint16_t code) override;
+		void Remove();
+		bool Save();
+		void Reload(BitmapTileset&& tileset);
+		Size GetBoundingBoxSize();
+		Type GetType();
+		bool Provides(uint16_t code);
+		void Prepare(uint16_t code);
 	private:
 		Bitmap m_cache;
 		uint16_t m_base_code;

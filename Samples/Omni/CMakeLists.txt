@@ -13,7 +13,7 @@ set(CMAKE_EXE_LINKER_FLAGS_RELEASE "-s")
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g3")
 
 # Common flags
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
 if(WIN32)
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static -mwindows")
 else()

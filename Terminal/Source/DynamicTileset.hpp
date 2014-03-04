@@ -16,13 +16,13 @@ namespace BearLibTerminal
 	{
 	public:
 		DynamicTileset(TileContainer& container, OptionGroup& group);
-		void Remove() override;
-		bool Save() override;
-		void Reload(DynamicTileset&& tileset) override;
-		Size GetBoundingBoxSize() override;
-		Type GetType() override;
-		bool Provides(uint16_t code) override;
-		void Prepare(uint16_t code) override;
+		void Remove();
+		bool Save();
+		void Reload(DynamicTileset&& tileset);
+		Size GetBoundingBoxSize();
+		Type GetType();
+		bool Provides(uint16_t code);
+		void Prepare(uint16_t code);
 	private:
 		Size m_tile_size;
 	};

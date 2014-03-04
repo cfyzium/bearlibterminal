@@ -18,13 +18,18 @@ set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "-s")
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g3")
 
 # Common flags
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fvisibility=hidden")
 if (WIN32)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUNICODE")
 	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -static")
 else()
-	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -static-libstdc++ -static-libgcc")
+	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -static-libgcc")
+	if (${BITNESS} EQUAL 32)
+		# 32-bit build can take advantage of greater compatibility by statically linking to libstdc++.
+		# It is impossible to do that on 64-bit because of -fPIC requirement. 
+		set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -static-libstdc++")
+	endif()
 endif()
 
 find_package(OpenGL)

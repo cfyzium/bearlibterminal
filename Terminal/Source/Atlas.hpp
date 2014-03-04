@@ -73,9 +73,9 @@ namespace BearLibTerminal
 		TexCoords texture_coords;
 
 		TileSlot();
-		void BindTexture() override;
-		void Draw(const Leaf& leaf, int x, int y, int w2, int h2) override;
-		void Update(const Bitmap& bitmap) override;
+		void BindTexture();
+		void Draw(const Leaf& leaf, int x, int y, int w2, int h2);
+		void Update(const Bitmap& bitmap);
 	};
 
 	class AtlasTexture

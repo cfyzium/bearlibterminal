@@ -26,6 +26,7 @@
 #include "Atlas.hpp"
 #include "OptionGroup.hpp"
 #include <unordered_map>
+#include <stdexcept>
 #include <string>
 #include <memory>
 #include <map>
@@ -66,7 +67,7 @@ namespace BearLibTerminal
 			Tileset(container)
 		{ }
 
-		void Reload(Tileset&& tileset) override
+		void Reload(Tileset&& tileset)
 		{
 			if (typeid(*this) != typeid(tileset))
 			{

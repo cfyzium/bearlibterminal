@@ -32,11 +32,11 @@ namespace BearLibTerminal
 	struct CustomCodepage: Encoding<char>
 	{
 		CustomCodepage(const std::wstring& name, std::istream& stream);
-		wchar_t Convert(int value) const override;
-		int Convert(wchar_t value) const override;
-		std::wstring Convert(const std::string& value) const override;
-		std::string Convert(const std::wstring& value) const override;
-		std::wstring GetName() const override;
+		wchar_t Convert(int value) const;
+		int Convert(wchar_t value) const;
+		std::wstring Convert(const std::string& value) const;
+		std::string Convert(const std::wstring& value) const;
+		std::wstring GetName() const;
 		std::unordered_map<int, wchar_t> m_forward;  // custom -> wchar_t
 		std::unordered_map<wchar_t, int> m_backward; // wchar_t -> custom
 		std::wstring m_name;
@@ -211,11 +211,11 @@ namespace BearLibTerminal
 
 	struct UTF8Encoding: Encoding<char>
 	{
-		wchar_t Convert(int value) const override;
-		int Convert(wchar_t value) const override;
-		std::wstring Convert(const std::string& value) const override;
-		std::string Convert(const std::wstring& value) const override;
-		std::wstring GetName() const override;
+		wchar_t Convert(int value) const;
+		int Convert(wchar_t value) const;
+		std::wstring Convert(const std::string& value) const;
+		std::string Convert(const std::wstring& value) const;
+		std::wstring GetName() const;
 	};
 
 	wchar_t UTF8Encoding::Convert(int value) const
@@ -314,11 +314,11 @@ namespace BearLibTerminal
 
 	struct UCS2Encoding: Encoding<char16_t>
 	{
-		wchar_t Convert(int value) const override;
-		int Convert(wchar_t value) const override;
-		std::wstring Convert(const std::u16string& value) const override;
-		std::u16string Convert(const std::wstring& value) const override;
-		std::wstring GetName() const override;
+		wchar_t Convert(int value) const;
+		int Convert(wchar_t value) const;
+		std::wstring Convert(const std::u16string& value) const;
+		std::u16string Convert(const std::wstring& value) const;
+		std::wstring GetName() const;
 	};
 
 	wchar_t UCS2Encoding::Convert(int value) const
@@ -364,11 +364,11 @@ namespace BearLibTerminal
 
 	struct UCS4Encoding: Encoding<char32_t>
 	{
-		wchar_t Convert(int value) const override;
-		int Convert(wchar_t value) const override;
-		std::wstring Convert(const std::u32string& value) const override;
-		std::u32string Convert(const std::wstring& value) const override;
-		std::wstring GetName() const override;
+		wchar_t Convert(int value) const;
+		int Convert(wchar_t value) const;
+		std::wstring Convert(const std::u32string& value) const;
+		std::u32string Convert(const std::wstring& value) const;
+		std::wstring GetName() const;
 	};
 
 	wchar_t UCS4Encoding::Convert(int value) const
