@@ -10,41 +10,35 @@
 
 #include <fstream>
 #include <time.h>
-#include <sys/time.h>
+#include <chrono>
 
 namespace BearLibTerminal
 {
-	std::unique_ptr<Log> g_logger(new Log()); // Leave empty? It is reset in Terminal ctor
+	std::unique_ptr<Log> g_logger(new Log()); // Leave empty? It is reset in Terminal ctor.
 
 	static std::string FormatTime()
 	{
+		auto now = std::chrono::system_clock::now();
+		auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+		time_t time = std::chrono::system_clock::to_time_t(now);
+		struct tm tm = {0};
+#if defined(_MSC_VER)
+		localtime_s(&tm, &time); // MSVC
+#else
+		localtime_r(&time, &tm); // SUSv2
+#endif
+
 		const size_t buffer_size = 13;
 		char buffer[buffer_size] = {0};
-
-		struct timeval tv;
-		struct tm tm = {0};
-#if defined(_WIN32)
-		struct tm *temp_tm = 0;
-#endif
-
-		gettimeofday(&tv, NULL);
-#if defined(_WIN32)
-		time_t seconds = (time_t)tv.tv_sec;
-		temp_tm = localtime(&seconds);
-		if (temp_tm) tm = *temp_tm;
-#else
-		localtime_r(&tv.tv_sec, &tm);
-#endif
-
 		snprintf
 		(
 			buffer,
 			buffer_size,
-			"%02d:%02d:%02d.%03d", /* hh:mm:ss.ttt */
+			"%02d:%02d:%02d.%03d", // hh:mm:ss.ttt
 			tm.tm_hour,
 			tm.tm_min,
 			tm.tm_sec,
-			(int)(tv.tv_usec/1000)
+			(int)(ms%1000)
 		);
 
 		return buffer;
