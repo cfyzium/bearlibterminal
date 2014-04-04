@@ -196,6 +196,11 @@
  */
 typedef uint32_t color_t;
 
+/*
+ * Generic callback
+ */
+typedef int (*terminal_cb_t)(intptr_t opaque);
+
 #if defined(_WIN32)
 #  if defined(BEARLIBTERMINAL_BUILDING_LIBRARY)
 #    define TERMINAL_API __declspec(dllexport)
@@ -227,7 +232,8 @@ TERMINAL_API void terminal_color(color_t color);
 TERMINAL_API void terminal_bkcolor(color_t color);
 TERMINAL_API void terminal_composition(int mode);
 TERMINAL_API void terminal_put(int x, int y, int code);
-TERMINAL_API void terminal_put_ext(int x, int y, int dx, int dy, int code, color_t* corners);
+TERMINAL_API void terminal_put_ext(int x, int y, int dx, int dy, int code, color_t* corners = NULL);
+TERMINAL_API void terminal_put_callback(int x, int y, terminal_cb_t callback, intptr_t opaque, terminal_cb_t deleter = NULL);
 TERMINAL_API int terminal_print8(int x, int y, const int8_t* s);
 TERMINAL_API int terminal_print16(int x, int y, const int16_t* s);
 TERMINAL_API int terminal_print32(int x, int y, const int32_t* s);
@@ -381,6 +387,8 @@ static inline int terminal_set(const wchar_t* s)
 	return terminal_wset(s);
 }
 
+TERMINAL_FORMATTED(setf(const wchar_t* s, ...), wsetf(s, args))
+
 static inline void terminal_color(const char* name)
 {
 	terminal_color(color_from_name(name));
@@ -401,8 +409,6 @@ static inline void terminal_bkcolor(const wchar_t* name)
 	terminal_bkcolor(color_from_wname(name));
 }
 
-TERMINAL_FORMATTED(setf(const wchar_t* s, ...), wsetf(s, args))
-
 static inline int terminal_print(int x, int y, const wchar_t* s)
 {
 	return terminal_wprint(x, y, s);
@@ -419,7 +425,44 @@ static inline color_t color_from_name(const wchar_t* name)
 {
 	return color_from_wname(name);
 }
-#endif
+
+/*
+ * Private BearLibTerminal namespace.
+ * Right now it is used for callback wrapper implementation only.
+ */
+namespace terminal
+{
+	namespace detail
+	{
+		template<typename T> int functor_dispatcher(intptr_t opaque)
+		{
+			return (*reinterpret_cast<T*>(opaque))();
+		}
+
+		template<typename T> int functor_deleter(intptr_t opaque)
+		{
+			delete reinterpret_cast<T*>(opaque);
+		}
+	}
+}
+
+/*
+ * C++03 version of callback wrapper capable of dispatching copyable functor objects.
+ * During callback an operator() will be invoked on the copy of functor object.
+ */
+template<typename T> void terminal_put_callback(int x, int y, const T& functor)
+{
+	terminal_put_callback
+	(
+		x,
+		y,
+		&terminal::detail::functor_dispatcher<T>,
+		(intptr_t)new T(functor),
+		&terminal::detail::functor_deleter<T>
+	);
+}
+
+#endif /* __cplusplus */
 
 /*
  * Color routines
@@ -482,4 +525,4 @@ static inline int terminal_check(int code)
 
 #endif
 
-#endif // BEARLIBTERMINAL_H
+#endif /* BEARLIBTERMINAL_H */
