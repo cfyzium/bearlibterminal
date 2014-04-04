@@ -1,6 +1,6 @@
 /*
 * BearLibTerminal
-* Copyright (C) 2013 Cfyz
+* Copyright (C) 2013-2014 Cfyz
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -61,8 +61,6 @@ namespace BearLibTerminal
 		virtual void Show() = 0;
 		virtual void Hide() = 0;
 		virtual void Invoke(std::function<void()> func) = 0;
-		virtual bool AcquireRC() = 0;
-		virtual bool ReleaseRC() = 0;
 		virtual void SwapBuffers() = 0;
 		virtual void SetVSync(bool enabled) = 0;
 		virtual void SetResizeable(bool resizeable) = 0;
