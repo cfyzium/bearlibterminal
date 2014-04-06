@@ -1,6 +1,6 @@
 /*
 * BearLibTerminal
-* Copyright (C) 2013 Cfyz
+* Copyright (C) 2014 Cfyz
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -22,114 +22,12 @@
 
 #include "SDL2Window.hpp"
 #include "Encoding.hpp"
+#include "Platform.hpp"
+#include "Utility.hpp"
 #include <stdint.h>
-
-#include <dlfcn.h>
 
 namespace BearLibTerminal
 {
-	class Module // FIXME: move to Platform module
-	{
-	public:
-		typedef void* Handle;
-
-		enum Ownership
-		{
-			TakeOwnership,
-			DoNotTakeOwnership
-		};
-
-		Module();
-		Module(std::string name);
-		Module(Module&& from);
-		Module(Handle handle, Ownership ownership);
-		~Module();
-		Handle GetHandle() const;
-		Module& operator=(Module&& from);
-		void* operator[](std::string name) const;
-		void* Probe(std::string name) const;
-
-	private:
-		Module(const Module&);
-		Module& operator=(const Module&);
-
-		Handle m_handle;
-		bool m_owner;
-	};
-
-	Module::Module():
-		m_handle(nullptr),
-		m_owner(false)
-	{ }
-
-	Module::Module(std::string name)
-	{
-		m_handle = dlopen(name.c_str(), RTLD_NOW|RTLD_GLOBAL);
-		m_owner = true;
-
-		if (!m_handle)
-		{
-			throw std::runtime_error(dlerror());
-		}
-	}
-
-	Module::Module(Module&& from):
-		m_handle(from.m_handle),
-		m_owner(from.m_owner)
-	{
-		from.m_handle = nullptr;
-		from.m_owner = false;
-	}
-
-	Module::Module(Handle handle, Ownership ownership):
-		m_handle(handle),
-		m_owner(ownership == TakeOwnership)
-	{ }
-
-	Module::~Module()
-	{
-		if (m_owner && m_handle)
-		{
-			dlclose(m_handle);
-		}
-	}
-
-	Module::Handle Module::GetHandle() const
-	{
-		return m_handle;
-	}
-
-	Module& Module::operator=(Module&& from)
-	{
-		std::swap(m_handle, from.m_handle);
-		std::swap(m_owner, from.m_owner);
-		return *this;
-	}
-
-	void* Module::Probe(std::string name) const
-	{
-		if (m_handle == nullptr)
-		{
-			throw std::runtime_error("module handle is empty");
-		}
-
-		return dlsym(m_handle, name.c_str());
-	}
-
-	void* Module::operator[](std::string name) const
-	{
-		void* p = Probe(std::move(name));
-
-		if (p == nullptr)
-		{
-			throw std::runtime_error(dlerror());
-		}
-
-		return p;
-	}
-
-	// ----------------------------------------------------
-
 	namespace
 	{
 		typedef struct SDL_Window SDL_Window;
@@ -190,11 +88,11 @@ namespace BearLibTerminal
 
 		SDL_Window* window;
 		SDL_Renderer* renderer;
-	}
+	};
 
 	SDL2Window::Private::Private()
 	{
-		libSDL2 = Module("libSDL2-2.0.so.0"); // TODO: soname compatibility
+		libSDL2 = Module(L"libSDL2-2.0.so.0"); // TODO: soname compatibility
 
 		SDL_GetError = (PFNSDLGETERROR)libSDL2["SDL_GetError"];
 		SDL_Init = (PFNSDLINIT)libSDL2["SDL_Init"];
@@ -221,11 +119,11 @@ namespace BearLibTerminal
 	{
 		try
 		{
-			m_private.reset(new Private()); // TODO: make_unique
+			m_private = std::make_unique<Private>();
 		}
 		catch (std::exception& e)
 		{
-			LOG(Fatal, "Loading SDL2: " << e.what());
+			LOG(Fatal, "Loading SDL2 failed: " << e.what());
 			throw std::runtime_error("SDL2Window construction failed");
 		}
 	}
@@ -241,7 +139,7 @@ namespace BearLibTerminal
 	void SDL2Window::SetTitle(const std::wstring& title)
 	{
 		if (m_private->window == nullptr) return;
-		m_private->SDL_SetWindowTitle(m_private->window, UTF8->Convert(title).c_str()); // FIXME
+		m_private->SDL_SetWindowTitle(m_private->window, UTF8->Convert(title).c_str());
 	}
 
 	void SDL2Window::SetIcon(const std::wstring& filename)
