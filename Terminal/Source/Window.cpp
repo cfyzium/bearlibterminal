@@ -31,6 +31,8 @@
 #include <future>
 #include <stdexcept>
 
+#include "SDL2Window.hpp"
+
 namespace BearLibTerminal
 {
 	Window::Window():
@@ -145,12 +147,16 @@ namespace BearLibTerminal
 	{
 		std::unique_ptr<Window> result;
 
+		/*
 #if defined(__linux)
 		result.reset(new X11Window());
 #endif
 #if defined(_WIN32)
 		result.reset(new WinApiWindow());
 #endif
+		/*/
+		result.reset(new SDL2Window());
+		//*/
 
 		result->RunAsynchronous();
 		return std::move(result);

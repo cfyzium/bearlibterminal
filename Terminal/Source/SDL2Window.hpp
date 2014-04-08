@@ -23,6 +23,9 @@
 #ifndef BEARLIBTERMINAL_SDL2WINDOW_HPP
 #define BEARLIBTERMINAL_SDL2WINDOW_HPP
 
+#define USE_SDL
+
+#if defined(USE_SDL)
 #include <memory>
 #include "Window.hpp"
 
@@ -52,7 +55,9 @@ namespace BearLibTerminal
 	protected:
 		struct Private;
 		std::unique_ptr<Private> m_private;
+		int m_mouse_wheel;
 	};
 }
+#endif
 
 #endif // BEARLIBTERMINAL_SDL2WINDOW_HPP
