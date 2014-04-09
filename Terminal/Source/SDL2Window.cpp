@@ -32,14 +32,20 @@
 #define BEARLIBTERMINAL_BUILDING_LIBRARY
 #include "BearLibTerminal.h"
 
+#define WIN32_LEAN_AND_MEAN
+#include "Windows.h"
+
 namespace BearLibTerminal
 {
 	namespace
 	{
 		typedef struct SDL_Window SDL_Window;
 
-		typedef struct SDL_Renderer SDL_Renderer;
+		//typedef struct SDL_Renderer SDL_Renderer;
 
+		typedef void* SDL_GLContext;
+
+		/*
 		struct SDL_RendererInfo
 		{
 		    const char *name;             // The name of the renderer
@@ -49,6 +55,7 @@ namespace BearLibTerminal
 		    int max_texture_width;        // The maximimum texture width
 		    int max_texture_height;       // The maximimum texture height
 		};
+		//*/
 
 		typedef struct SDL_Surface SDL_Surface;
 
@@ -364,8 +371,8 @@ namespace BearLibTerminal
 		typedef int (*PFNSDLINIT)(uint32_t flags);
 		typedef void (*PFNSDLQUIT)(void);
 		typedef SDL_Window* (*PFNSDLCREATEWINDOW)(const char *title, int x, int y, int w, int h, uint32_t flags);
-		typedef SDL_Renderer* (*PFNSDLCREATERENDERER)(SDL_Window* window, int index, uint32_t flags);
-		typedef int (*PFNSDLGETRENDERERINFO)(SDL_Renderer* renderer, SDL_RendererInfo* info);
+		//typedef SDL_Renderer* (*PFNSDLCREATERENDERER)(SDL_Window* window, int index, uint32_t flags);
+		//typedef int (*PFNSDLGETRENDERERINFO)(SDL_Renderer* renderer, SDL_RendererInfo* info);
 		//typedef void (*PFNSDLRENDERPRESENT)(SDL_Renderer* renderer);
 		typedef void (*PFNSDLGLSWAPWINDOW)(SDL_Window* window);
 		typedef int (*PFNSDLGLSETSWAPINTERVAL)(int interval);
@@ -375,7 +382,7 @@ namespace BearLibTerminal
 		typedef void (*PFNSDLSETWINDOWTITLE)(SDL_Window* window, const char* title);
 		typedef void (*PFNSDLSHOWWINDOW)(SDL_Window* window);
 		typedef void (*PFNSDLHIDEWINDOW)(SDL_Window* window);
-		typedef void (*PFNSDLDESTROYRENDERER)(SDL_Renderer* renderer);
+		//typedef void (*PFNSDLDESTROYRENDERER)(SDL_Renderer* renderer);
 		typedef void (*PFNSDLDESTROYWINDOW)(SDL_Window* window);
 		typedef SDL_Surface* (*PFNSDLCREATERGBSURFACEFROM)(void* pixels, int width, int height, int depth, int pitch, uint32_t Rmask, uint32_t Gmask, uint32_t Bmask, uint32_t Amask);
 		typedef void (*PFNSDLFREESURFACE)(SDL_Surface* surface);
@@ -383,6 +390,9 @@ namespace BearLibTerminal
 		typedef int (*PFNSDLPUSHEVENT)(SDL_Event* event);
 		//typedef void (*PFNSDLSTARTTEXTINPUT)(void);
 		typedef SDL_Keycode (*PFNSDLGETKEYFROMSCANCODE)(SDL_Scancode scancode);
+		typedef SDL_GLContext (*PFNSDLGLCREATECONTEXT)(SDL_Window* window);
+		typedef void (*PFNSDLGLDELETECONTEXT)(SDL_GLContext context);
+		typedef int (*PFNSDLGLMAKECURRENT)(SDL_Window* window, SDL_GLContext context);
 
 		#define SDL_INIT_VIDEO          0x00000020
 		#define SDL_WINDOWPOS_UNDEFINED 0x1FFF0000
@@ -427,6 +437,7 @@ namespace BearLibTerminal
 		    SDL_WINDOWEVENT_CLOSE                       // The window manager requests that the window be closed
 		};
 
+		/*
 		enum SDL_RendererFlags
 		{
 		    SDL_RENDERER_SOFTWARE = 0x00000001,         // The renderer is a software fallback
@@ -434,6 +445,7 @@ namespace BearLibTerminal
 		    SDL_RENDERER_PRESENTVSYNC = 0x00000004,     // Present is synchronized with the refresh rate
 		    SDL_RENDERER_TARGETTEXTURE = 0x00000008     // The renderer supports rendering to texture
 		};
+		//*/
 	}
 
 	struct SDL2Window::Private
@@ -445,8 +457,8 @@ namespace BearLibTerminal
 		PFNSDLINIT SDL_Init;
 		PFNSDLQUIT SDL_Quit;
 		PFNSDLCREATEWINDOW SDL_CreateWindow;
-		PFNSDLCREATERENDERER SDL_CreateRenderer;
-		PFNSDLGETRENDERERINFO SDL_GetRendererInfo;
+		//PFNSDLCREATERENDERER SDL_CreateRenderer;
+		//PFNSDLGETRENDERERINFO SDL_GetRendererInfo;
 		//PFNSDLRENDERPRESENT SDL_RenderPresent;
 		PFNSDLGLSWAPWINDOW SDL_GL_SwapWindow;
 		PFNSDLGLSETSWAPINTERVAL SDL_GL_SetSwapInterval;
@@ -456,7 +468,7 @@ namespace BearLibTerminal
 		PFNSDLSETWINDOWTITLE SDL_SetWindowTitle;
 		PFNSDLSHOWWINDOW SDL_ShowWindow;
 		PFNSDLHIDEWINDOW SDL_HideWindow;
-		PFNSDLDESTROYRENDERER SDL_DestroyRenderer;
+		//PFNSDLDESTROYRENDERER SDL_DestroyRenderer;
 		PFNSDLDESTROYWINDOW SDL_DestroyWindow;
 		PFNSDLCREATERGBSURFACEFROM SDL_CreateRGBSurfaceFrom;
 		PFNSDLFREESURFACE SDL_FreeSurface;
@@ -464,9 +476,13 @@ namespace BearLibTerminal
 		PFNSDLPUSHEVENT SDL_PushEvent;
 		//PFNSDLSTARTTEXTINPUT SDL_StartTextInput;
 		PFNSDLGETKEYFROMSCANCODE SDL_GetKeyFromScancode;
+		PFNSDLGLCREATECONTEXT SDL_GL_CreateContext;
+		PFNSDLGLDELETECONTEXT SDL_GL_DeleteContext;
+		PFNSDLGLMAKECURRENT SDL_GL_MakeCurrent;
 
 		SDL_Window* window;
-		SDL_Renderer* renderer;
+		//SDL_Renderer* renderer;
+		SDL_GLContext context;
 	};
 
 	SDL2Window::Private::Private()
@@ -481,8 +497,8 @@ namespace BearLibTerminal
 		SDL_Init = (PFNSDLINIT)libSDL2["SDL_Init"];
 		SDL_Quit = (PFNSDLQUIT)libSDL2["SDL_Quit"];
 		SDL_CreateWindow = (PFNSDLCREATEWINDOW )libSDL2["SDL_CreateWindow"];
-		SDL_CreateRenderer = (PFNSDLCREATERENDERER)libSDL2["SDL_CreateRenderer"];
-		SDL_GetRendererInfo = (PFNSDLGETRENDERERINFO)libSDL2["SDL_GetRendererInfo"];
+		//SDL_CreateRenderer = (PFNSDLCREATERENDERER)libSDL2["SDL_CreateRenderer"];
+		//SDL_GetRendererInfo = (PFNSDLGETRENDERERINFO)libSDL2["SDL_GetRendererInfo"];
 		//SDL_RenderPresent = (PFNSDLRENDERPRESENT)libSDL2["SDL_RenderPresent"];
 		SDL_GL_SwapWindow = (PFNSDLGLSWAPWINDOW)libSDL2["SDL_GL_SwapWindow"];
 		SDL_GL_SetSwapInterval = (PFNSDLGLSETSWAPINTERVAL)libSDL2["SDL_GL_SetSwapInterval"];
@@ -492,7 +508,7 @@ namespace BearLibTerminal
 		SDL_SetWindowTitle = (PFNSDLSETWINDOWTITLE)libSDL2["SDL_SetWindowTitle"];
 		SDL_ShowWindow = (PFNSDLSHOWWINDOW)libSDL2["SDL_ShowWindow"];
 		SDL_HideWindow = (PFNSDLHIDEWINDOW)libSDL2["SDL_HideWindow"];
-		SDL_DestroyRenderer = (PFNSDLDESTROYRENDERER)libSDL2["SDL_DestroyRenderer"];
+		//SDL_DestroyRenderer = (PFNSDLDESTROYRENDERER)libSDL2["SDL_DestroyRenderer"];
 		SDL_DestroyWindow = (PFNSDLDESTROYWINDOW)libSDL2["SDL_DestroyWindow"];
 		SDL_CreateRGBSurfaceFrom = (PFNSDLCREATERGBSURFACEFROM)libSDL2["SDL_CreateRGBSurfaceFrom"];
 		SDL_FreeSurface = (PFNSDLFREESURFACE)libSDL2["SDL_FreeSurface"];
@@ -500,9 +516,13 @@ namespace BearLibTerminal
 		SDL_PushEvent = (PFNSDLPUSHEVENT)libSDL2["SDL_PushEvent"];
 		//SDL_StartTextInput = (PFNSDLSTARTTEXTINPUT)libSDL2["SDL_StartTextInput"];
 		SDL_GetKeyFromScancode = (PFNSDLGETKEYFROMSCANCODE)libSDL2["SDL_GetKeyFromScancode"];
+		SDL_GL_CreateContext = (PFNSDLGLCREATECONTEXT)libSDL2["SDL_GL_CreateContext"];
+		SDL_GL_DeleteContext = (PFNSDLGLDELETECONTEXT)libSDL2["SDL_GL_DeleteContext"];
+		SDL_GL_MakeCurrent = (PFNSDLGLMAKECURRENT)libSDL2["SDL_GL_MakeCurrent"];
 
 		window = nullptr;
-		renderer = nullptr;
+		//renderer = nullptr;
+		context = nullptr;
 	}
 
 	SDL2Window::SDL2Window():
@@ -623,6 +643,8 @@ namespace BearLibTerminal
 				if (keycode <= 32 || keycode >= 0xFFFE || type != Keystroke::KeyPress) keycode = 0;
 				if (keycode > 0) type |= Keystroke::Unicode;
 
+				LOG(Error, "type = " << (event.type == SDL_KEYDOWN? "press": "release") << ", scancode = " << scancode << ", char = " << (int)keycode);
+
 				Keystroke stroke(type, scancode, (char16_t)keycode);
 				if (m_on_input) m_on_input(stroke);
 			}
@@ -664,8 +686,7 @@ namespace BearLibTerminal
 			//}
 			else if (event.type == SDL_USEREVENT)
 			{
-				LOG(Error, "SDL2 invokation processing");
-				auto task = (std::packaged_task<void()>*)event.user.data1;
+				auto task = static_cast<std::packaged_task<void()>*>(event.user.data1);
 				(*task)();
 				delete task;
 			}
@@ -687,7 +708,7 @@ namespace BearLibTerminal
 
 		while (m_proceed)
 		{
-			if (!PumpEvents()) usleep(500);
+			if (!PumpEvents()) Sleep(0);//usleep(500);
 		}
 
 		// There was redraw barrier notify call
@@ -711,6 +732,7 @@ namespace BearLibTerminal
 			return false;
 		}
 
+		/*
 		m_private->renderer = m_private->SDL_CreateRenderer(m_private->window, -1, SDL_RENDERER_ACCELERATED|SDL_RENDERER_PRESENTVSYNC);
 		if (m_private->renderer == nullptr)
 		{
@@ -718,6 +740,15 @@ namespace BearLibTerminal
 			Destroy();
 			return false;
 		}
+		/*/
+		m_private->context = m_private->SDL_GL_CreateContext(m_private->window);
+		if (m_private->window == nullptr)
+		{
+			LOG(Fatal, "SDL_GL_CreateContext failed: " << m_private->SDL_GetError());
+			Destroy();
+			return false;
+		}
+		//*/
 
 		// TODO: renderer info
 
@@ -730,11 +761,20 @@ namespace BearLibTerminal
 
 	void SDL2Window::Destroy()
 	{
+		/*
 		if (m_private->renderer != nullptr)
 		{
 			m_private->SDL_DestroyRenderer(m_private->renderer);
 			m_private->renderer = nullptr;
 		}
+		/*/
+		if (m_private->context != nullptr && m_private->window != nullptr)
+		{
+			m_private->SDL_GL_MakeCurrent(m_private->window, nullptr);
+			m_private->SDL_GL_DeleteContext(m_private->context);
+			m_private->context = nullptr;
+		}
+		//*/
 
 		if (m_private->window != nullptr)
 		{
