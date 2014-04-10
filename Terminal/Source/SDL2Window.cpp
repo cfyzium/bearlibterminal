@@ -32,9 +32,6 @@
 #define BEARLIBTERMINAL_BUILDING_LIBRARY
 #include "BearLibTerminal.h"
 
-#define WIN32_LEAN_AND_MEAN
-#include "Windows.h"
-
 namespace BearLibTerminal
 {
 	namespace
@@ -267,14 +264,16 @@ namespace BearLibTerminal
 		    int32_t start;                               // The start cursor of selected editing text
 		    int32_t length;                              // The length of selected editing text
 		} SDL_TextEditingEvent;
+		//*/
 
-		typedef struct SDL_TextInputEvent
+		//*
+		struct SDL_TextInputEvent
 		{
 		    uint32_t type;                              // ::SDL_TEXTINPUT
 		    uint32_t timestamp;
 		    uint32_t windowID;                          // The window with keyboard focus, if any
 		    char text[32];//SDL_TEXTINPUTEVENT_TEXT_SIZE];  // The input text
-		} SDL_TextInputEvent;
+		};
 		//*/
 
 		struct SDL_MouseMotionEvent
@@ -337,7 +336,7 @@ namespace BearLibTerminal
 		    SDL_WindowEvent window;         // Window event data
 		    SDL_KeyboardEvent key;          // Keyboard event data
 		    //SDL_TextEditingEvent edit;      /**< Text editing event data */
-		    //SDL_TextInputEvent text;        /**< Text input event data */
+		    SDL_TextInputEvent text;        /**< Text input event data */
 		    SDL_MouseMotionEvent motion;    // Mouse motion event data
 		    SDL_MouseButtonEvent button;    // Mouse button event data
 		    SDL_MouseWheelEvent wheel;      // Mouse wheel event data
@@ -388,7 +387,8 @@ namespace BearLibTerminal
 		typedef void (*PFNSDLFREESURFACE)(SDL_Surface* surface);
 		typedef int (*PFNSDLPOLLEVENT)(SDL_Event* event);
 		typedef int (*PFNSDLPUSHEVENT)(SDL_Event* event);
-		//typedef void (*PFNSDLSTARTTEXTINPUT)(void);
+		typedef void (*PFNSDLSTARTTEXTINPUT)(void);
+		typedef void (*PFNSDLSTOPTEXTINPUT)(void);
 		typedef SDL_Keycode (*PFNSDLGETKEYFROMSCANCODE)(SDL_Scancode scancode);
 		typedef SDL_GLContext (*PFNSDLGLCREATECONTEXT)(SDL_Window* window);
 		typedef void (*PFNSDLGLDELETECONTEXT)(SDL_GLContext context);
@@ -474,7 +474,8 @@ namespace BearLibTerminal
 		PFNSDLFREESURFACE SDL_FreeSurface;
 		PFNSDLPOLLEVENT SDL_PollEvent;
 		PFNSDLPUSHEVENT SDL_PushEvent;
-		//PFNSDLSTARTTEXTINPUT SDL_StartTextInput;
+		PFNSDLSTARTTEXTINPUT SDL_StartTextInput;
+		PFNSDLSTOPTEXTINPUT SDL_StopTextInput;
 		PFNSDLGETKEYFROMSCANCODE SDL_GetKeyFromScancode;
 		PFNSDLGLCREATECONTEXT SDL_GL_CreateContext;
 		PFNSDLGLDELETECONTEXT SDL_GL_DeleteContext;
@@ -514,7 +515,8 @@ namespace BearLibTerminal
 		SDL_FreeSurface = (PFNSDLFREESURFACE)libSDL2["SDL_FreeSurface"];
 		SDL_PollEvent = (PFNSDLPOLLEVENT)libSDL2["SDL_PollEvent"];
 		SDL_PushEvent = (PFNSDLPUSHEVENT)libSDL2["SDL_PushEvent"];
-		//SDL_StartTextInput = (PFNSDLSTARTTEXTINPUT)libSDL2["SDL_StartTextInput"];
+		SDL_StartTextInput = (PFNSDLSTARTTEXTINPUT)libSDL2["SDL_StartTextInput"];
+		SDL_StopTextInput = (PFNSDLSTOPTEXTINPUT)libSDL2["SDL_StopTextInput"];
 		SDL_GetKeyFromScancode = (PFNSDLGETKEYFROMSCANCODE)libSDL2["SDL_GetKeyFromScancode"];
 		SDL_GL_CreateContext = (PFNSDLGLCREATECONTEXT)libSDL2["SDL_GL_CreateContext"];
 		SDL_GL_DeleteContext = (PFNSDLGLDELETECONTEXT)libSDL2["SDL_GL_DeleteContext"];
@@ -526,7 +528,9 @@ namespace BearLibTerminal
 	}
 
 	SDL2Window::SDL2Window():
-		m_mouse_wheel(0)
+		m_mouse_wheel(0),
+		m_pending_stroke(Keystroke::KeyPress, 0, 0),
+		m_pending_stroke_time(0)
 	{
 		try
 		{
@@ -638,6 +642,7 @@ namespace BearLibTerminal
 					continue;
 				}
 
+				/*
 				Keystroke::Type type = (event.type == SDL_KEYDOWN? Keystroke::KeyPress: Keystroke::KeyRelease);
 				uint32_t keycode = m_private->SDL_GetKeyFromScancode(sdl_scancode);
 				if (keycode <= 32 || keycode >= 0xFFFE || type != Keystroke::KeyPress) keycode = 0;
@@ -647,11 +652,31 @@ namespace BearLibTerminal
 
 				Keystroke stroke(type, scancode, (char16_t)keycode);
 				if (m_on_input) m_on_input(stroke);
+				/*/
+				if (m_pending_stroke.scancode > 0)
+				{
+					m_pending_stroke.type = Keystroke::KeyPress;
+					m_on_input(m_pending_stroke);
+					m_pending_stroke.scancode = 0;
+				}
+
+				if (event.type == SDL_KEYDOWN)
+				{
+					m_pending_stroke.scancode = scancode;
+					m_pending_stroke.character = 0;
+					m_pending_stroke_time = gettime();
+				}
+				else
+				{
+					Keystroke stroke(Keystroke::KeyRelease, scancode);
+					m_on_input(stroke);
+				}
+				//*/
 			}
 			else if (event.type == SDL_MOUSEMOTION)
 			{
 				Keystroke stroke(Keystroke::MouseMove, TK_MOUSE_MOVE, event.motion.x, event.motion.y, 0);
-				if (m_on_input) m_on_input(stroke);
+				m_on_input(stroke);
 			}
 			else if (event.type == SDL_MOUSEBUTTONDOWN || event.type == SDL_MOUSEBUTTONUP)
 			{
@@ -664,32 +689,54 @@ namespace BearLibTerminal
 				}
 
 				Keystroke stroke(type, scancodes[event.button.button]);
-				if (m_on_input) m_on_input(stroke);
+				m_on_input(stroke);
 			}
 			else if (event.type == SDL_MOUSEWHEEL)
 			{
 				m_mouse_wheel += event.wheel.y;
 				Keystroke stroke(Keystroke::MouseScroll, TK_MOUSE_SCROLL, 0, 0, m_mouse_wheel);
-				if (m_on_input) m_on_input(stroke);
+				m_on_input(stroke);
 			}
 			else if (event.type == SDL_WINDOWEVENT_EXPOSED)
 			{
-				// if (this->m_on_redraw()) m_private->SDL_GL_SwapWindow(m_private->window);
+				//if (this->m_on_redraw()) m_private->SDL_GL_SwapWindow(m_private->window);
 			}
-			//else if (event.type == SDL_TEXTEDITING)
-			//{
-			//	LOG(Error, "Text editing: \"" << event.edit.text << "\"");
-			//}
-			//else if (event.type == SDL_TEXTINPUT)
-			//{
-			//	LOG(Error, "Text input: \"" << event.text.text << "\"");
-			//}
+			/*
+			else if (event.type == SDL_TEXTEDITING)
+			{
+				LOG(Error, "Text editing: \"" << event.edit.text << "\"");
+			}
+			//*/
+			//*
+			else if (event.type == SDL_TEXTINPUT)
+			{
+				//LOG(Error, "Text input: \"" << event.text.text << "\"");
+				if (m_pending_stroke.scancode > 0)
+				{
+					std::wstring text = UTF8->Convert(event.text.text);
+					if (text.length() > 0)
+					{
+						m_pending_stroke.character = (char16_t)text[0];
+						m_pending_stroke.type = Keystroke::KeyPress | Keystroke::Unicode;
+					}
+					m_on_input(m_pending_stroke);
+					m_pending_stroke.scancode = 0;
+				}
+			}
+			//*/
 			else if (event.type == SDL_USEREVENT)
 			{
 				auto task = static_cast<std::packaged_task<void()>*>(event.user.data1);
 				(*task)();
 				delete task;
 			}
+		}
+
+		if (m_pending_stroke.scancode && gettime() > m_pending_stroke_time+2500)
+		{
+			m_pending_stroke.type = Keystroke::KeyPress;
+			m_on_input(m_pending_stroke);
+			m_pending_stroke.scancode = 0;
 		}
 
 		return false;
@@ -704,16 +751,16 @@ namespace BearLibTerminal
 
 	void SDL2Window::ThreadFunction()
 	{
-		LOG(Error, "Entering SDL2 window thread function");
-
 		while (m_proceed)
 		{
-			if (!PumpEvents()) Sleep(0);//usleep(500);
+			if (!PumpEvents())
+			{
+				int delay = m_pending_stroke.scancode? 1: 5;
+				std::this_thread::sleep_for(std::chrono::milliseconds(delay));
+			}
 		}
 
 		// There was redraw barrier notify call
-
-		LOG(Error, "Leaving SDL2 window thread function");
 	}
 
 	bool SDL2Window::Construct()
@@ -732,15 +779,6 @@ namespace BearLibTerminal
 			return false;
 		}
 
-		/*
-		m_private->renderer = m_private->SDL_CreateRenderer(m_private->window, -1, SDL_RENDERER_ACCELERATED|SDL_RENDERER_PRESENTVSYNC);
-		if (m_private->renderer == nullptr)
-		{
-			LOG(Fatal, "SDL_CreateRenderer failed: " << m_private->SDL_GetError());
-			Destroy();
-			return false;
-		}
-		/*/
 		m_private->context = m_private->SDL_GL_CreateContext(m_private->window);
 		if (m_private->window == nullptr)
 		{
@@ -748,12 +786,8 @@ namespace BearLibTerminal
 			Destroy();
 			return false;
 		}
-		//*/
 
-		// TODO: renderer info
-
-		LOG(Error, "SDL2 Construction succeeded");
-
+		//m_private->SDL_StartTextInput();
 		m_proceed = true;
 
 		return true;
@@ -761,20 +795,13 @@ namespace BearLibTerminal
 
 	void SDL2Window::Destroy()
 	{
-		/*
-		if (m_private->renderer != nullptr)
-		{
-			m_private->SDL_DestroyRenderer(m_private->renderer);
-			m_private->renderer = nullptr;
-		}
-		/*/
 		if (m_private->context != nullptr && m_private->window != nullptr)
 		{
+			//m_private->SDL_StopTextInput();
 			m_private->SDL_GL_MakeCurrent(m_private->window, nullptr);
 			m_private->SDL_GL_DeleteContext(m_private->context);
 			m_private->context = nullptr;
 		}
-		//*/
 
 		if (m_private->window != nullptr)
 		{

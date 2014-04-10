@@ -56,6 +56,8 @@ namespace BearLibTerminal
 		struct Private;
 		std::unique_ptr<Private> m_private;
 		int m_mouse_wheel;
+		Keystroke m_pending_stroke;
+		uint64_t m_pending_stroke_time;
 	};
 }
 #endif
