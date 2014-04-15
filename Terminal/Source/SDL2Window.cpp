@@ -26,6 +26,7 @@
 #include "Encoding.hpp"
 #include "Platform.hpp"
 #include "Utility.hpp"
+#include "Geometry.hpp"
 #include <stdint.h>
 #include <future>
 
@@ -38,21 +39,7 @@ namespace BearLibTerminal
 	{
 		typedef struct SDL_Window SDL_Window;
 
-		//typedef struct SDL_Renderer SDL_Renderer;
-
 		typedef void* SDL_GLContext;
-
-		/*
-		struct SDL_RendererInfo
-		{
-		    const char *name;             // The name of the renderer
-		    uint32_t flags;               // Supported ::SDL_RendererFlags
-		    uint32_t num_texture_formats; // The number of available texture formats
-		    uint32_t texture_formats[16]; // The available texture formats
-		    int max_texture_width;        // The maximimum texture width
-		    int max_texture_height;       // The maximimum texture height
-		};
-		//*/
 
 		typedef struct SDL_Surface SDL_Surface;
 
@@ -71,14 +58,6 @@ namespace BearLibTerminal
 		    SDL_MOUSEWHEEL,               // Mouse wheel motion
 		    SDL_USEREVENT      = 0x8000,
 		};
-
-		/*
-		typedef struct SDL_CommonEvent
-		{
-		    uint32_t type;
-		    uint32_t timestamp;
-		} SDL_CommonEvent;
-		//*/
 
 		struct SDL_WindowEvent
 		{
@@ -254,19 +233,6 @@ namespace BearLibTerminal
 		    SDL_Keysym keysym;    // The key that was pressed or released
 		};
 
-		/*
-		typedef struct SDL_TextEditingEvent
-		{
-		    uint32_t type;                                // ::SDL_TEXTEDITING
-		    uint32_t timestamp;
-		    uint32_t windowID;                            // The window with keyboard focus, if any
-		    char text[32];      // The editing text
-		    int32_t start;                               // The start cursor of selected editing text
-		    int32_t length;                              // The length of selected editing text
-		} SDL_TextEditingEvent;
-		//*/
-
-		//*
 		struct SDL_TextInputEvent
 		{
 		    uint32_t type;                              // ::SDL_TEXTINPUT
@@ -274,7 +240,6 @@ namespace BearLibTerminal
 		    uint32_t windowID;                          // The window with keyboard focus, if any
 		    char text[32];//SDL_TEXTINPUTEVENT_TEXT_SIZE];  // The input text
 		};
-		//*/
 
 		struct SDL_MouseMotionEvent
 		{
@@ -332,37 +297,14 @@ namespace BearLibTerminal
 		union SDL_Event
 		{
 		    uint32_t type;                  // Event type, shared with all events
-		    //SDL_CommonEvent common;         // Common event data
 		    SDL_WindowEvent window;         // Window event data
 		    SDL_KeyboardEvent key;          // Keyboard event data
-		    //SDL_TextEditingEvent edit;      /**< Text editing event data */
-		    SDL_TextInputEvent text;        /**< Text input event data */
+		    SDL_TextInputEvent text;        // Text input event data
 		    SDL_MouseMotionEvent motion;    // Mouse motion event data
 		    SDL_MouseButtonEvent button;    // Mouse button event data
 		    SDL_MouseWheelEvent wheel;      // Mouse wheel event data
-		    //SDL_JoyAxisEvent jaxis;         /**< Joystick axis event data */
-		    //SDL_JoyBallEvent jball;         /**< Joystick ball event data */
-		    //SDL_JoyHatEvent jhat;           /**< Joystick hat event data */
-		    //SDL_JoyButtonEvent jbutton;     /**< Joystick button event data */
-		    //SDL_JoyDeviceEvent jdevice;     /**< Joystick device change event data */
-		    //SDL_ControllerAxisEvent caxis;      /**< Game Controller axis event data */
-		    //SDL_ControllerButtonEvent cbutton;  /**< Game Controller button event data */
-		    //SDL_ControllerDeviceEvent cdevice;  /**< Game Controller device event data */
 		    SDL_QuitEvent quit;             // Quit request event data
 		    SDL_UserEvent user;             // Custom event data
-		    //SDL_SysWMEvent syswm;           /**< System dependent window event data */
-		    //SDL_TouchFingerEvent tfinger;   /**< Touch finger event data */
-		    //SDL_MultiGestureEvent mgesture; /**< Gesture event data */
-		    //SDL_DollarGestureEvent dgesture; /**< Gesture event data */
-		    //SDL_DropEvent drop;             /**< Drag and drop event data */
-
-		    /* This is necessary for ABI compatibility between Visual C++ and GCC
-		       Visual C++ will respect the push pack pragma and use 52 bytes for
-		       this structure, and GCC will use the alignment of the largest datatype
-		       within the union, which is 8 bytes.
-
-		       So... we'll add padding to force the size to be 56 bytes for both.
-		    */
 		    uint8_t padding[56];
 		};
 
@@ -370,18 +312,16 @@ namespace BearLibTerminal
 		typedef int (*PFNSDLINIT)(uint32_t flags);
 		typedef void (*PFNSDLQUIT)(void);
 		typedef SDL_Window* (*PFNSDLCREATEWINDOW)(const char *title, int x, int y, int w, int h, uint32_t flags);
-		//typedef SDL_Renderer* (*PFNSDLCREATERENDERER)(SDL_Window* window, int index, uint32_t flags);
-		//typedef int (*PFNSDLGETRENDERERINFO)(SDL_Renderer* renderer, SDL_RendererInfo* info);
-		//typedef void (*PFNSDLRENDERPRESENT)(SDL_Renderer* renderer);
 		typedef void (*PFNSDLGLSWAPWINDOW)(SDL_Window* window);
 		typedef int (*PFNSDLGLSETSWAPINTERVAL)(int interval);
 		typedef void (*PFNSDLSETWINDOWICON)(SDL_Window* window, SDL_Surface* icon);
 		typedef void (*PFNSDLSETWINDOWMINIMUMSIZE)(SDL_Window* window, int min_w, int min_h);
+		typedef void (*PFNSDLSETWINDOWMAXIMUMSIZE)(SDL_Window* window, int min_w, int min_h);
 		typedef void (*PFNSDLSETWINDOWSIZE)(SDL_Window* window, int w, int h);
 		typedef void (*PFNSDLSETWINDOWTITLE)(SDL_Window* window, const char* title);
 		typedef void (*PFNSDLSHOWWINDOW)(SDL_Window* window);
 		typedef void (*PFNSDLHIDEWINDOW)(SDL_Window* window);
-		//typedef void (*PFNSDLDESTROYRENDERER)(SDL_Renderer* renderer);
+		typedef void (*PFNSDLRESTOREWINDOW)(SDL_Window* window);
 		typedef void (*PFNSDLDESTROYWINDOW)(SDL_Window* window);
 		typedef SDL_Surface* (*PFNSDLCREATERGBSURFACEFROM)(void* pixels, int width, int height, int depth, int pitch, uint32_t Rmask, uint32_t Gmask, uint32_t Bmask, uint32_t Amask);
 		typedef void (*PFNSDLFREESURFACE)(SDL_Surface* surface);
@@ -436,16 +376,6 @@ namespace BearLibTerminal
 		    SDL_WINDOWEVENT_FOCUS_LOST,                 // Window has lost keyboard focus
 		    SDL_WINDOWEVENT_CLOSE                       // The window manager requests that the window be closed
 		};
-
-		/*
-		enum SDL_RendererFlags
-		{
-		    SDL_RENDERER_SOFTWARE = 0x00000001,         // The renderer is a software fallback
-		    SDL_RENDERER_ACCELERATED = 0x00000002,      // The renderer uses hardware acceleration
-		    SDL_RENDERER_PRESENTVSYNC = 0x00000004,     // Present is synchronized with the refresh rate
-		    SDL_RENDERER_TARGETTEXTURE = 0x00000008     // The renderer supports rendering to texture
-		};
-		//*/
 	}
 
 	struct SDL2Window::Private
@@ -457,18 +387,16 @@ namespace BearLibTerminal
 		PFNSDLINIT SDL_Init;
 		PFNSDLQUIT SDL_Quit;
 		PFNSDLCREATEWINDOW SDL_CreateWindow;
-		//PFNSDLCREATERENDERER SDL_CreateRenderer;
-		//PFNSDLGETRENDERERINFO SDL_GetRendererInfo;
-		//PFNSDLRENDERPRESENT SDL_RenderPresent;
 		PFNSDLGLSWAPWINDOW SDL_GL_SwapWindow;
 		PFNSDLGLSETSWAPINTERVAL SDL_GL_SetSwapInterval;
 		PFNSDLSETWINDOWICON SDL_SetWindowIcon;
 		PFNSDLSETWINDOWMINIMUMSIZE SDL_SetWindowMinimumSize;
+		PFNSDLSETWINDOWMAXIMUMSIZE SDL_SetWindowMaximumSize;
 		PFNSDLSETWINDOWSIZE SDL_SetWindowSize;
 		PFNSDLSETWINDOWTITLE SDL_SetWindowTitle;
 		PFNSDLSHOWWINDOW SDL_ShowWindow;
 		PFNSDLHIDEWINDOW SDL_HideWindow;
-		//PFNSDLDESTROYRENDERER SDL_DestroyRenderer;
+		PFNSDLRESTOREWINDOW SDL_RestoreWindow;
 		PFNSDLDESTROYWINDOW SDL_DestroyWindow;
 		PFNSDLCREATERGBSURFACEFROM SDL_CreateRGBSurfaceFrom;
 		PFNSDLFREESURFACE SDL_FreeSurface;
@@ -482,7 +410,6 @@ namespace BearLibTerminal
 		PFNSDLGLMAKECURRENT SDL_GL_MakeCurrent;
 
 		SDL_Window* window;
-		//SDL_Renderer* renderer;
 		SDL_GLContext context;
 	};
 
@@ -498,18 +425,16 @@ namespace BearLibTerminal
 		SDL_Init = (PFNSDLINIT)libSDL2["SDL_Init"];
 		SDL_Quit = (PFNSDLQUIT)libSDL2["SDL_Quit"];
 		SDL_CreateWindow = (PFNSDLCREATEWINDOW )libSDL2["SDL_CreateWindow"];
-		//SDL_CreateRenderer = (PFNSDLCREATERENDERER)libSDL2["SDL_CreateRenderer"];
-		//SDL_GetRendererInfo = (PFNSDLGETRENDERERINFO)libSDL2["SDL_GetRendererInfo"];
-		//SDL_RenderPresent = (PFNSDLRENDERPRESENT)libSDL2["SDL_RenderPresent"];
 		SDL_GL_SwapWindow = (PFNSDLGLSWAPWINDOW)libSDL2["SDL_GL_SwapWindow"];
 		SDL_GL_SetSwapInterval = (PFNSDLGLSETSWAPINTERVAL)libSDL2["SDL_GL_SetSwapInterval"];
 		SDL_SetWindowIcon = (PFNSDLSETWINDOWICON)libSDL2["SDL_SetWindowIcon"];
 		SDL_SetWindowMinimumSize = (PFNSDLSETWINDOWMINIMUMSIZE)libSDL2["SDL_SetWindowMinimumSize"];
+		SDL_SetWindowMaximumSize = (PFNSDLSETWINDOWMAXIMUMSIZE)libSDL2["SDL_SetWindowMaximumSize"];
 		SDL_SetWindowSize = (PFNSDLSETWINDOWSIZE)libSDL2["SDL_SetWindowSize"];
 		SDL_SetWindowTitle = (PFNSDLSETWINDOWTITLE)libSDL2["SDL_SetWindowTitle"];
 		SDL_ShowWindow = (PFNSDLSHOWWINDOW)libSDL2["SDL_ShowWindow"];
 		SDL_HideWindow = (PFNSDLHIDEWINDOW)libSDL2["SDL_HideWindow"];
-		//SDL_DestroyRenderer = (PFNSDLDESTROYRENDERER)libSDL2["SDL_DestroyRenderer"];
+		SDL_RestoreWindow = (PFNSDLRESTOREWINDOW)libSDL2["SDL_RestoreWindow"];
 		SDL_DestroyWindow = (PFNSDLDESTROYWINDOW)libSDL2["SDL_DestroyWindow"];
 		SDL_CreateRGBSurfaceFrom = (PFNSDLCREATERGBSURFACEFROM)libSDL2["SDL_CreateRGBSurfaceFrom"];
 		SDL_FreeSurface = (PFNSDLFREESURFACE)libSDL2["SDL_FreeSurface"];
@@ -523,14 +448,15 @@ namespace BearLibTerminal
 		SDL_GL_MakeCurrent = (PFNSDLGLMAKECURRENT)libSDL2["SDL_GL_MakeCurrent"];
 
 		window = nullptr;
-		//renderer = nullptr;
 		context = nullptr;
 	}
 
 	SDL2Window::SDL2Window():
 		m_mouse_wheel(0),
 		m_pending_stroke(Keystroke::KeyPress, 0, 0),
-		m_pending_stroke_time(0)
+		m_pending_stroke_time(0),
+		m_resizeable(false),
+		m_maximized(false)
 	{
 		try
 		{
@@ -567,14 +493,39 @@ namespace BearLibTerminal
 	void SDL2Window::SetClientSize(const Size& size)
 	{
 		if (m_private->window == nullptr) return;
+
+		if (m_maximized)
+		{
+			m_private->SDL_RestoreWindow(m_private->window);
+			m_maximized = false;
+		}
+
 		m_private->SDL_SetWindowSize(m_private->window, size.width, size.height);
-		// TODO: update minimum size here
+		m_client_size = size;
+
+		UpdateSizeHints();
+	}
+
+	void SDL2Window::SetResizeable(bool resizeable)
+	{
+		m_resizeable = resizeable;
+		UpdateSizeHints();
+	}
+
+	void SDL2Window::UpdateSizeHints()
+	{
+		if (m_private->window == nullptr) return;
+
+		Size minimum = m_resizeable? m_cell_size*m_minimum_size: m_client_size;
+		m_private->SDL_SetWindowMinimumSize(m_private->window, minimum.width, minimum.height);
+
+		Size maximum = m_resizeable? Size(1E+6, 1E+6): minimum;
+		m_private->SDL_SetWindowMaximumSize(m_private->window, maximum.width, maximum.height);
 	}
 
 	void SDL2Window::Redraw()
 	{
-		// FIXME: NYI
-		// TODO: Not necessary, remove and use Invoke
+		// TODO: should not be necessary, remove and use Invoke
 	}
 
 	void SDL2Window::Show()
@@ -642,17 +593,6 @@ namespace BearLibTerminal
 					continue;
 				}
 
-				/*
-				Keystroke::Type type = (event.type == SDL_KEYDOWN? Keystroke::KeyPress: Keystroke::KeyRelease);
-				uint32_t keycode = m_private->SDL_GetKeyFromScancode(sdl_scancode);
-				if (keycode <= 32 || keycode >= 0xFFFE || type != Keystroke::KeyPress) keycode = 0;
-				if (keycode > 0) type |= Keystroke::Unicode;
-
-				LOG(Error, "type = " << (event.type == SDL_KEYDOWN? "press": "release") << ", scancode = " << scancode << ", char = " << (int)keycode);
-
-				Keystroke stroke(type, scancode, (char16_t)keycode);
-				if (m_on_input) m_on_input(stroke);
-				/*/
 				if (m_pending_stroke.scancode > 0)
 				{
 					m_pending_stroke.type = Keystroke::KeyPress;
@@ -671,7 +611,6 @@ namespace BearLibTerminal
 					Keystroke stroke(Keystroke::KeyRelease, scancode);
 					m_on_input(stroke);
 				}
-				//*/
 			}
 			else if (event.type == SDL_MOUSEMOTION)
 			{
@@ -697,20 +636,32 @@ namespace BearLibTerminal
 				Keystroke stroke(Keystroke::MouseScroll, TK_MOUSE_SCROLL, 0, 0, m_mouse_wheel);
 				m_on_input(stroke);
 			}
-			else if (event.type == SDL_WINDOWEVENT_EXPOSED)
+			else if (event.type == SDL_WINDOWEVENT)
 			{
-				//if (this->m_on_redraw()) m_private->SDL_GL_SwapWindow(m_private->window);
+				if (event.window.event == SDL_WINDOWEVENT_EXPOSED)
+				{
+					//if (this->m_on_redraw())
+					//{
+					//	m_private->SDL_GL_SwapWindow(m_private->window
+					//);
+				}
+				else if (event.window.event == SDL_WINDOWEVENT_RESIZED)
+				{
+					m_client_size = Size(event.window.data1, event.window.data2);
+					Keystroke stroke(Keystroke::KeyPress, TK_WINDOW_RESIZE, m_client_size.width, m_client_size.height, 0);
+					m_on_input(stroke);
+				}
+				else if (event.window.event == SDL_WINDOWEVENT_MAXIMIZED)
+				{
+					m_maximized = true;
+				}
+				else if (event.window.event == SDL_WINDOWEVENT_MINIMIZED || event.window.event == SDL_WINDOWEVENT_RESTORED)
+				{
+					m_maximized = false;
+				}
 			}
-			/*
-			else if (event.type == SDL_TEXTEDITING)
-			{
-				LOG(Error, "Text editing: \"" << event.edit.text << "\"");
-			}
-			//*/
-			//*
 			else if (event.type == SDL_TEXTINPUT)
 			{
-				//LOG(Error, "Text input: \"" << event.text.text << "\"");
 				if (m_pending_stroke.scancode > 0)
 				{
 					std::wstring text = UTF8->Convert(event.text.text);
@@ -723,7 +674,6 @@ namespace BearLibTerminal
 					m_pending_stroke.scancode = 0;
 				}
 			}
-			//*/
 			else if (event.type == SDL_USEREVENT)
 			{
 				auto task = static_cast<std::packaged_task<void()>*>(event.user.data1);
@@ -740,13 +690,6 @@ namespace BearLibTerminal
 		}
 
 		return false;
-	}
-
-	void SDL2Window::SetResizeable(bool resizeable)
-	{
-		// FIXME: NYI
-		// TODO: update minimum size here
-		// XXX: SDL2 does not seem to allow changing resizeability without window reconstruction
 	}
 
 	void SDL2Window::ThreadFunction()
@@ -771,7 +714,15 @@ namespace BearLibTerminal
 			return false;
 		}
 
-		m_private->window = m_private->SDL_CreateWindow("BearLibTerminal", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 640, 400, SDL_WINDOW_HIDDEN|SDL_WINDOW_OPENGL);
+		m_private->window = m_private->SDL_CreateWindow
+		(
+			"BearLibTerminal",
+			SDL_WINDOWPOS_UNDEFINED,
+			SDL_WINDOWPOS_UNDEFINED,
+			640,
+			400,
+			SDL_WINDOW_HIDDEN|SDL_WINDOW_OPENGL|SDL_WINDOW_RESIZABLE
+		);
 		if (m_private->window == nullptr)
 		{
 			LOG(Fatal, "SDL_CreateWindow failed: " << m_private->SDL_GetError());
@@ -787,7 +738,6 @@ namespace BearLibTerminal
 			return false;
 		}
 
-		//m_private->SDL_StartTextInput();
 		m_proceed = true;
 
 		return true;
@@ -797,7 +747,6 @@ namespace BearLibTerminal
 	{
 		if (m_private->context != nullptr && m_private->window != nullptr)
 		{
-			//m_private->SDL_StopTextInput();
 			m_private->SDL_GL_MakeCurrent(m_private->window, nullptr);
 			m_private->SDL_GL_DeleteContext(m_private->context);
 			m_private->context = nullptr;

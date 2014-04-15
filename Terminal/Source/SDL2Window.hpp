@@ -52,12 +52,15 @@ namespace BearLibTerminal
 		void ThreadFunction();
 		bool Construct();
 		void Destroy();
+		void UpdateSizeHints();
 	protected:
 		struct Private;
 		std::unique_ptr<Private> m_private;
 		int m_mouse_wheel;
 		Keystroke m_pending_stroke;
 		uint64_t m_pending_stroke_time;
+		bool m_resizeable;
+		bool m_maximized;
 	};
 }
 #endif
