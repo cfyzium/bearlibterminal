@@ -30,6 +30,7 @@
 #include "Log.hpp"
 #include <future>
 #include <stdexcept>
+#include <fstream>
 
 #include "SDL2Window.hpp"
 
@@ -147,18 +148,24 @@ namespace BearLibTerminal
 	{
 		std::unique_ptr<Window> result;
 
-		/*
+		//*
+		// Experimental.
+		// If there is a "SDL" file in current directory, use SDL2 window backend.
+		if (std::ifstream("SDL").is_open())
+		{
+			result.reset(new SDL2Window());
+			result->RunAsynchronous();
+			return result;
+		}
+		//*/
+
 #if defined(__linux)
 		result.reset(new X11Window());
 #endif
 #if defined(_WIN32)
 		result.reset(new WinApiWindow());
 #endif
-		/*/
-		result.reset(new SDL2Window());
-		//*/
-
-		result->RunAsynchronous();
+		result->RunAsynchronous(); // TODO: Rename. There is no sync/async versions.
 		return std::move(result);
 	}
 }

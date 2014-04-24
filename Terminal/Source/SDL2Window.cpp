@@ -27,8 +27,12 @@
 #include "Platform.hpp"
 #include "Utility.hpp"
 #include "Geometry.hpp"
+#include "Resource.hpp"
+#include "LoadBitmap.hpp"
 #include <stdint.h>
 #include <future>
+
+#include "OpenGL.hpp"
 
 #define BEARLIBTERMINAL_BUILDING_LIBRARY
 #include "BearLibTerminal.h"
@@ -319,6 +323,7 @@ namespace BearLibTerminal
 		typedef void (*PFNSDLSETWINDOWMAXIMUMSIZE)(SDL_Window* window, int min_w, int min_h);
 		typedef void (*PFNSDLSETWINDOWSIZE)(SDL_Window* window, int w, int h);
 		typedef void (*PFNSDLSETWINDOWTITLE)(SDL_Window* window, const char* title);
+		typedef void (*PFNSDLGETWINDOWSIZE)(SDL_Window* window, int* w, int* h);
 		typedef void (*PFNSDLSHOWWINDOW)(SDL_Window* window);
 		typedef void (*PFNSDLHIDEWINDOW)(SDL_Window* window);
 		typedef void (*PFNSDLRESTOREWINDOW)(SDL_Window* window);
@@ -376,6 +381,43 @@ namespace BearLibTerminal
 		    SDL_WINDOWEVENT_FOCUS_LOST,                 // Window has lost keyboard focus
 		    SDL_WINDOWEVENT_CLOSE                       // The window manager requests that the window be closed
 		};
+
+		// 16x16 version of default icon in BGRA format
+		static const uint32_t default_icon[] =
+		{
+			0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
+			0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
+			0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
+			0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
+			0xFF8F9297, 0xFF8F9297, 0xFF8F9297, 0xFF8F9297, 0xFF8F9297, 0xFF8F9297, 0xFF8F9297, 0xFF8F9297,
+			0xFF8F9297, 0xFF8F9297, 0xFF8F9297, 0xFF8F9297, 0xFF8F9297, 0xFF8F9297, 0xFF8F9297, 0xFF8F9297,
+			0xFF8F9297, 0xFFD3D9E0, 0xFFD3D9E0, 0xFFD3D9E0, 0xFFD3D9E0, 0xFFD3D9E0, 0xFFD3D9E0, 0xFFD3D9E0,
+			0xFFD3D9E0, 0xFFD3D9E0, 0xFF687991, 0xFFD3D9E0, 0xFF687991, 0xFFD3D9E0, 0xFF687991, 0xFF8F9297,
+			0xFF8F9297, 0xFFCACCCD, 0xFFCACCCD, 0xFFCACCCD, 0xFFCACCCD, 0xFFCACCCD, 0xFFCACCCD, 0xFFCACCCD,
+			0xFFCACCCD, 0xFFCACCCD, 0xFFCACCCD, 0xFFCACCCD, 0xFFCACCCD, 0xFFCACCCD, 0xFFCACCCD, 0xFF8F9297,
+			0xFF8F9297, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000,
+			0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF8F9297,
+			0xFF8F9297, 0xFF000000, 0xFF000000, 0xFFD3D9E0, 0xFFD3D9E0, 0xFFD3D9E0, 0xFFD3D9E0, 0xFFD3D9E0,
+			0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF8F9297,
+			0xFF8F9297, 0xFF000000, 0xFFD3D9E0, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000,
+			0xFFD3D9E0, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF8F9297,
+			0xFF8F9297, 0xFF000000, 0xFFD3D9E0, 0xFF000000, 0xFFD3D9E0, 0xFFD3D9E0, 0xFFD3D9E0, 0xFF000000,
+			0xFFD3D9E0, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF8F9297,
+			0xFF8F9297, 0xFF000000, 0xFFD3D9E0, 0xFF000000, 0xFFD3D9E0, 0xFF000000, 0xFFD3D9E0, 0xFF000000,
+			0xFFD3D9E0, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF8F9297,
+			0xFF8F9297, 0xFF000000, 0xFFD3D9E0, 0xFF000000, 0xFFD3D9E0, 0xFFD3D9E0, 0xFFD3D9E0, 0xFFD3D9E0,
+			0xFFD3D9E0, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF8F9297,
+			0xFF8F9297, 0xFF000000, 0xFFD3D9E0, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000,
+			0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF8F9297,
+			0xFF8F9297, 0xFF000000, 0xFF000000, 0xFFD3D9E0, 0xFFD3D9E0, 0xFFD3D9E0, 0xFFD3D9E0, 0xFFD3D9E0,
+			0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF8F9297,
+			0xFF8F9297, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000,
+			0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF000000, 0xFF8F9297,
+			0xFF8F9297, 0xFF8F9297, 0xFF8F9297, 0xFF8F9297, 0xFF8F9297, 0xFF8F9297, 0xFF8F9297, 0xFF8F9297,
+			0xFF8F9297, 0xFF8F9297, 0xFF8F9297, 0xFF8F9297, 0xFF8F9297, 0xFF8F9297, 0xFF8F9297, 0xFF8F9297,
+			0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
+			0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
+		};
 	}
 
 	struct SDL2Window::Private
@@ -394,6 +436,7 @@ namespace BearLibTerminal
 		PFNSDLSETWINDOWMAXIMUMSIZE SDL_SetWindowMaximumSize;
 		PFNSDLSETWINDOWSIZE SDL_SetWindowSize;
 		PFNSDLSETWINDOWTITLE SDL_SetWindowTitle;
+		PFNSDLGETWINDOWSIZE SDL_GetWindowSize;
 		PFNSDLSHOWWINDOW SDL_ShowWindow;
 		PFNSDLHIDEWINDOW SDL_HideWindow;
 		PFNSDLRESTOREWINDOW SDL_RestoreWindow;
@@ -432,6 +475,7 @@ namespace BearLibTerminal
 		SDL_SetWindowMaximumSize = (PFNSDLSETWINDOWMAXIMUMSIZE)libSDL2["SDL_SetWindowMaximumSize"];
 		SDL_SetWindowSize = (PFNSDLSETWINDOWSIZE)libSDL2["SDL_SetWindowSize"];
 		SDL_SetWindowTitle = (PFNSDLSETWINDOWTITLE)libSDL2["SDL_SetWindowTitle"];
+		SDL_GetWindowSize = (PFNSDLGETWINDOWSIZE)libSDL2["SDL_GetWindowSize"];
 		SDL_ShowWindow = (PFNSDLSHOWWINDOW)libSDL2["SDL_ShowWindow"];
 		SDL_HideWindow = (PFNSDLHIDEWINDOW)libSDL2["SDL_HideWindow"];
 		SDL_RestoreWindow = (PFNSDLRESTOREWINDOW)libSDL2["SDL_RestoreWindow"];
@@ -476,7 +520,7 @@ namespace BearLibTerminal
 
 	bool SDL2Window::ValidateIcon(const std::wstring& filename)
 	{
-		return true; // FIXME: NYI
+		return true; // TODO: Remove. Icons cannot be validated reliably.
 	}
 
 	void SDL2Window::SetTitle(const std::wstring& title)
@@ -487,23 +531,73 @@ namespace BearLibTerminal
 
 	void SDL2Window::SetIcon(const std::wstring& filename)
 	{
-		// FIXME: NYI
+		if (m_private->window == nullptr) return;
+
+		Bitmap bmp = filename == L"default"?
+			Bitmap(Size(16, 16), (const Color*)default_icon):
+			LoadBitmap(*Resource::Open(filename));
+
+		auto surface = m_private->SDL_CreateRGBSurfaceFrom
+		(
+			(void*)bmp.GetData(),
+			bmp.GetSize().width,
+			bmp.GetSize().height,
+			32,                    // depth
+			bmp.GetSize().width*4, // pitch
+			0x00FF0000,            // R
+			0x0000FF00,            // G
+			0x000000FF,            // B
+			0xFF000000             // A
+		);
+
+		m_private->SDL_SetWindowIcon(m_private->window, surface);
+		m_private->SDL_FreeSurface(surface);
 	}
 
 	void SDL2Window::SetClientSize(const Size& size)
 	{
 		if (m_private->window == nullptr) return;
 
+		// NOTE: access to m_maximized has potential data race. However
+		// programmatical size change must be initiated, even if indirectly,
+		// by the user. Issuing some UI command at the same time as
+		// maximizing/restoring the window is unlikely.
+		bool f = false;
 		if (m_maximized)
 		{
 			m_private->SDL_RestoreWindow(m_private->window);
 			m_maximized = false;
+			f = true;
 		}
 
+		//*
+		auto l = [&, size]()
+		{
+			m_private->SDL_SetWindowSize(m_private->window, size.width, size.height);
+			m_client_size = size;
+
+			UpdateSizeHints();
+
+			glViewport(0, 0, size.width, size.height);
+
+			glMatrixMode(GL_PROJECTION);
+			glLoadIdentity();
+			glOrtho(0, size.width, size.height, 0, -1, +1);
+
+			glMatrixMode(GL_MODELVIEW);
+			glLoadIdentity();
+		};
+		Invoke(l);
+		/*/
 		m_private->SDL_SetWindowSize(m_private->window, size.width, size.height);
 		m_client_size = size;
 
 		UpdateSizeHints();
+		//*/
+
+		//Keystroke stroke(Keystroke::KeyPress, TK_WINDOW_RESIZE, m_client_size.width, m_client_size.height, 0);
+		//m_on_input(stroke);
+		//if (f) Invoke(m_on_redraw);
 	}
 
 	void SDL2Window::SetResizeable(bool resizeable)
@@ -525,7 +619,7 @@ namespace BearLibTerminal
 
 	void SDL2Window::Redraw()
 	{
-		// TODO: should not be necessary, remove and use Invoke
+		// TODO: Remove. OpenGL generally is composited and do not require redraw.
 	}
 
 	void SDL2Window::Show()
@@ -638,6 +732,8 @@ namespace BearLibTerminal
 			}
 			else if (event.type == SDL_WINDOWEVENT)
 			{
+				uint8_t e = event.window.event;
+
 				if (event.window.event == SDL_WINDOWEVENT_EXPOSED)
 				{
 					//if (this->m_on_redraw())
@@ -647,9 +743,9 @@ namespace BearLibTerminal
 				}
 				else if (event.window.event == SDL_WINDOWEVENT_RESIZED)
 				{
-					m_client_size = Size(event.window.data1, event.window.data2);
-					Keystroke stroke(Keystroke::KeyPress, TK_WINDOW_RESIZE, m_client_size.width, m_client_size.height, 0);
-					m_on_input(stroke);
+					//m_client_size = Size(event.window.data1, event.window.data2);
+					//Keystroke stroke(Keystroke::KeyPress, TK_WINDOW_RESIZE, m_client_size.width, m_client_size.height, 0);
+					//m_on_input(stroke);
 				}
 				else if (event.window.event == SDL_WINDOWEVENT_MAXIMIZED)
 				{
@@ -658,6 +754,13 @@ namespace BearLibTerminal
 				else if (event.window.event == SDL_WINDOWEVENT_MINIMIZED || event.window.event == SDL_WINDOWEVENT_RESTORED)
 				{
 					m_maximized = false;
+				}
+
+				if (e == SDL_WINDOWEVENT_RESIZED || e == SDL_WINDOWEVENT_MAXIMIZED || e == SDL_WINDOWEVENT_RESTORED)
+				{
+					m_private->SDL_GetWindowSize(m_private->window, &m_client_size.width, &m_client_size.height);
+					Keystroke stroke(Keystroke::KeyPress, TK_WINDOW_RESIZE, m_client_size.width, m_client_size.height, 0);
+					m_on_input(stroke);
 				}
 			}
 			else if (event.type == SDL_TEXTINPUT)
