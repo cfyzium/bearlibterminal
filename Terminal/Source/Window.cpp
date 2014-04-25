@@ -28,6 +28,7 @@
 #include "WinApiWindow.hpp"
 #endif
 #include "Log.hpp"
+#include "Utility.hpp"
 #include <future>
 #include <stdexcept>
 #include <fstream>
@@ -89,7 +90,13 @@ namespace BearLibTerminal
 		return m_client_size;
 	}
 
-	void Window::RunAsynchronous()
+	void Window::Invoke(std::function<void()> func)
+	{
+		auto future = Post(std::move(func));
+		future.get();
+	}
+
+	void Window::Run()
 	{
 		auto thread_function = [&](std::shared_ptr<std::promise<bool>> promise)
 		{
@@ -144,6 +151,37 @@ namespace BearLibTerminal
 		}
 	}
 
+	void Window::HandleExposure(uint64_t started)
+	{
+		try
+		{
+			if (m_on_redraw && m_on_redraw() > 0)
+			{
+				SwapBuffers();
+			}
+			else
+			{
+				LOG(Error, "failed to call on redraw");
+				uint64_t now = gettime();
+				if (started == 0) started = now;
+				if (now < started + 5000) // Continue no longer than 5 seconds
+				{
+					std::this_thread::yield();
+					Post(std::bind(&Window::HandleExposure, this, started));
+				}
+				else
+				{
+					LOG(Warning, "Cannot redraw for 5 seconds in a row");
+				}
+			}
+		}
+		catch (std::exception& e)
+		{
+			LOG(Fatal, "Rendering routine has thrown an exception: " << e.what());
+			m_proceed = false;
+		}
+	}
+
 	std::unique_ptr<Window> Window::Create()
 	{
 		std::unique_ptr<Window> result;
@@ -154,7 +192,7 @@ namespace BearLibTerminal
 		if (std::ifstream("SDL").is_open())
 		{
 			result.reset(new SDL2Window());
-			result->RunAsynchronous();
+			result->Run();
 			return result;
 		}
 		//*/
@@ -165,7 +203,7 @@ namespace BearLibTerminal
 #if defined(_WIN32)
 		result.reset(new WinApiWindow());
 #endif
-		result->RunAsynchronous(); // TODO: Rename. There is no sync/async versions.
+		result->Run();
 		return std::move(result);
 	}
 }

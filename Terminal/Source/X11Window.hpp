@@ -41,17 +41,16 @@ namespace BearLibTerminal
 		void SetTitle(const std::wstring& title);
 		void SetIcon(const std::wstring& filename);
 		void SetClientSize(const Size& size);
-		void Redraw();
 		void Show();
 		void Hide();
-		void Invoke(std::function<void()> func);
-		bool AcquireRC();
-		bool ReleaseRC();
+		std::future<void> Post(std::function<void()> func);
 		void SwapBuffers();
 		void SetVSync(bool enabled);
 		bool PumpEvents();
 		void SetResizeable(bool resizeable);
 	protected:
+		bool AcquireRC();
+		bool ReleaseRC();
 		void ThreadFunction();
 		bool Construct();
 		void Destroy();

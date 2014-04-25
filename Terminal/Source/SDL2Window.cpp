@@ -459,8 +459,8 @@ namespace BearLibTerminal
 	SDL2Window::Private::Private()
 	{
 #if defined (__linux__)
-		libSDL2 = Module(L"libSDL2-2.0.so.0"); // TODO: comment about soname
-#else
+		libSDL2 = Module(L"libSDL2-2.0.so.0");
+#elif defined(_WIN32)
 		libSDL2 = Module(L"SDL2.dll");
 #endif
 
@@ -525,7 +525,6 @@ namespace BearLibTerminal
 
 	void SDL2Window::SetTitle(const std::wstring& title)
 	{
-		if (m_private->window == nullptr) return;
 		m_private->SDL_SetWindowTitle(m_private->window, UTF8->Convert(title).c_str());
 	}
 
@@ -556,54 +555,31 @@ namespace BearLibTerminal
 
 	void SDL2Window::SetClientSize(const Size& size)
 	{
-		if (m_private->window == nullptr) return;
-
-		// NOTE: access to m_maximized has potential data race. However
-		// programmatical size change must be initiated, even if indirectly,
-		// by the user. Issuing some UI command at the same time as
-		// maximizing/restoring the window is unlikely.
-		bool f = false;
-		if (m_maximized)
+		Invoke([=]()
 		{
-			m_private->SDL_RestoreWindow(m_private->window);
-			m_maximized = false;
-			f = true;
-		}
-
-		//*
-		auto l = [&, size]()
-		{
-			m_private->SDL_SetWindowSize(m_private->window, size.width, size.height);
 			m_client_size = size;
-
+			if (m_maximized)
+			{
+				m_private->SDL_RestoreWindow(m_private->window);
+				m_maximized = false;
+			}
+			m_private->SDL_SetWindowSize(m_private->window, size.width, size.height);
 			UpdateSizeHints();
-
-			glViewport(0, 0, size.width, size.height);
-
-			glMatrixMode(GL_PROJECTION);
-			glLoadIdentity();
-			glOrtho(0, size.width, size.height, 0, -1, +1);
-
-			glMatrixMode(GL_MODELVIEW);
-			glLoadIdentity();
-		};
-		Invoke(l);
-		/*/
-		m_private->SDL_SetWindowSize(m_private->window, size.width, size.height);
-		m_client_size = size;
-
-		UpdateSizeHints();
-		//*/
-
-		//Keystroke stroke(Keystroke::KeyPress, TK_WINDOW_RESIZE, m_client_size.width, m_client_size.height, 0);
-		//m_on_input(stroke);
-		//if (f) Invoke(m_on_redraw);
+		});
 	}
 
 	void SDL2Window::SetResizeable(bool resizeable)
 	{
-		m_resizeable = resizeable;
-		UpdateSizeHints();
+		Invoke([=]()
+		{
+			if (!resizeable && m_maximized)
+			{
+				m_private->SDL_RestoreWindow(m_private->window);
+				m_maximized = false;
+			}
+			m_resizeable = resizeable;
+			UpdateSizeHints();
+		});
 	}
 
 	void SDL2Window::UpdateSizeHints()
@@ -615,38 +591,41 @@ namespace BearLibTerminal
 
 		Size maximum = m_resizeable? Size(1E+6, 1E+6): minimum;
 		m_private->SDL_SetWindowMaximumSize(m_private->window, maximum.width, maximum.height);
+
+		LOG(Error, "updatesizehints min = " << minimum << ", max = " << maximum);
 	}
 
 	void SDL2Window::Redraw()
 	{
-		// TODO: Remove. OpenGL generally is composited and do not require redraw.
+		// TODO: Remove.
 	}
 
 	void SDL2Window::Show()
 	{
-		if (m_private->window == nullptr) return;
 		m_private->SDL_ShowWindow(m_private->window);
 	}
 
 	void SDL2Window::Hide()
 	{
-		if (m_private->window == nullptr) return;
 		m_private->SDL_HideWindow(m_private->window);
 	}
 
-	void SDL2Window::Invoke(std::function<void()> func)
+	std::future<void> SDL2Window::Post(std::function<void()> func)
 	{
-		if (m_private->window == nullptr) return;
+		if (m_private->window == nullptr)
+		{
+			throw std::runtime_error("SDL2Window::Post: window is not created");
+		}
 
-		auto task = new std::packaged_task<void()>(func);
+		auto task = new std::packaged_task<void()>(std::move(func));
 		auto future = task->get_future();
 
 		SDL_Event event;
 		event.type = SDL_USEREVENT;
 		event.user.data1 = (void*)task;
-
 		m_private->SDL_PushEvent(&event);
-		future.wait();
+
+		return std::move(future);
 	}
 
 	void SDL2Window::SwapBuffers()
@@ -734,33 +713,29 @@ namespace BearLibTerminal
 			{
 				uint8_t e = event.window.event;
 
-				if (event.window.event == SDL_WINDOWEVENT_EXPOSED)
+				if (e == SDL_WINDOWEVENT_EXPOSED)
 				{
-					//if (this->m_on_redraw())
-					//{
-					//	m_private->SDL_GL_SwapWindow(m_private->window
-					//);
+					HandleExposure();
 				}
-				else if (event.window.event == SDL_WINDOWEVENT_RESIZED)
-				{
-					//m_client_size = Size(event.window.data1, event.window.data2);
-					//Keystroke stroke(Keystroke::KeyPress, TK_WINDOW_RESIZE, m_client_size.width, m_client_size.height, 0);
-					//m_on_input(stroke);
-				}
-				else if (event.window.event == SDL_WINDOWEVENT_MAXIMIZED)
+				else if (e == SDL_WINDOWEVENT_MAXIMIZED)
 				{
 					m_maximized = true;
 				}
-				else if (event.window.event == SDL_WINDOWEVENT_MINIMIZED || event.window.event == SDL_WINDOWEVENT_RESTORED)
+				else if (e == SDL_WINDOWEVENT_MINIMIZED || e == SDL_WINDOWEVENT_RESTORED)
 				{
 					m_maximized = false;
 				}
 
 				if (e == SDL_WINDOWEVENT_RESIZED || e == SDL_WINDOWEVENT_MAXIMIZED || e == SDL_WINDOWEVENT_RESTORED)
 				{
-					m_private->SDL_GetWindowSize(m_private->window, &m_client_size.width, &m_client_size.height);
-					Keystroke stroke(Keystroke::KeyPress, TK_WINDOW_RESIZE, m_client_size.width, m_client_size.height, 0);
-					m_on_input(stroke);
+					Size new_size;
+					m_private->SDL_GetWindowSize(m_private->window, &new_size.width, &new_size.height);
+					if (new_size != m_client_size && m_resizeable)
+					{
+						m_client_size = new_size;
+						Keystroke stroke(Keystroke::KeyPress, TK_WINDOW_RESIZE, m_client_size.width, m_client_size.height, 0);
+						m_on_input(stroke);
+					}
 				}
 			}
 			else if (event.type == SDL_TEXTINPUT)
@@ -834,7 +809,7 @@ namespace BearLibTerminal
 		}
 
 		m_private->context = m_private->SDL_GL_CreateContext(m_private->window);
-		if (m_private->window == nullptr)
+		if (m_private->context == nullptr)
 		{
 			LOG(Fatal, "SDL_GL_CreateContext failed: " << m_private->SDL_GetError());
 			Destroy();

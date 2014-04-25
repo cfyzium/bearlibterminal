@@ -26,6 +26,7 @@
 #include "OpenGL.hpp"
 #include "Log.hpp"
 #include "Encoding.hpp"
+#include "Utility.hpp"
 #include <X11/Xlib.h>
 #include <X11/Xmu/Xmu.h>
 #include <GL/glx.h>
@@ -64,15 +65,6 @@ namespace BearLibTerminal
 		PFN_GLXSWAPINTERVALMESA glXSwapIntervalMESA;
 	};
 
-	struct InvokationSentry2
-	{
-		std::packaged_task<void()> task;
-
-		InvokationSentry2(std::function<void()> func):
-			task(func)
-		{ }
-	};
-
 	X11Window::Private::Private():
 		display(NULL),
 		window(0),
@@ -82,6 +74,7 @@ namespace BearLibTerminal
 		im(NULL),
 		ic(NULL),
 		close_message(),
+		invoke_message(),
 		glXSwapIntervalEXT(nullptr),
 		glXSwapIntervalMESA(nullptr),
 		size_hints(nullptr)
@@ -227,11 +220,24 @@ namespace BearLibTerminal
 
 	void X11Window::SetClientSize(const Size& size)
 	{
-		std::lock_guard<std::mutex> guard(m_lock);
-		if ( m_private->window == 0 ) return;
-		m_client_size = size;
-		UpdateSizeHints();
-		XResizeWindow(m_private->display, m_private->window, size.width, size.height);
+		if (get_locked(m_private->window, m_lock) == 0) return;
+
+		Invoke([=]() // Executed on window thread because of OpenGL
+		{
+			// Window
+			m_client_size = size;
+			UpdateSizeHints();
+			XResizeWindow(m_private->display, m_private->window, size.width, size.height);
+
+			// Viewport
+			glViewport(0, 0, size.width, size.height);
+			glMatrixMode(GL_PROJECTION);
+			glLoadIdentity();
+			glOrtho(0, size.width, size.height, 0, -1, +1);
+			glMatrixMode(GL_MODELVIEW);
+			glLoadIdentity();
+			LOG(Error, "  viewport");
+		});
 	}
 
 	void X11Window::SetResizeable(bool resizeable)
@@ -261,35 +267,6 @@ namespace BearLibTerminal
 		UpdateSizeHints();
 	}
 
-	void X11Window::Redraw()
-	{
-		std::unique_lock<std::mutex> guard(m_lock);
-
-		int retries = 5;
-		m_redraw_barrier.SetValue(0);
-		do
-		{
-			XClearArea
-			(
-				m_private->display,
-				m_private->window,
-				0,
-				0,
-				m_client_size.width,
-				m_client_size.height,
-				True
-			);
-
-			guard.unlock();
-			if (m_redraw_barrier.WaitFor(50))
-			{
-				break;
-			}
-			guard.lock();
-		}
-		while (retries --> 0);
-	}
-
 	void X11Window::Show()
 	{
 		std::lock_guard<std::mutex> guard(m_lock);
@@ -300,24 +277,6 @@ namespace BearLibTerminal
 	{
 		std::lock_guard<std::mutex> guard(m_lock);
 		if ( m_private->window != 0 ) XUnmapWindow(m_private->display, m_private->window);
-	}
-
-	void X11Window::HandleRepaint()
-	{
-		int rc = 0;
-
-		try
-		{
-			if (m_on_redraw && m_on_redraw() > 0) SwapBuffers();
-		}
-		catch (std::exception& e)
-		{
-			LOG(Fatal, L"Rendering routine has thrown an exception: " << e.what());
-			m_proceed = false;
-		}
-
-		// Open barrier
-		m_redraw_barrier.NotifyAtMost(1);
 	}
 
 	static int DEF_keymap[256];
@@ -483,28 +442,28 @@ namespace BearLibTerminal
 		return key;
 	}
 
-	void X11Window::Invoke(std::function<void()> func)
+	std::future<void> X11Window::Post(std::function<void()> func)
 	{
-		auto sentry = std::make_shared<InvokationSentry2>(func);
-		std::future<void> future = sentry->task.get_future();
+		if (m_private->window == 0)
+		{
+			throw std::runtime_error("X11Window::Post: window is not created");
+		}
+
+		auto task = new std::packaged_task<void()>(std::move(func));
+		auto future = task->get_future();
 
 		XClientMessageEvent event;
 		memset(&event, 0, sizeof(XClientMessageEvent));
 		event.type = ClientMessage;
 		event.window = m_private->window;
 		event.format = 32;
-
-		// XXX: bitness-agnostic event marking hack
 		event.data.l[0] = (long)m_private->invoke_message;
-
-		uint64_t p = (uint64_t)&sentry;
-		event.data.l[1] = p & 0xFFFFFFFF; // low
-		event.data.l[2] = (p >> 32) & 0xFFFFFFFF; // high
-
+		event.data.l[1] = (long)((uint64_t)task & 0xFFFFFFFF); // low 32 bit
+		event.data.l[2] = (long)((uint64_t)task >> 32); // high 32 bit
 		XSendEvent(m_private->display, m_private->window, 0, 0, (XEvent*)&event);
 		XFlush(m_private->display);
 
-		future.get();
+		return std::move(future);
 	}
 
 	bool X11Window::PumpEvents()
@@ -519,7 +478,7 @@ namespace BearLibTerminal
 
 			if (e.type == Expose && e.xexpose.count == 0)
 			{
-				HandleRepaint();
+				HandleExposure();
 			}
 			else if (e.type == XlibKeyPress || e.type == XlibKeyRelease)
 			{
@@ -550,7 +509,7 @@ namespace BearLibTerminal
 			{
 				// OnResize
 				Size new_size(e.xconfigure.width, e.xconfigure.height);
-				if (new_size.width != m_client_size.width || new_size.height != m_client_size.height)
+				if (new_size != m_client_size && m_resizeable)
 				{
 					m_client_size = new_size;
 					if (m_on_input)
@@ -605,11 +564,11 @@ namespace BearLibTerminal
 			}
 			else if (e.type == ClientMessage && e.xclient.format == 32 && e.xclient.data.l[0] == (long)m_private->invoke_message)
 			{
-				uint64_t low = e.xclient.data.l[1] & 0xFFFFFFFF;
-				uint64_t high = e.xclient.data.l[2] & 0xFFFFFFFF;
-				uint64_t p = (high << 32) | low;
-				auto sentry = *(std::shared_ptr<InvokationSentry2>*)p;
-				sentry->task();
+				uint64_t low = (uint32_t)e.xclient.data.l[1];
+				uint64_t high = (uint32_t)e.xclient.data.l[2];
+				auto task = reinterpret_cast<std::packaged_task<void()>*>((high << 32) | low);
+				(*task)();
+				delete task;
 			}
 			else if (e.type == ClientMessage && e.xclient.data.l[0] == (long)m_private->close_message)
 			{

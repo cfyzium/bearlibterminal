@@ -233,7 +233,7 @@ namespace BearLibTerminal
 
 		if (updated.window_resizeable != m_options.window_resizeable)
 		{
-			m_window->SetResizeable(updated.window_resizeable);
+			viewport_size_changed = true;
 		}
 
 		// If the size of cell has changed -OR- new basic tileset has been specified
@@ -292,6 +292,10 @@ namespace BearLibTerminal
 			m_vars[TK_CLIENT_HEIGHT] = viewport_size.height;
 			m_window->SetSizeHints(m_world.state.cellsize, updated.window_minimum_size);
 			m_window->SetClientSize(viewport_size);
+			if (updated.window_resizeable != m_options.window_resizeable)
+			{
+				m_window->SetResizeable(updated.window_resizeable);
+			}
 			m_viewport_modified = true;
 		}
 
@@ -1172,7 +1176,11 @@ namespace BearLibTerminal
 
 	void Terminal::ConfigureViewport()
 	{
-		Size viewport_size = Size(m_vars[TK_CLIENT_WIDTH], m_vars[TK_CLIENT_HEIGHT]);
+		// Here, an actual current client size is used and not the TK_CLIENT_WIDTH/HEIGHT slots.
+		// There are situations where the window must be redrawn and present on screen before
+		// TK_WINDOW_RESIZE is consumed by a client.
+		Size viewport_size = m_window->GetClientSize();
+
 		Size stage_size = m_world.stage.size * m_world.state.cellsize;
 		int hp = (viewport_size.width-stage_size.width)/2;
 		int vp = (viewport_size.height-stage_size.height)/2;
@@ -1184,7 +1192,6 @@ namespace BearLibTerminal
 
 		glMatrixMode(GL_PROJECTION);
 		glLoadIdentity();
-		//glOrtho(-hp-1, viewport_size.width-hp-1, viewport_size.height-vp-1, -vp-1, -1, +1);
 		glOrtho(-hp, viewport_size.width-hp, viewport_size.height-vp, -vp, -1, +1);
 
 		glMatrixMode(GL_MODELVIEW);
@@ -1282,8 +1289,8 @@ namespace BearLibTerminal
 		// Rendering callback will try to acquire the lock. Failing to  do so
 		// will mean that Terminal is currently busy. Calling window implementation
 		// SHOULD be prepared to reschedule painting to a later time.
-		std::unique_lock<std::mutex> guard(m_lock, std::try_to_lock);
-		if (!guard.owns_lock()) return -1; // TODO: enum TODO: timed try
+		std::unique_lock<std::mutex> guard(m_lock, std::try_to_lock); // TODO: timed try
+		if (!guard.owns_lock()) return -1; // TODO: enum
 		/*/
 		std::unique_lock<std::mutex> guard(m_lock);
 		//*/
@@ -1432,7 +1439,7 @@ namespace BearLibTerminal
 		if ((keystroke.type & Keystroke::KeyPress) && keystroke.scancode == TK_F12 && m_vars[TK_SHIFT] && m_vars[TK_CONTROL])
 		{
 			LOG(Info, "Ctrl+Shift+F12 was caught, dumping texture atlas on disk");
-			std::lock_guard<std::mutex> guard(m_lock);
+			std::lock_guard<std::mutex> guard(m_lock); // FIXME: Potential deadlock if SetOptions is currently calls Invoke
 			m_world.tiles.atlas.Dump();
 			return;
 		}
@@ -1440,10 +1447,7 @@ namespace BearLibTerminal
 		{
 			LOG(Info, "Ctrl+Shift+F11 was caught, toggling grid");
 			m_show_grid = !m_show_grid;
-
-			// Redraw must be called from separate thread since calling it from user thread is impossible
-			// and calling from window thread will simply deadblock.
-			std::thread([=]{m_window->Redraw();}).detach();
+			m_window->Post([&]{m_window->HandleExposure();});
 			return;
 		}
 
@@ -1523,9 +1527,10 @@ namespace BearLibTerminal
 		else if (stroke.scancode == TK_WINDOW_RESIZE)
 		{
 			// Window being resized
-			if (stroke.x != m_vars[TK_CLIENT_WIDTH] || stroke.y != m_vars[TK_CLIENT_HEIGHT])
+			if (stroke.x != m_vars[TK_CLIENT_WIDTH] || stroke.y != m_vars[TK_CLIENT_HEIGHT]) // TODO: keep dimensions in world state
 			{
-				// Client size changed, must redraw
+				// Client size changed, must redraw.
+				// NOTE: there is no deadlock possible because TK_WINDOW_RESIZE is consumed from main thread only.
 				std::lock_guard<std::mutex> guard(m_lock);
 
 				m_vars[TK_CLIENT_WIDTH] = stroke.x;

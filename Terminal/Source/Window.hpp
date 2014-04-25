@@ -32,6 +32,7 @@
 #include <thread>
 #include <utility>
 #include <functional>
+#include <future>
 
 // For internal usage
 #define TK_ALT 0x12
@@ -57,22 +58,24 @@ namespace BearLibTerminal
 		virtual void SetIcon(const std::wstring& filename) = 0;
 		virtual void SetSizeHints(Size increment, Size minimum_size);
 		virtual void SetClientSize(const Size& size) = 0;
-		virtual void Redraw() = 0;
 		virtual void Show() = 0;
 		virtual void Hide() = 0;
-		virtual void Invoke(std::function<void()> func) = 0;
 		virtual void SwapBuffers() = 0;
 		virtual void SetVSync(bool enabled) = 0;
 		virtual void SetResizeable(bool resizeable) = 0;
+		virtual std::future<void> Post(std::function<void()> func) = 0;
+		void Invoke(std::function<void()> func);
 		static std::unique_ptr<Window> Create();
+		void HandleExposure(uint64_t started = 0);
 	protected:
 		Window();
 		virtual void ThreadFunction() = 0; // noexcept(true)
 		virtual bool Construct() = 0;
 		virtual void Destroy() = 0; // noexcept(true)
 		virtual bool PumpEvents() = 0;
-		void RunAsynchronous();
+		void Run();
 		void Stop();
+
 		DrawEventHandler m_on_redraw;
 		EventHandler m_on_deactivate;
 		EventHandler m_on_activate;
