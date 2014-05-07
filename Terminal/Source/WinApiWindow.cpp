@@ -166,7 +166,7 @@ namespace BearLibTerminal
 		if ( m_handle ) PostMessage(m_handle, WM_CUSTOM_SETTITLE, (WPARAM)NULL, (LPARAM)new std::wstring(title));
 		/*/
 		Invoke([=]{
-			SetWindowTextW(m_handle, title->c_str());
+			SetWindowTextW(m_handle, title.c_str());
 		});
 		//*/
 	}
@@ -714,7 +714,7 @@ namespace BearLibTerminal
 			//}
 
 			// Mark window area as processed, otherwise Windows keeps sending WM_PAINT messages
-			RECT rect;
+			//RECT rect;
 			GetClientRect(m_handle, &rect);
 			ValidateRect(m_handle, &rect);
 
@@ -1042,7 +1042,7 @@ namespace BearLibTerminal
 		//*/
 		else if (uMsg == WM_CUSTOM_INVOKE)
 		{
-			auto task = *(std::packaged_task<void()>*)lParam;
+			auto task = (std::packaged_task<void()>*)lParam;
 			(*task)();
 			delete task;
 		}
