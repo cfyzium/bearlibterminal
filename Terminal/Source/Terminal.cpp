@@ -1244,13 +1244,6 @@ namespace BearLibTerminal
 			if (!provided && m_world.tilesets[kUnicodeReplacementCharacter]->Provides(code))
 			{
 				m_world.tilesets[kUnicodeReplacementCharacter]->Prepare(code);
-				provided = true;
-			}
-
-			if (!provided)
-			{
-				// Use Unicode replacement character code (MUST be already provided by dynamic tileset)
-				m_world.tiles.slots[code] = m_world.tiles.slots[kUnicodeReplacementCharacter];
 			}
 		}
 
@@ -1366,23 +1359,23 @@ namespace BearLibTerminal
 					for (auto& leaf: layer.cells[i].leafs)
 					{
 						auto j = m_world.tiles.slots.find(leaf.code);
-						if (j != m_world.tiles.slots.end())
-						{
-							auto& slot = *(j->second);
-							if (slot.texture_id != current_texture_id)
-							{
-								glEnd();
-								slot.BindTexture();
-								current_texture_id = slot.texture_id;
-								glBegin(GL_QUADS);
-							}
 
-							slot.Draw(leaf, left, top, w2, h2);
-						}
-						else
+						if (j == m_world.tiles.slots.end())
 						{
-							LOG(Debug, "Didn't find slot for code " << leaf.code);
+							// Replacement character MUST be provided by the ever-present dynamic tileset.
+							j = m_world.tiles.slots.find(kUnicodeReplacementCharacter);
 						}
+
+						auto& slot = *(j->second);
+						if (slot.texture_id != current_texture_id)
+						{
+							glEnd();
+							slot.BindTexture();
+							current_texture_id = slot.texture_id;
+							glBegin(GL_QUADS);
+						}
+
+						slot.Draw(leaf, left, top, w2, h2);
 					}
 
 					i += 1;
