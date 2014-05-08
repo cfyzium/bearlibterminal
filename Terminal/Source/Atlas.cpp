@@ -138,7 +138,7 @@ namespace BearLibTerminal
 	std::shared_ptr<TileSlot> AtlasTexture::Add(const Bitmap& bitmap, Rectangle region)
 	{
 		// Round requested rectangle dimensions to multiple of 4 for more discrete space partitioning
-		Size tile_size = region.Size();
+		Size tile_size = region.Size() + Size(2, 2);
 		tile_size.width = RoundUpTo(tile_size.width, 4);
 		tile_size.height = RoundUpTo(tile_size.height, 4);
 
@@ -169,8 +169,22 @@ namespace BearLibTerminal
 		}
 
 		// Place
-		Point tile_location = acceptable_space->Location();
-		m_canvas.Blit(bitmap, region, tile_location);
+		Point location = acceptable_space->Location() + Point(1, 1);
+		m_canvas.Blit(bitmap, region, location);
+
+		// Expand borders
+		for (int x=0; x<region.width; x++)
+		{
+			m_canvas(location.x+x, location.y-1) = m_canvas(location.x+x, location.y);
+			m_canvas(location.x+x, location.y+region.height) = m_canvas(location.x+x, location.y+region.height-1);
+		}
+		for (int y=0; y<region.height; y++)
+		{
+			m_canvas(location.x-1, location.y+y) = m_canvas(location.x, location.y+y);
+			m_canvas(location.x+region.width, location.y+y) = m_canvas(location.x+region.width-1, location.y+y);
+		}
+
+		// Mark for texture update
 		m_is_dirty = true;
 
 		// Split used space
@@ -225,10 +239,10 @@ namespace BearLibTerminal
 		PostprocessSpaces();
 
 		auto result = std::make_shared<TileSlot>();
-		result->space_size = tile_size;
+		result->space = Rectangle(location-Point(1, 1), tile_size);
 		result->texture = this;
 		result->texture_id = (uint64_t)this;
-		result->texture_region = Rectangle(tile_location, region.Size());
+		result->texture_region = Rectangle(location, region.Size());
 		result->texture_coords = CalcTexCoords(result->texture_region);
 		m_slots.push_back(result);
 		return result;
@@ -257,10 +271,10 @@ namespace BearLibTerminal
 		m_slots.erase(i);
 
 		// Give back used space
-		m_spaces.push_back(Rectangle(slot->texture_region.Location(), slot->space_size));
+		m_spaces.push_back(slot->space);
 
 		// DEBUG: fill freed area with some color
-		Rectangle area = Rectangle(slot->texture_region.Location(), slot->space_size);
+		Rectangle area = slot->space;
 		for (int y=area.top; y<area.top+area.height; y++)
 		{
 			for (int x=area.left; x<area.left+area.width; x++)
@@ -277,7 +291,7 @@ namespace BearLibTerminal
 		if (m_canvas.GetSize().width > 256 && m_canvas.GetSize().height > 256)
 		{
 			float used_area = 0, unused_area = 0;
-			for (auto& slot: m_slots) used_area += slot->space_size.Area();
+			for (auto& slot: m_slots) used_area += slot->space.Area();
 			for (auto& space: m_spaces) unused_area += space.Area();
 
 			float used_unused_ratio = used_area / unused_area;
@@ -652,7 +666,7 @@ namespace BearLibTerminal
 		if (type == AtlasTexture::Type::Sprite)
 		{
 			// Allocate whole texture for this image
-			m_textures.emplace_back(type, Size(RoundUpTo(size.width, 4), RoundUpTo(size.height,4)));
+			m_textures.emplace_back(type, Size(RoundUpTo(size.width+2, 4), RoundUpTo(size.height+2, 4)));
 			LOG(Trace, "Added sprite texture #" << (uint64_t)&m_textures.back());
 			return m_textures.back().Add(bitmap, region);
 		}

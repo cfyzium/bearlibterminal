@@ -68,7 +68,7 @@ namespace BearLibTerminal
 	struct TileSlot: Slot, Tile, std::enable_shared_from_this<TileSlot>
 	{
 		AtlasTexture* texture;
-		Size space_size;
+		Rectangle space;
 		Rectangle texture_region;
 		TexCoords texture_coords;
 
