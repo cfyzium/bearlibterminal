@@ -483,7 +483,7 @@ namespace BearLibTerminal
 		return key;
 	}
 
-	void X11Window::Invoke(std::function<void()> func)
+	std::future<void> X11Window::Post(std::function<void()> func)
 	{
 		auto sentry = std::make_shared<InvokationSentry2>(func);
 		std::future<void> future = sentry->task.get_future();
@@ -504,7 +504,7 @@ namespace BearLibTerminal
 		XSendEvent(m_private->display, m_private->window, 0, 0, (XEvent*)&event);
 		XFlush(m_private->display);
 
-		future.get();
+		return std::move(future);
 	}
 
 	bool X11Window::PumpEvents()
