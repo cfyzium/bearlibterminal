@@ -54,12 +54,14 @@ namespace BearLibTerminal
 		void Redraw();
 		void Show();
 		void Hide();
-		void Invoke(std::function<void()> func);
+		std::future<void> Post(std::function<void()> func);
 		bool AcquireRC();
 		bool ReleaseRC();
 		void SwapBuffers();
 		void SetVSync(bool enabled);
 		void SetResizeable(bool resizeable);
+		void ToggleFullscreen();
+		Size GetActualSize();
 	protected:
 		void ThreadFunction();
 		bool Construct();

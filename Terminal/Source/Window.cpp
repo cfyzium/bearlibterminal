@@ -36,7 +36,9 @@ namespace BearLibTerminal
 	Window::Window():
 		m_synchronous_redraw(false),
 		m_proceed(false),
-		m_minimum_size(1, 1)
+		m_minimum_size(1, 1),
+		m_fullscreen(false),
+		m_resizeable(false)
 	{ }
 
 	Window::~Window()
@@ -84,6 +86,16 @@ namespace BearLibTerminal
 	Size Window::GetClientSize()
 	{
 		return m_client_size;
+	}
+
+	bool Window::IsFullscreen() const
+	{
+		return m_fullscreen;
+	}
+
+	void Window::Invoke(std::function<void()> func)
+	{
+		Post(std::move(func)).get();
 	}
 
 	void Window::RunAsynchronous()

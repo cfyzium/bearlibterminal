@@ -1172,10 +1172,8 @@ namespace BearLibTerminal
 
 	void Terminal::ConfigureViewport()
 	{
-		Size viewport_size = Size(m_vars[TK_CLIENT_WIDTH], m_vars[TK_CLIENT_HEIGHT]);
+		Size viewport_size = m_window->GetActualSize();
 		Size stage_size = m_world.stage.size * m_world.state.cellsize;
-		int hp = (viewport_size.width-stage_size.width)/2;
-		int vp = (viewport_size.height-stage_size.height)/2;
 
 		glDisable(GL_DEPTH_TEST);
 
@@ -1184,8 +1182,52 @@ namespace BearLibTerminal
 
 		glMatrixMode(GL_PROJECTION);
 		glLoadIdentity();
-		//glOrtho(-hp-1, viewport_size.width-hp-1, viewport_size.height-vp-1, -vp-1, -1, +1);
-		glOrtho(-hp, viewport_size.width-hp, viewport_size.height-vp, -vp, -1, +1);
+
+		Rectangle stage_area(0, 0, stage_size.width, stage_size.height);
+		if (viewport_size != stage_size)
+		{
+			if (m_window->IsFullscreen())
+			{
+				// Stretch
+				float viewport_ratio = viewport_size.width / (float)viewport_size.height;
+				float stage_ratio = stage_size.width / (float)stage_size.height;
+
+				if (viewport_ratio >= stage_ratio)
+				{
+					// Viewport is wider
+					float factor = viewport_size.height / (float)stage_size.height;
+					stage_area.height = viewport_size.height;
+					stage_area.width = stage_size.width * factor;
+					stage_area.left = (viewport_size.width - stage_area.width)/2;
+				}
+				else
+				{
+					// Stage is wider
+					float factor = viewport_size.width / (float)stage_size.width;
+					stage_area.width = viewport_size.width;
+					stage_area.height = stage_size.height * factor;
+					stage_area.top = (viewport_size.height - stage_area.height)/2;
+				}
+			}
+			else
+			{
+				// Center
+				stage_area.left += (viewport_size.width-stage_size.width)/2;
+				stage_area.top += (viewport_size.height-stage_size.height)/2;
+			}
+		}
+
+		float hf = stage_size.width/(float)stage_area.width;
+		float vf = stage_size.height/(float)stage_area.height;
+		glOrtho
+		(
+			-stage_area.left*hf,
+			(viewport_size.width - stage_area.left)*hf,
+			(viewport_size.height - stage_area.top)*vf,
+			-stage_area.top*vf,
+			-1,
+			+1
+		);
 
 		glMatrixMode(GL_MODELVIEW);
 		glLoadIdentity();
@@ -1195,7 +1237,14 @@ namespace BearLibTerminal
 
 		if (viewport_size != stage_size)
 		{
-			m_viewport_scissors = Rectangle(hp, viewport_size.height-stage_size.height-vp, stage_size.width, stage_size.height);
+			//m_viewport_scissors = Rectangle(hp, viewport_size.height-stage_size.height-vp, stage_size.width, stage_size.height);
+			m_viewport_scissors = Rectangle
+			(
+				stage_area.left,
+				viewport_size.height - stage_area.height - stage_area.top,
+				stage_area.width,
+				stage_area.height
+			);
 		}
 		else
 		{
@@ -1422,22 +1471,31 @@ namespace BearLibTerminal
 	{
 		std::lock_guard<std::mutex> guard(m_input_lock);
 
-		if ((keystroke.type & Keystroke::KeyPress) && keystroke.scancode == TK_F12 && m_vars[TK_SHIFT] && m_vars[TK_CONTROL])
+		if ((keystroke.type & Keystroke::KeyPress) && keystroke.scancode == TK_A && m_vars[TK_ALT])
 		{
-			LOG(Info, "Ctrl+Shift+F12 was caught, dumping texture atlas on disk");
 			std::lock_guard<std::mutex> guard(m_lock);
 			m_world.tiles.atlas.Dump();
 			return;
 		}
-		else if ((keystroke.type & Keystroke::KeyPress) && keystroke.scancode == TK_F11 && m_vars[TK_SHIFT] && m_vars[TK_CONTROL])
+		else if ((keystroke.type & Keystroke::KeyPress) && keystroke.scancode == TK_G && m_vars[TK_ALT])
 		{
-			LOG(Info, "Ctrl+Shift+F11 was caught, toggling grid");
 			m_show_grid = !m_show_grid;
 
 			// Redraw must be called from separate thread since calling it from user thread is impossible
 			// and calling from window thread will simply deadblock.
 			std::thread([=]{m_window->Redraw();}).detach();
 			return;
+		}
+		if ((keystroke.type & Keystroke::KeyPress) && keystroke.scancode == TK_RETURN && m_vars[TK_ALT])
+		{
+			// Alt+Enter
+			m_viewport_modified = true;
+			m_window->ToggleFullscreen();
+			return;
+		}
+		if ((keystroke.type & Keystroke::KeyPress) && keystroke.scancode == TK_INVALIDATE_VIEWPORT)
+		{
+			m_viewport_modified = true;
 		}
 
 		// Consume queue immediately if user is not interested

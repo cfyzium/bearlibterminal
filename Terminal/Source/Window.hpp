@@ -25,16 +25,19 @@
 
 #include "Log.hpp"
 #include "Size.hpp"
+#include "Point.hpp"
 #include "Keystroke.hpp"
 #include <mutex>
 #include <atomic>
 #include <memory>
 #include <thread>
+#include <future>
 #include <utility>
 #include <functional>
 
 // For internal usage
 #define TK_ALT 0x12
+#define TK_INVALIDATE_VIEWPORT 0xFE
 
 namespace BearLibTerminal
 {
@@ -52,6 +55,7 @@ namespace BearLibTerminal
 		void SetOnActivate(EventHandler callback);
 		void SetOnDestroy(EventHandler callback);
 		Size GetClientSize();
+		virtual Size GetActualSize() {return Size(1, 1);}
 		virtual bool ValidateIcon(const std::wstring& filename) = 0;
 		virtual void SetTitle(const std::wstring& title) = 0;
 		virtual void SetIcon(const std::wstring& filename) = 0;
@@ -60,12 +64,15 @@ namespace BearLibTerminal
 		virtual void Redraw() = 0;
 		virtual void Show() = 0;
 		virtual void Hide() = 0;
-		virtual void Invoke(std::function<void()> func) = 0;
+		virtual std::future<void> Post(std::function<void()> func) = 0;
 		virtual bool AcquireRC() = 0;
 		virtual bool ReleaseRC() = 0;
 		virtual void SwapBuffers() = 0;
 		virtual void SetVSync(bool enabled) = 0;
 		virtual void SetResizeable(bool resizeable) = 0;
+		virtual void ToggleFullscreen() { }
+		void Invoke(std::function<void()> func);
+		bool IsFullscreen() const;
 		static std::unique_ptr<Window> Create();
 	protected:
 		Window();
@@ -86,7 +93,10 @@ namespace BearLibTerminal
 		std::atomic<bool> m_proceed;
 		Size m_cell_size;
 		Size m_minimum_size;
+		Point m_location;
 		Size m_client_size;
+		bool m_fullscreen;
+		bool m_resizeable;
 	};
 }
 

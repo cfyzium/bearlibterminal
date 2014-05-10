@@ -23,6 +23,7 @@
 #ifdef _WIN32
 
 #include <map>
+#include <set>
 #include <future>
 #include <algorithm>
 #include "WinApiWindow.hpp"
@@ -39,11 +40,7 @@
 #define MAPVK_VSC_TO_VK 1
 #endif
 
-#define WM_CUSTOM_SETSIZE (WM_APP+1)
-#define WM_CUSTOM_SETTITLE (WM_APP+2)
-#define WM_CUSTOM_SETICON (WM_APP+3)
-#define WM_CUSTOM_INVOKE (WM_APP+4)
-#define WM_CUSTOM_INVOKE2 (WM_APP+5)
+#define WM_CUSTOM_POST (WM_APP+1)
 
 namespace BearLibTerminal
 {
@@ -158,58 +155,188 @@ namespace BearLibTerminal
 
 	void WinApiWindow::SetTitle(const std::wstring& title)
 	{
-		std::lock_guard<std::mutex> guard(m_lock);
-		if ( m_handle ) PostMessage(m_handle, WM_CUSTOM_SETTITLE, (WPARAM)NULL, (LPARAM)new std::wstring(title));
+		Post([&, title]
+		{
+			SetWindowTextW(m_handle, title.c_str());
+		});
 	}
 
 	void WinApiWindow::SetIcon(const std::wstring& filename)
 	{
-		if ( filename.empty() ) return;
-		std::lock_guard<std::mutex> guard(m_lock);
-		if ( m_handle ) PostMessage(m_handle, WM_CUSTOM_SETICON, (WPARAM)NULL, (LPARAM)new std::wstring(filename));
+		if (filename.empty()) return;
+
+		Post([&, filename]
+		{
+			HICON new_small_icon = LoadIconFromFile(filename, true);
+			if ( new_small_icon != NULL )
+			{
+				HICON old_small_icon = (HICON)SetClassLongPtr(m_handle, GCLP_HICONSM, (LONG_PTR)new_small_icon);
+				DWORD rc = GetLastError();
+				if ( rc == 0 )
+				{
+					if ( old_small_icon != NULL ) DestroyIcon(old_small_icon);
+				}
+				else
+				{
+					LOG(Error, L"Failed to apply small icon (" << GetLastErrorStr() << ")");
+				}
+			}
+
+			HICON new_large_icon = LoadIconFromFile(filename, false);
+			if ( new_large_icon != NULL )
+			{
+				HICON old_large_icon = (HICON)SetClassLongPtr(m_handle, GCLP_HICON, (LONG_PTR)new_large_icon);
+				DWORD rc = GetLastError();
+				if ( rc == 0 )
+				{
+					if ( old_large_icon != NULL ) DestroyIcon(old_large_icon);
+				}
+				else
+				{
+					LOG(Error, L"Failed to apply large icon (" << GetLastErrorStr() << ")");
+				}
+			}
+		});
 	}
 
 	void WinApiWindow::SetClientSize(const Size& size)
 	{
-		std::lock_guard<std::mutex> guard(m_lock);
-		if ( m_handle ) PostMessage(m_handle, WM_CUSTOM_SETSIZE, (WPARAM)NULL, (LPARAM)new Size(size));
+		Post([&, size]
+		{
+			if (!m_fullscreen)
+			{
+				DWORD style = GetWindowLongW(m_handle, GWL_STYLE);
+				RECT rectangle = {0, 0, size.width, size.height};
+				AdjustWindowRect(&rectangle, style, FALSE);
+				SetWindowPos
+				(
+					m_handle,
+					HWND_NOTOPMOST,
+					0, 0,
+					rectangle.right-rectangle.left,
+					rectangle.bottom-rectangle.top,
+					SWP_NOMOVE
+				);
+			}
+
+			m_client_size = size;
+		});
 	}
 
 	void WinApiWindow::SetResizeable(bool resizeable)
 	{
 		if (!m_handle) return;
 
-		auto change_window_style = [=]()
+		Post([=]
 		{
-			if (!resizeable)
+			if (!m_fullscreen)
 			{
-				WINDOWPLACEMENT placement;
-				GetWindowPlacement(m_handle, &placement);
-				if (placement.showCmd & SW_MAXIMIZE)
+				if (!resizeable)
 				{
-					ShowWindow(m_handle, SW_RESTORE);
+					WINDOWPLACEMENT placement;
+					GetWindowPlacement(m_handle, &placement);
+					if (placement.showCmd & SW_MAXIMIZE)
+					{
+						ShowWindow(m_handle, SW_RESTORE);
+					}
 				}
+
+				DWORD style = GetWindowLongW(m_handle, GWL_STYLE);
+				DWORD flags = WS_THICKFRAME | WS_MAXIMIZEBOX;
+				style = resizeable? style|flags: style^flags;
+				SetWindowLongW(m_handle, GWL_STYLE, style);
+
+				RECT rectangle = {0, 0, m_client_size.width, m_client_size.height};
+				AdjustWindowRect(&rectangle, style, FALSE);
+				BOOL rc = SetWindowPos
+				(
+					m_handle,
+					HWND_NOTOPMOST,
+					0, 0,
+					rectangle.right-rectangle.left,
+					rectangle.bottom-rectangle.top,
+					SWP_NOMOVE
+				);
 			}
 
-			DWORD style = GetWindowLongW(m_handle, GWL_STYLE);
-			DWORD flags = WS_THICKFRAME | WS_MAXIMIZEBOX;
-			style = resizeable? style|flags: style^flags;
-			SetWindowLongW(m_handle, GWL_STYLE, style);
+			m_resizeable = resizeable;
+		});
+	}
 
-			RECT rectangle = {0, 0, m_client_size.width, m_client_size.height};
-			AdjustWindowRect(&rectangle, style, FALSE);
-			BOOL rc = SetWindowPos
-			(
-				m_handle,
-				HWND_NOTOPMOST,
-				0, 0,
-				rectangle.right-rectangle.left,
-				rectangle.bottom-rectangle.top,
-				SWP_NOMOVE
-			);
-		};
+	void WinApiWindow::ToggleFullscreen()
+	{
+		Post([=]
+		{
+			if (m_fullscreen)
+			{
+				// Leave fullscreen mode
 
-		Invoke(change_window_style);
+				DWORD required_style = WS_BORDER|WS_CAPTION;
+				if (m_resizeable) required_style |= WS_THICKFRAME|WS_MAXIMIZEBOX;
+
+				DWORD style = GetWindowLongW(m_handle, GWL_STYLE);
+				style = style|required_style;
+				SetWindowLongW(m_handle, GWL_STYLE, style);
+
+				RECT rectangle = {0, 0, m_client_size.width, m_client_size.height};
+				AdjustWindowRect(&rectangle, style, FALSE);
+
+				BOOL rc = SetWindowPos
+				(
+					m_handle,
+					HWND_TOP,//NOTOPMOST,
+					m_location.x, m_location.y,
+					rectangle.right-rectangle.left,
+					rectangle.bottom-rectangle.top,
+					0
+				);
+			}
+			else
+			{
+				// Enter fullscreen mode
+
+				RECT rect;
+				GetWindowRect(m_handle, &rect);
+				m_location = Point(rect.left, rect.top);
+
+				DWORD unnecessary_style = WS_BORDER|WS_CAPTION|WS_THICKFRAME|WS_MAXIMIZEBOX;
+
+				DWORD style = GetWindowLongW(m_handle, GWL_STYLE);
+				style &= ~unnecessary_style;
+				SetWindowLongW(m_handle, GWL_STYLE, style);
+
+				int width = GetSystemMetrics(SM_CXSCREEN);
+				int height = GetSystemMetrics(SM_CYSCREEN);
+
+				// Make sure this window is placed over everyting (taskbar is especially stubborn here)
+				SetWindowPos(m_handle, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE|SWP_NOSIZE|SWP_NOREDRAW);
+				SetWindowPos(m_handle, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE|SWP_NOSIZE|SWP_NOREDRAW);
+
+				BOOL rc = SetWindowPos
+				(
+					m_handle,
+					HWND_TOP,
+					0, 0,
+					width,
+					height,
+					0
+				);
+
+				SetForegroundWindow(m_handle);
+			}
+
+			m_fullscreen = !m_fullscreen;
+
+			// Force window update
+			InvalidateRect(m_handle, NULL, FALSE);
+		});
+	}
+
+	Size WinApiWindow::GetActualSize()
+	{
+		RECT rect;
+		GetClientRect(m_handle, &rect);
+		return Size(rect.right-rect.left, rect.bottom-rect.top);
 	}
 
 	void WinApiWindow::Redraw()
@@ -254,22 +381,17 @@ namespace BearLibTerminal
 		{ }
 	};
 
-	void WinApiWindow::Invoke(std::function<void()> func)
+	std::future<void> WinApiWindow::Post(std::function<void()> func)
 	{
-		if (m_handle)
+		if (!m_handle)
 		{
-			/*
-			std::shared_ptr<InvokationSentry> sentry = std::make_shared<InvokationSentry>();
-			sentry->func = func;
-			PostMessage(m_handle, WM_CUSTOM_INVOKE, (WPARAM)NULL, (LPARAM)&sentry);
-			sentry->semaphore.Wait();
-			/*/
-			auto sentry = std::make_shared<InvokationSentry2>(func);
-			std::future<void> future = sentry->task.get_future();
-			PostMessage(m_handle, WM_CUSTOM_INVOKE2, (WPARAM)NULL, (LPARAM)&sentry);
-			future.get();
-			//*/
+			throw std::runtime_error("posting closure to uninitialized window");
 		}
+
+		auto task = new std::packaged_task<void()>(std::move(func));
+		auto future = task->get_future();
+		PostMessage(m_handle, WM_CUSTOM_POST, (WPARAM)NULL, (LPARAM)task);
+		return std::move(future);
 	}
 
 	bool WinApiWindow::PumpEvents()
@@ -520,6 +642,7 @@ namespace BearLibTerminal
 	{
 		try
 		{
+			/*
 			RECT rect;
 			GetClientRect(m_handle, &rect);
 			Size client_size(rect.right - rect.left, rect.bottom - rect.top);
@@ -534,6 +657,7 @@ namespace BearLibTerminal
 				glOrtho(0, client_size.width, client_size.height, 0, -1, +1);
 				glMatrixMode(GL_MODELVIEW);
 			}
+			//*/
 
 			if (m_on_redraw && m_on_redraw() > 0)
 			{
@@ -701,14 +825,25 @@ namespace BearLibTerminal
 			// * Break
 			// * Navigation: Insert, Home, PgUp, Delete, End, PgDown + Arrows
 			// * Numpad
+			// * Alt+... combinations
 
 			uint8_t scancode = (uint8_t)(wParam & 0xFF);
 			bool extended = (lParam & (1<<24)) > 0;
 			bool pressed = (uMsg == WM_KEYDOWN) || (uMsg == WM_SYSKEYDOWN);
 
-			if ( (uMsg == WM_SYSKEYDOWN || uMsg == WM_SYSKEYUP) && scancode != VK_F10 )
+			if (uMsg == WM_SYSKEYDOWN || uMsg == WM_SYSKEYUP)
 			{
-				return DefWindowProc(m_handle, uMsg, wParam, lParam);
+				std::set<int> scancodes = {TK_F10, TK_ALT, TK_RETURN, TK_A, TK_G};
+
+				if (scancodes.count(scancode))
+				{
+					ReportInput(Keystroke(pressed? Keystroke::KeyPress: Keystroke::KeyRelease, scancode));
+					return FALSE;
+				}
+				else
+				{
+					return DefWindowProc(m_handle, uMsg, wParam, lParam);
+				}
 			}
 
 			if ( scancode == VK_CONTROL ||
@@ -748,6 +883,10 @@ namespace BearLibTerminal
 			}
 
 			return FALSE;
+		}
+		else if (uMsg == WM_MENUCHAR)
+		{
+			return MNC_CLOSE << 16;
 		}
 		else if ( uMsg == WM_MOUSEMOVE )
 		{
@@ -867,93 +1006,16 @@ namespace BearLibTerminal
 				rect->bottom += delta;
 			}
 
+			Keystroke stroke(Keystroke::KeyPress, TK_INVALIDATE_VIEWPORT);
+			ReportInput(stroke);
+
 			return TRUE;
 		}
-		else if ( uMsg == WM_CUSTOM_SETSIZE )
+		else if (uMsg == WM_CUSTOM_POST)
 		{
-			auto size = (Size*)lParam;
-			DWORD style = GetWindowLongW(m_handle, GWL_STYLE);
-			RECT rectangle = { 0, 0, size->width, size->height };
-			AdjustWindowRect(&rectangle, style, FALSE);
-			BOOL rc = SetWindowPos
-			(
-				m_handle,
-				HWND_NOTOPMOST,
-				0, 0,
-				rectangle.right-rectangle.left,
-				rectangle.bottom-rectangle.top,
-				SWP_NOMOVE//|SWP_NOREDRAW
-			);
-			if ( !rc )
-			{
-				LOG(Error, L"Failed to update window size (" << GetLastErrorStr() << ")");
-			}
-			m_client_size = *size;
-
-			delete size;
-			return 0;
-		}
-		else if ( uMsg == WM_CUSTOM_SETTITLE )
-		{
-			auto title = (std::wstring*)lParam;
-			SetWindowTextW(m_handle, title->c_str());
-			delete title;
-			return 0;
-		}
-		else if ( uMsg == WM_CUSTOM_SETICON )
-		{
-			auto filename = reinterpret_cast<std::wstring*>(lParam);
-
-			HICON new_small_icon = LoadIconFromFile(*filename, true);
-			if ( new_small_icon != NULL )
-			{
-				HICON old_small_icon = (HICON)SetClassLongPtr(m_handle, GCLP_HICONSM, (LONG_PTR)new_small_icon);
-				DWORD rc = GetLastError();
-				if ( rc == 0 )
-				{
-					if ( old_small_icon != NULL ) DestroyIcon(old_small_icon);
-				}
-				else
-				{
-					LOG(Error, L"Failed to apply small icon (" << GetLastErrorStr() << ")");
-				}
-			}
-
-			HICON new_large_icon = LoadIconFromFile(*filename, false);
-			if ( new_large_icon != NULL )
-			{
-				HICON old_large_icon = (HICON)SetClassLongPtr(m_handle, GCLP_HICON, (LONG_PTR)new_large_icon);
-				DWORD rc = GetLastError();
-				if ( rc == 0 )
-				{
-					if ( old_large_icon != NULL ) DestroyIcon(old_large_icon);
-				}
-				else
-				{
-					LOG(Error, L"Failed to apply large icon (" << GetLastErrorStr() << ")");
-				}
-			}
-
-			delete filename;
-			return 0;
-		}
-		else if (uMsg == WM_CUSTOM_INVOKE)
-		{
-			// shared_ptr is necessary because semaphore does not synchronize its own
-			// lifetime so caller thread may proceed and deallocate sentry while callee
-			// is still executing Notify()
-			std::shared_ptr<InvokationSentry> sentry = *(std::shared_ptr<InvokationSentry>*)lParam;
-			sentry->func();
-			sentry->semaphore.Notify();
-			return 0;
-		}
-		else if (uMsg == WM_CUSTOM_INVOKE2)
-		{
-			// shared_ptr is necessary because semaphore does not synchronize its own
-			// lifetime so caller thread may proceed and deallocate sentry while callee
-			// is still executing Notify()
-			auto sentry = *(std::shared_ptr<InvokationSentry2>*)lParam;
-			sentry->task();
+			auto task = (std::packaged_task<void()>*)lParam;
+			(*task)();
+			delete task;
 			return 0;
 		}
 
