@@ -55,7 +55,7 @@ namespace BearLibTerminal
 		void SetOnActivate(EventHandler callback);
 		void SetOnDestroy(EventHandler callback);
 		Size GetClientSize();
-		virtual Size GetActualSize() {return Size(1, 1);}
+		virtual Size GetActualSize() = 0;
 		virtual bool ValidateIcon(const std::wstring& filename) = 0;
 		virtual void SetTitle(const std::wstring& title) = 0;
 		virtual void SetIcon(const std::wstring& filename) = 0;

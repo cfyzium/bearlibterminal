@@ -1,105 +1,33 @@
 /*
- * Luaopen.cpp
- *
- *  Created on: Jan 26, 2014
- *      Author: Cfyz
- */
-
-#if defined(_WIN32)
-#define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
-#define PSAPI_VERSION 1
-#include <psapi.h>
-#elif defined(__linux)
-#include <dlfcn.h>
-#endif
+* BearLibTerminal
+* Copyright (C) 2014 Cfyz
+*
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+* of the Software, and to permit persons to whom the Software is furnished to do
+* so, subject to the following conditions:
+*
+* The above copyright notice and this permission notice shall be included in all
+* copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+* FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+* COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+* IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+* CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/
 
 #define BEARLIBTERMINAL_BUILDING_LIBRARY
 #include "BearLibTerminal.h"
-
+#include "Platform.hpp"
 #include "Log.hpp"
 #include <vector>
 #include <type_traits>
 #include <stddef.h>
 #include <string.h>
-
-#if defined(_WIN32)
-typedef HMODULE ModuleHandle;
-typedef FARPROC FunctionHandle;
-
-ModuleHandle GetLuaModule()
-{
-	std::shared_ptr<std::remove_pointer<HMODULE>::type> psapi(LoadLibraryA("Psapi.dll"), FreeLibrary);
-	if (!psapi)
-	{
-		LOG(Error, "Can't load psapi library");
-		return nullptr;
-	}
-
-	auto enumProcessModules = (BOOL WINAPI (*)(HANDLE, HMODULE*, DWORD, LPDWORD))GetProcAddress(psapi.get(), "EnumProcessModules");
-	if (enumProcessModules == nullptr)
-	{
-		LOG(Error, "Failed to get address of EnumProcessModulesA function in Psapi.dll");
-		return nullptr;
-	}
-
-	auto getModuleFileNameExW = (DWORD WINAPI (*)(HANDLE, HMODULE, LPWSTR, DWORD))GetProcAddress(psapi.get(), "GetModuleFileNameExW");
-	if (getModuleFileNameExW == nullptr)
-	{
-		LOG(Error, "Failed to get address of GetModuleFileNameExW in Psapi.dll");
-		return nullptr;
-	}
-
-	HANDLE process = GetCurrentProcess();
-	DWORD bytes_needed = 0;
-	enumProcessModules(process, nullptr, 0, &bytes_needed);
-	size_t n_modules = bytes_needed / sizeof(HMODULE);
-	std::vector<HMODULE> modules{n_modules};
-
-	enumProcessModules(process, modules.data(), modules.size()*sizeof(HMODULE), &bytes_needed);
-	for (auto module: modules)
-	{
-		if (GetProcAddress(module, "lua_gettop") != nullptr)
-		{
-			wchar_t name[MAX_PATH];
-			getModuleFileNameExW(process, module, name, sizeof(name)/sizeof(wchar_t));
-			LOG(Info, "Using lua provider module \"" << name << "\"");
-
-			return module;
-		}
-	}
-
-	return nullptr;
-}
-
-FunctionHandle GetLuaFunction(ModuleHandle module, const char* name, bool may_fail=false)
-{
-	FunctionHandle result = GetProcAddress(module, name);
-	if (result == nullptr && !may_fail)
-	{
-		LOG(Error, "Can't get address of function \"" << name << "\"");
-	}
-	return result;
-}
-#elif defined(__linux)
-typedef void* ModuleHandle;
-typedef void* FunctionHandle;
-
-ModuleHandle GetLuaModule()
-{
-	return dlopen(0, RTLD_NOW|RTLD_GLOBAL);
-}
-
-FunctionHandle GetLuaFunction(ModuleHandle module, const char* name, bool may_fail=false)
-{
-	FunctionHandle result = dlsym(module, name);
-	if (result == nullptr && !may_fail)
-	{
-		LOG(Error, "Can't get address of function \"" << name << "\"");
-	}
-	return result;
-}
-#endif
 
 typedef struct lua_State lua_State;
 typedef double lua_Number;
@@ -701,57 +629,57 @@ luaterminal_constants[] =
 
 int luaopen_BearLibTerminal(lua_State* L)
 {
-	auto module = GetLuaModule();
-	if (module == nullptr)
+	BearLibTerminal::Module liblua = BearLibTerminal::Module::GetProviding("lua_gettop");
+	if (!liblua)
 	{
 		LOG(Error, "Lua provider module was not found");
 		return 1; // This will cause lua runtime to fail on table dereferencing, thus notifying user that something went wrong
 	}
 
-	bool version_52 = GetLuaFunction(module, "lua_tonumberx", true) != nullptr;
+	bool version_52 = liblua.Probe("lua_tonumberx") != nullptr;
 
-	lua_gettop = (PFNLUAGETTOP)GetLuaFunction(module, "lua_gettop");
-	lua_createtable = (PFNLUACREATETABLE)GetLuaFunction(module, "lua_createtable");
-	luaL_checkstack = (PFNLUALCHECKSTACK)GetLuaFunction(module, "luaL_checkstack");
-	lua_pushvalue = (PFNLUAPUSHVALUE)GetLuaFunction(module, "lua_pushvalue");
-	lua_pushcclosure = (PFNLUAPUSHCCLOSURE)GetLuaFunction(module, "lua_pushcclosure");
-	lua_setfield = (PFNLUASETFIELD)GetLuaFunction(module, "lua_setfield");
-	lua_settop = (PFNLUASETTOP)GetLuaFunction(module, "lua_settop");
-	lua_pushnumber = (PFNLUAPUSHNUMBER)GetLuaFunction(module, "lua_pushnumber");
-	lua_pushinteger = (PFNLUAPUSHINTEGER)GetLuaFunction(module, "lua_pushinteger");
-	lua_tolstring = (PFNLUATOSTRING)GetLuaFunction(module, "lua_tolstring");
-	lua_rawgeti = (PFNLUARAWGETI)GetLuaFunction(module, "lua_rawgeti");
-	lua_type = (PFNLUATYPE)GetLuaFunction(module, "lua_type");
-	lua_pushboolean = (PFNLUAPUSHBOOLEAN)GetLuaFunction(module, "lua_pushboolean");
-	lua_gettable = (PFNLUAGETTABLE)GetLuaFunction(module, "lua_gettable");
-	lua_pushstring = (PFNLUAPUSHSTRING)GetLuaFunction(module, "lua_pushstring");
-	lua_getfield = (PFNLUAGETFIELD)GetLuaFunction(module, "lua_getfield");
-	lua_insert = (PFNLUAINSERT)GetLuaFunction(module, "lua_insert");
-	lua_replace = (PFNLUAREPLACE)GetLuaFunction(module, "lua_replace");
-	lua_error = (PFNLUAERROR)GetLuaFunction(module, "lua_error");
+	lua_gettop = (PFNLUAGETTOP)liblua["lua_gettop"];
+	lua_createtable = (PFNLUACREATETABLE)liblua["lua_createtable"];
+	luaL_checkstack = (PFNLUALCHECKSTACK)liblua["luaL_checkstack"];
+	lua_pushvalue = (PFNLUAPUSHVALUE)liblua["lua_pushvalue"];
+	lua_pushcclosure = (PFNLUAPUSHCCLOSURE)liblua["lua_pushcclosure"];
+	lua_setfield = (PFNLUASETFIELD)liblua["lua_setfield"];
+	lua_settop = (PFNLUASETTOP)liblua["lua_settop"];
+	lua_pushnumber = (PFNLUAPUSHNUMBER)liblua["lua_pushnumber"];
+	lua_pushinteger = (PFNLUAPUSHINTEGER)liblua["lua_pushinteger"];
+	lua_tolstring = (PFNLUATOSTRING)liblua["lua_tolstring"];
+	lua_rawgeti = (PFNLUARAWGETI)liblua["lua_rawgeti"];
+	lua_type = (PFNLUATYPE)liblua["lua_type"];
+	lua_pushboolean = (PFNLUAPUSHBOOLEAN)liblua["lua_pushboolean"];
+	lua_gettable = (PFNLUAGETTABLE)liblua["lua_gettable"];
+	lua_pushstring = (PFNLUAPUSHSTRING)liblua["lua_pushstring"];
+	lua_getfield = (PFNLUAGETFIELD)liblua["lua_getfield"];
+	lua_insert = (PFNLUAINSERT)liblua["lua_insert"];
+	lua_replace = (PFNLUAREPLACE)liblua["lua_replace"];
+	lua_error = (PFNLUAERROR)liblua["lua_error"];
 
 	if (version_52)
 	{
 		// Lua 5.2 has lua_tonumber and lua_tointeger as preprocessor macro
 
-		lua_tonumberx = (PFNLUATONUMBERX)GetLuaFunction(module, "lua_tonumberx");
+		lua_tonumberx = (PFNLUATONUMBERX)liblua["lua_tonumberx"];
 		lua_tonumber = &lua_tonumber_52;
 
-		lua_tointegerx = (PFNLUATOINTEGERX)GetLuaFunction(module, "lua_tointegerx");
+		lua_tointegerx = (PFNLUATOINTEGERX)liblua["lua_tointegerx"];
 		lua_tointeger = &lua_tointeger_52;
 
-		lua_pcallk = (PFNLUAPCALLK)GetLuaFunction(module, "lua_pcallk");
+		lua_pcallk = (PFNLUAPCALLK)liblua["lua_pcallk"];
 		lua_pcall = &lua_pcall_52;
 
-		lua_rawlen = (PFNLUARAWLEN)GetLuaFunction(module, "lua_rawlen");
+		lua_rawlen = (PFNLUARAWLEN)liblua["lua_rawlen"];
 		lua_objlen = &lua_objlen_52;
 	}
 	else
 	{
-		lua_tonumber = (PFNLUATONUMBER)GetLuaFunction(module, "lua_tonumber", true);
-		lua_tointeger = (PFNLUATOINTEGER)GetLuaFunction(module, "lua_tointeger", true);
-		lua_pcall = (PFNLUAPCALL)GetLuaFunction(module, "lua_pcall");
-		lua_objlen = (PFNLUAOBJLEN)GetLuaFunction(module, "lua_objlen");
+		lua_tonumber = (PFNLUATONUMBER)liblua["lua_tonumber"];
+		lua_tointeger = (PFNLUATOINTEGER)liblua["lua_tointeger"];
+		lua_pcall = (PFNLUAPCALL)liblua["lua_pcall"];
+		lua_objlen = (PFNLUAOBJLEN)liblua["lua_objlen"];
 	}
 
 	// Make module table

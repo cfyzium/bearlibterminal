@@ -51,6 +51,7 @@ namespace BearLibTerminal
 		void SetVSync(bool enabled);
 		bool PumpEvents();
 		void SetResizeable(bool resizeable);
+		Size GetActualSize();
 	protected:
 		void ThreadFunction();
 		bool Construct();

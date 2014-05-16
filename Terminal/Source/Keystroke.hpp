@@ -1,6 +1,6 @@
 /*
 * BearLibTerminal
-* Copyright (C) 2013 Cfyz
+* Copyright (C) 2013-2014 Cfyz
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -24,6 +24,7 @@
 #define BEARLIBTERMINAL_KEYSTROKE_HPP
 
 #include <cstdint>
+#include <vector>
 
 namespace BearLibTerminal
 {
@@ -50,6 +51,31 @@ namespace BearLibTerminal
 		std::uint8_t scancode;
 		char16_t character;
 		int x, y, z;
+	};
+
+	struct Event
+	{
+		enum class Domain
+		{
+			System,    // TK_CLOSE, TK_WINDOW_RESIZE, ...
+			Keyboard,  // TK_A, TK_0, ...
+			Mouse      // TK_LBUTTON, TK_MOUSE_MOVE, ...
+		};
+
+		struct Property
+		{
+			int slot;  // TK_A, TK_MOUSE_X, TK_CHAR
+			int value; // boolean or integer value of a slot
+		};
+
+		Domain domain;
+		int code;
+		std::vector<Property> properties;
+
+		Event(int code);
+		Event(int code, std::vector<Property> properties);
+
+		static Domain GetDomainByCode(int code);
 	};
 }
 

@@ -144,13 +144,35 @@
  * terminal to generate these input events. It is not set by default.
  */
 #define TK_FLAG_RELEASED	0x100
+#define TK_KEY_RELEASED     0x100
 
 /*
- * Specific input events
+ * Mouse events and states
  */
+#define TK_MOUSE_LEFT
+#define TK_MOUSE_RIGHT
+#define TK_MOUSE_MIDDLE
+#define TK_MOUSE_X1
+#define TK_MOUSE_X2
 #define TK_MOUSE_MOVE       0xD3 /* Mouse movement event */
 #define TK_MOUSE_SCROLL     0xD4 /* Mouse wheel scroll event */
+#define TK_MOUSE_X
+#define TK_MOUSE_Y
+#define TK_MOUSE_PIXEL_X
+#define TK_MOUSE_PIXEL_Y
+#define TK_MOUSE_WHEEL // -1/+1 of last mouse scroll event
+
+/*
+ * Other events
+ */
+#define TK_CLOSE
 #define TK_WINDOW_RESIZE    0xDF /* Window resize event */
+#define TK_RESIZE
+#define TK_FULLSCREEN
+#define TK_MAXIMIZED
+#define TK_MINIMIZED
+#define TK_RESTORED
+#define TK_VISIBLE
 
 /*
  * Virtual key-codes for internal terminal states/variables. These can be
@@ -175,9 +197,11 @@
  */
 #define TK_COMPOSITION_OFF    0
 #define TK_COMPOSITION_ON     1
+#define TK_OFF
+#define TK_ON
 
 /*
- * Input result codes for terminal_read, terminal_read_char and terminal_read_str.
+ * Input result codes for terminal_read* functions.
  */
 #define TK_INPUT_NONE         0
 #define TK_INPUT_CANCELLED   -1
@@ -321,11 +345,7 @@ static inline color_t color_from_wname(const wchar_t* name)
  * These inline functions provide formatted versions for textual API:
  * terminal_[w]setf and terminal_[w]printf
  *
- * NOTE: inlining these is okay because
- * a) huge temporary buffer is static and won't mess the stack;
- * b) printing functions are heavy by themselves.
- *
- * NOTE: using static termporary buffer is okay because terminal API is not
+ * Using static termporary buffer is okay because terminal API is not
  * required to be multiple-thread safe by design.
  */
 
@@ -376,50 +396,51 @@ TERMINAL_FORMATTED(wprintf(int x, int y, const wchar_t* s, ...), wprintf(x, y, s
  * C++ supports function overloading, should take advantage of it.
  */
 
-static inline int terminal_set(const wchar_t* s)
+inline int terminal_set(const wchar_t* s)
 {
 	return terminal_wset(s);
 }
 
-static inline void terminal_color(const char* name)
+TERMINAL_FORMATTED(setf(const wchar_t* s, ...), wsetf(s, args))
+
+inline void terminal_color(const char* name)
 {
 	terminal_color(color_from_name(name));
 }
 
-static inline void terminal_color(const wchar_t* name)
+inline void terminal_color(const wchar_t* name)
 {
 	terminal_color(color_from_wname(name));
 }
 
-static inline void terminal_bkcolor(const char* name)
+inline void terminal_bkcolor(const char* name)
 {
 	terminal_bkcolor(color_from_name(name));
 }
 
-static inline void terminal_bkcolor(const wchar_t* name)
+inline void terminal_bkcolor(const wchar_t* name)
 {
 	terminal_bkcolor(color_from_wname(name));
 }
 
-TERMINAL_FORMATTED(setf(const wchar_t* s, ...), wsetf(s, args))
-
-static inline int terminal_print(int x, int y, const wchar_t* s)
+inline int terminal_print(int x, int y, const wchar_t* s)
 {
 	return terminal_wprint(x, y, s);
 }
 
 TERMINAL_FORMATTED(printf(int x, int y, const wchar_t* s, ...), wprintf(x, y, s, args))
 
-static inline int terminal_read_str(int x, int y, wchar_t* buffer, int max)
+inline int terminal_read_str(int x, int y, wchar_t* buffer, int max)
 {
 	return terminal_read_wstr(x, y, buffer, max);
 }
 
-static inline color_t color_from_name(const wchar_t* name)
+inline color_t color_from_name(const wchar_t* name)
 {
 	return color_from_wname(name);
 }
-#endif
+
+#endif /* __cplusplus */
 
 /*
  * Color routines

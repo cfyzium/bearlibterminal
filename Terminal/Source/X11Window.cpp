@@ -64,15 +64,6 @@ namespace BearLibTerminal
 		PFN_GLXSWAPINTERVALMESA glXSwapIntervalMESA;
 	};
 
-	struct InvokationSentry2
-	{
-		std::packaged_task<void()> task;
-
-		InvokationSentry2(std::function<void()> func):
-			task(func)
-		{ }
-	};
-
 	X11Window::Private::Private():
 		display(NULL),
 		window(0),
@@ -82,6 +73,7 @@ namespace BearLibTerminal
 		im(NULL),
 		ic(NULL),
 		close_message(),
+		invoke_message(),
 		glXSwapIntervalEXT(nullptr),
 		glXSwapIntervalMESA(nullptr),
 		size_hints(nullptr)
@@ -302,6 +294,26 @@ namespace BearLibTerminal
 		if ( m_private->window != 0 ) XUnmapWindow(m_private->display, m_private->window);
 	}
 
+	Size X11Window::GetActualSize()
+	{
+		::Window root;
+		int x, y;
+		unsigned int width, height, border, depth;
+
+		XGetGeometry
+		(
+			m_private->display,
+			m_private->window,
+			&root,
+			&x, &y,
+			&width, &height,
+			&border,
+			&depth
+		);
+
+		return Size(width, height);
+	}
+
 	void X11Window::HandleRepaint()
 	{
 		int rc = 0;
@@ -485,21 +497,21 @@ namespace BearLibTerminal
 
 	std::future<void> X11Window::Post(std::function<void()> func)
 	{
-		auto sentry = std::make_shared<InvokationSentry2>(func);
-		std::future<void> future = sentry->task.get_future();
+		auto task = new std::packaged_task<void()>(std::move(func));
+		auto future = task->get_future();
 
 		XClientMessageEvent event;
 		memset(&event, 0, sizeof(XClientMessageEvent));
 		event.type = ClientMessage;
 		event.window = m_private->window;
 		event.format = 32;
-
-		// XXX: bitness-agnostic event marking hack
 		event.data.l[0] = (long)m_private->invoke_message;
 
-		uint64_t p = (uint64_t)&sentry;
-		event.data.l[1] = p & 0xFFFFFFFF; // low
-		event.data.l[2] = (p >> 32) & 0xFFFFFFFF; // high
+		// Bitness-agnostic address transfer. Note that while data.l is long and
+		// long is 8 bytes on Linux, X server does not keep upper 32 bits of those.
+		uint64_t p = (uint64_t)task;
+		event.data.l[1] = p & 0xFFFFFFFF; // low 32 bit
+		event.data.l[2] = (p >> 32) & 0xFFFFFFFF; // high 32 bit
 
 		XSendEvent(m_private->display, m_private->window, 0, 0, (XEvent*)&event);
 		XFlush(m_private->display);
@@ -603,13 +615,14 @@ namespace BearLibTerminal
 				stroke.z = m_mouse_wheel;
 				ReportInput(stroke);
 			}
-			else if (e.type == ClientMessage && e.xclient.format == 32 && e.xclient.data.l[0] == (long)m_private->invoke_message)
+			else if (e.type == ClientMessage && e.xclient.data.l[0] == (long)m_private->invoke_message)
 			{
 				uint64_t low = e.xclient.data.l[1] & 0xFFFFFFFF;
 				uint64_t high = e.xclient.data.l[2] & 0xFFFFFFFF;
 				uint64_t p = (high << 32) | low;
-				auto sentry = *(std::shared_ptr<InvokationSentry2>*)p;
-				sentry->task();
+				auto task = (std::packaged_task<void()>*)p;
+				(*task)();
+				delete task;
 			}
 			else if (e.type == ClientMessage && e.xclient.data.l[0] == (long)m_private->close_message)
 			{
