@@ -59,7 +59,7 @@ namespace BearLibTerminal
 		void DestroyUnlocked();
 		bool CreateWindowObject();
 		void DestroyWindowObject();
-		void ReportInput(const Keystroke& keystroke);
+		//void ReportInput(Event event);
 		void HandleRepaint();
 		void UpdateSizeHints();
 	protected:

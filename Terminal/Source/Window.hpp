@@ -36,24 +36,30 @@
 #include <functional>
 
 // For internal usage
-#define TK_ALT 0x12
-#define TK_INVALIDATE_VIEWPORT 0xFE
+#define TK_ALT           0x72
+#define TK_REDRAW        0x1001
+#define TK_INVALIDATE    0x1002
+#define TK_DESTROY       0x1003
+#define TK_ACTIVATED     0x1004
+#define TK_DEACTIVATED   0x1005
 
 namespace BearLibTerminal
 {
-	typedef std::function<void()> EventHandler;
-	typedef std::function<int()> DrawEventHandler;
-	typedef std::function<void(Keystroke)> InputEventHandler;
+	//typedef std::function<void()> EventHandler;
+	//typedef std::function<int()> DrawEventHandler;
+	//typedef std::function<void(Event)> InputEventHandler;
+	typedef std::function<int(Event)> EventHandler;
 
 	class Window
 	{
 	public:
 		virtual ~Window();
-		void SetOnRedraw(DrawEventHandler callback);
-		void SetOnInput(InputEventHandler callback);
-		void SetOnDeactivate(EventHandler callback);
-		void SetOnActivate(EventHandler callback);
-		void SetOnDestroy(EventHandler callback);
+		//void SetOnRedraw(DrawEventHandler callback); // TODO: Events
+		//void SetOnInput(InputEventHandler callback);
+		//void SetOnDeactivate(EventHandler callback);
+		//void SetOnActivate(EventHandler callback);
+		//void SetOnDestroy(EventHandler callback);
+		void SetEventHandler(EventHandler handler);
 		Size GetClientSize();
 		virtual Size GetActualSize() = 0;
 		virtual bool ValidateIcon(const std::wstring& filename) = 0;
@@ -65,8 +71,8 @@ namespace BearLibTerminal
 		virtual void Show() = 0;
 		virtual void Hide() = 0;
 		virtual std::future<void> Post(std::function<void()> func) = 0;
-		virtual bool AcquireRC() = 0;
-		virtual bool ReleaseRC() = 0;
+		//virtual bool AcquireRC() = 0;
+		//virtual bool ReleaseRC() = 0;
 		virtual void SwapBuffers() = 0;
 		virtual void SetVSync(bool enabled) = 0;
 		virtual void SetResizeable(bool resizeable) = 0;
@@ -80,13 +86,15 @@ namespace BearLibTerminal
 		virtual bool Construct() = 0;
 		virtual void Destroy() = 0; // noexcept(true)
 		virtual bool PumpEvents() = 0;
-		void RunAsynchronous();
+		void Run();
 		void Stop();
-		DrawEventHandler m_on_redraw;
-		EventHandler m_on_deactivate;
-		EventHandler m_on_activate;
-		EventHandler m_on_destroy;
-		InputEventHandler m_on_input;
+		int Handle(Event event);
+		//DrawEventHandler m_on_redraw;
+		//EventHandler m_on_deactivate;
+		//EventHandler m_on_activate;
+		//EventHandler m_on_destroy;
+		//InputEventHandler m_on_input;
+		EventHandler m_event_handler;
 		bool m_synchronous_redraw;
 		std::mutex m_lock;
 		std::thread m_thread;

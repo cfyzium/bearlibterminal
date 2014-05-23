@@ -34,7 +34,8 @@ namespace BearLibTerminal
 		bool output_vsync;
 
 		// Input
-		uint32_t input_events;
+		bool input_keyboard;
+		bool input_mouse;
 		bool input_precise_mouse;
 		bool input_sticky_close;
 		uint16_t input_cursor_symbol;

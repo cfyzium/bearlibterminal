@@ -407,7 +407,7 @@ int luaterminal_check(lua_State* L)
 int luaterminal_read(lua_State* L)
 {
 	int code = terminal_read();
-	int released = (code & TK_FLAG_RELEASED) > 0;
+	int released = (code & TK_KEY_RELEASED) > 0;
 	code = code & 0xFF;
 
 	lua_pushnumber(L, code);
@@ -422,11 +422,11 @@ int luaterminal_read_ext(lua_State* L)
 	int code = terminal_read_ext(flags);
 	int released = 0;
 
-	if (!(flags & TK_READ_CHAR))
-	{
-		released = (code & TK_FLAG_RELEASED) > 0;
-		code = code & 0xFF;
-	}
+	//if (!(flags & TK_READ_CHAR))
+	//{
+	released = (code & TK_KEY_RELEASED) > 0;
+	code = code & 0xFF;
+	//}
 
 	lua_pushnumber(L, code);
 	lua_pushboolean(L, released);
@@ -505,11 +505,10 @@ struct
 }
 luaterminal_constants[] =
 {
-	{"LBUTTON",          TK_LBUTTON},
-	{"RBUTTON",          TK_RBUTTON},
-	{"MBUTTON",          TK_MBUTTON},
+	{"LBUTTON",          TK_MOUSE_LEFT},
+	{"RBUTTON",          TK_MOUSE_RIGHT},
+	{"MBUTTON",          TK_MOUSE_MIDDLE},
 	{"CLOSE",            TK_CLOSE},
-	{"BACK",             TK_BACK},
 	{"BACKSPACE",        TK_BACKSPACE},
 	{"TAB",              TK_TAB},
 	{"RETURN",           TK_RETURN},
@@ -518,8 +517,8 @@ luaterminal_constants[] =
 	{"PAUSE",            TK_PAUSE},
 	{"ESCAPE",           TK_ESCAPE},
 	{"SPACE",            TK_SPACE},
-	{"PRIOR",            TK_PRIOR},
-	{"NEXT",             TK_NEXT},
+	{"PRIOR",            TK_PAGEUP},
+	{"NEXT",             TK_PAGEDOWN},
 	{"END",              TK_END},
 	{"HOME",             TK_HOME},
 	{"LEFT",             TK_LEFT},
@@ -575,21 +574,21 @@ luaterminal_constants[] =
 	{"COMMA",            TK_COMMA},
 	{"PERIOD",           TK_PERIOD},
 	{"SLASH",            TK_SLASH},
-	{"NUMPAD0",          TK_NUMPAD0},
-	{"NUMPAD1",          TK_NUMPAD1},
-	{"NUMPAD2",          TK_NUMPAD2},
-	{"NUMPAD3",          TK_NUMPAD3},
-	{"NUMPAD4",          TK_NUMPAD4},
-	{"NUMPAD5",          TK_NUMPAD5},
-	{"NUMPAD6",          TK_NUMPAD6},
-	{"NUMPAD7",          TK_NUMPAD7},
-	{"NUMPAD8",          TK_NUMPAD8},
-	{"NUMPAD9",          TK_NUMPAD9},
-	{"MULTIPLY",         TK_MULTIPLY},
-	{"ADD",              TK_ADD},
-	{"SUBSTRACT",        TK_SUBTRACT},
-	{"DECIMAL",          TK_DECIMAL},
-	{"DIVIDE",           TK_DIVIDE},
+	{"NUMPAD0",          TK_KP_0},
+	{"NUMPAD1",          TK_KP_1},
+	{"NUMPAD2",          TK_KP_2},
+	{"NUMPAD3",          TK_KP_3},
+	{"NUMPAD4",          TK_KP_4},
+	{"NUMPAD5",          TK_KP_5},
+	{"NUMPAD6",          TK_KP_6},
+	{"NUMPAD7",          TK_KP_7},
+	{"NUMPAD8",          TK_KP_8},
+	{"NUMPAD9",          TK_KP_9},
+	{"MULTIPLY",         TK_KP_MULTIPLY},
+	{"ADD",              TK_KP_PLUS},
+	{"SUBSTRACT",        TK_KP_MINUS},
+	{"DECIMAL",          TK_KP_PERIOD},
+	{"DIVIDE",           TK_KP_DIVIDE},
 	{"F1",               TK_F1},
 	{"F2",               TK_F2},
 	{"F3",               TK_F3},
@@ -603,8 +602,8 @@ luaterminal_constants[] =
 	{"F11",              TK_F11},
 	{"F12",              TK_F12},
 	{"MOUSE_MOVE",       TK_MOUSE_MOVE},
-	{"MOUSE_SCROLL",     TK_MOUSE_SCROLL},
-	{"WINDOW_RESIZE",    TK_WINDOW_RESIZE},
+	{"MOUSE_SCROLL",     TK_MOUSE_WHEEL},
+	{"WINDOW_RESIZE",    TK_RESIZE},
 	{"MOUSE_X",          TK_MOUSE_X},
 	{"MOUSE_Y",          TK_MOUSE_Y},
 	{"MOUSE_PIXEL_X",    TK_MOUSE_PIXEL_X},
@@ -618,11 +617,10 @@ luaterminal_constants[] =
 	{"COLOR",            TK_COLOR},
 	{"BKCOLOR",          TK_BKCOLOR},
 	{"LAYER",            TK_LAYER},
-	{"COMPOSITION_OFF",  TK_COMPOSITION_OFF},
-	{"COMPOSITION_ON",   TK_COMPOSITION_ON},
+	{"COMPOSITION_OFF",  TK_OFF},
+	{"COMPOSITION_ON",   TK_ON},
 	{"INPUT_NONE",       TK_INPUT_NONE},
 	{"INPUT_CANCELLED",  TK_INPUT_CANCELLED},
-	{"READ_CHAR",        TK_READ_CHAR},
 	{"READ_NOREMOVE",    TK_READ_NOREMOVE},
 	{"READ_NOBLOCK",     TK_READ_NOBLOCK}
 };

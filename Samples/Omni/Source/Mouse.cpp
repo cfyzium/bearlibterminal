@@ -28,7 +28,7 @@ void UpdatePreciseMovement(bool flag)
 void TestMouse()
 {
 	terminal_set("window.title=Omni: mouse input");
-	terminal_composition(TK_COMPOSITION_ON);
+	terminal_composition(TK_ON);
 
 	bool keypress = true;
 	bool keyrelease = true;
@@ -48,8 +48,8 @@ void TestMouse()
 		int mx = terminal_state(TK_MOUSE_X);
 		int my = terminal_state(TK_MOUSE_Y);
 		int mz = terminal_state(TK_MOUSE_WHEEL);
-		int lmb = terminal_state(TK_LBUTTON);
-		int rmb = terminal_state(TK_RBUTTON);
+		int lmb = terminal_state(TK_MOUSE_LEFT);
+		int rmb = terminal_state(TK_MOUSE_RIGHT);
 
 		terminal_clear();
 
@@ -128,7 +128,7 @@ void TestMouse()
 				if (code == TK_4) mousescroll = !mousescroll;
 				UpdateInputFilter(keypress, keyrelease, mousemove, mousescroll);
 			}
-			else if (code == TK_LBUTTON)
+			else if (code == TK_MOUSE_LEFT)
 			{
 				mx = terminal_state(TK_MOUSE_X);
 				my = terminal_state(TK_MOUSE_Y);
@@ -148,7 +148,7 @@ void TestMouse()
 					mly = my;
 				}
 			}
-			else if (code == TK_RBUTTON)
+			else if (code == TK_MOUSE_RIGHT)
 			{
 				mrx = terminal_state(TK_MOUSE_X);
 				mry = terminal_state(TK_MOUSE_Y);
@@ -158,6 +158,6 @@ void TestMouse()
 	}
 
 	terminal_color("white");
-	terminal_composition(TK_COMPOSITION_OFF);
+	terminal_composition(TK_OFF);
 	terminal_set("input.events=keypress; input.precise_mousemove=false");
 }

@@ -33,6 +33,7 @@
 #include <sys/time.h>
 #include "BearLibTerminal.h"
 #include <future>
+#include <iostream>
 
 // X11 hack because X.h #defines these names without any regards to others
 #define XlibKeyPress 2
@@ -46,6 +47,8 @@ namespace BearLibTerminal
 	{
 		Private();
 		~Private();
+		void InitKeymaps();
+		int TranslateKeycode(KeyCode kc);
 
 		Display* display;
 		::Window window;
@@ -57,6 +60,7 @@ namespace BearLibTerminal
 		Atom close_message;
 		Atom invoke_message;
 		XSizeHints* size_hints;
+		int keymaps[2][256];
 
 		typedef void (*PFN_GLXSWAPINTERVALEXT)(Display *dpy, GLXDrawable drawable, int interval);
 		typedef int (*PFN_GLXSWAPINTERVALMESA)(int interval);
@@ -79,11 +83,130 @@ namespace BearLibTerminal
 		size_hints(nullptr)
 	{
 		size_hints = XAllocSizeHints();
+		InitKeymaps();
 	}
 
 	X11Window::Private::~Private()
 	{
 		if (size_hints) XFree(size_hints);
+	}
+
+	void X11Window::Private::InitKeymaps()
+	{
+		memset(keymaps, 0, sizeof(keymaps));
+
+		// Generic keyboard keys
+		// TODO: what about non-qwerty?
+		keymaps[0][0x0A] = TK_1; // First row
+		keymaps[0][0x0B] = TK_2;
+		keymaps[0][0x0C] = TK_3;
+		keymaps[0][0x0D] = TK_4;
+		keymaps[0][0x0E] = TK_5;
+		keymaps[0][0x0F] = TK_6;
+		keymaps[0][0x10] = TK_7;
+		keymaps[0][0x11] = TK_8;
+		keymaps[0][0x12] = TK_9;
+		keymaps[0][0x13] = TK_0;
+		keymaps[0][0x14] = TK_MINUS;
+		keymaps[0][0x15] = TK_EQUALS;
+		keymaps[0][0x18] = TK_Q; // Second row
+		keymaps[0][0x19] = TK_W;
+		keymaps[0][0x1A] = TK_E;
+		keymaps[0][0x1B] = TK_R;
+		keymaps[0][0x1C] = TK_T;
+		keymaps[0][0x1D] = TK_Y;
+		keymaps[0][0x1E] = TK_U;
+		keymaps[0][0x1F] = TK_I;
+		keymaps[0][0x20] = TK_O;
+		keymaps[0][0x21] = TK_P;
+		keymaps[0][0x22] = TK_LBRACKET;
+		keymaps[0][0x23] = TK_RBRACKET;
+		keymaps[0][0x26] = TK_A; // Third row
+		keymaps[0][0x27] = TK_S;
+		keymaps[0][0x28] = TK_D;
+		keymaps[0][0x29] = TK_F;
+		keymaps[0][0x2A] = TK_G;
+		keymaps[0][0x2B] = TK_H;
+		keymaps[0][0x2C] = TK_J;
+		keymaps[0][0x2D] = TK_K;
+		keymaps[0][0x2E] = TK_L;
+		keymaps[0][0x2F] = TK_SEMICOLON;
+		keymaps[0][0x30] = TK_APOSTROPHE;
+		keymaps[0][0x31] = TK_GRAVE;
+		keymaps[0][0x33] = TK_BACKSLASH;
+		keymaps[0][0x34] = TK_Z; // Fourth row
+		keymaps[0][0x35] = TK_X;
+		keymaps[0][0x36] = TK_C;
+		keymaps[0][0x37] = TK_V;
+		keymaps[0][0x38] = TK_B;
+		keymaps[0][0x39] = TK_N;
+		keymaps[0][0x3A] = TK_M;
+		keymaps[0][0x3B] = TK_COMMA;
+		keymaps[0][0x3C] = TK_PERIOD;
+		keymaps[0][0x3D] = TK_SLASH;
+		keymaps[0][0x5B] = TK_KP_PERIOD; // Extra
+		keymaps[0][0x5E] = TK_BACKSLASH;
+		keymaps[0][0x77] = TK_DELETE;
+
+		keymaps[1][XK_BackSpace&0xFF] =    TK_BACKSPACE;   // 08 // Editing
+		keymaps[1][XK_Tab&0xFF] =          TK_TAB;         // 09
+		keymaps[1][XK_Return&0xFF] =       TK_RETURN;      // 0d
+		keymaps[1][XK_Pause&0xFF] =        TK_PAUSE;       // 13
+		keymaps[1][XK_Escape&0xFF] =       TK_ESCAPE;      // 1b
+		keymaps[1][XK_Delete&0xFF] =       TK_DELETE;      // ff
+		keymaps[1][XK_KP_0&0xFF] =         TK_KP_0;        // b0 // Keypad 0-9: NumLock on
+		keymaps[1][XK_KP_1&0xFF] =         TK_KP_1;        // b1
+		keymaps[1][XK_KP_2&0xFF] =         TK_KP_2;        // b2
+		keymaps[1][XK_KP_3&0xFF] =         TK_KP_3;        // b3
+		keymaps[1][XK_KP_4&0xFF] =         TK_KP_4;        // b4
+		keymaps[1][XK_KP_5&0xFF] =         TK_KP_5;        // b5
+		keymaps[1][XK_KP_6&0xFF] =         TK_KP_6;        // b6
+		keymaps[1][XK_KP_7&0xFF] =         TK_KP_7;        // b7
+		keymaps[1][XK_KP_8&0xFF] =         TK_KP_8;        // b8
+		keymaps[1][XK_KP_9&0xFF] =         TK_KP_9;        // b9
+		keymaps[1][XK_KP_Insert&0xFF] =    TK_KP_0;        // 9e // Keypad 0-9: NumLock off
+		keymaps[1][XK_KP_End&0xFF] =       TK_KP_1;        // 9c
+		keymaps[1][XK_KP_Down&0xFF] =      TK_KP_2;        // 99
+		keymaps[1][XK_KP_Page_Down&0xFF] = TK_KP_3;        // 9b
+		keymaps[1][XK_KP_Left&0xFF] =      TK_KP_4;        // 96
+		keymaps[1][XK_KP_Begin&0xFF] =     TK_KP_5;        // 9d
+		keymaps[1][XK_KP_Right&0xFF] =     TK_KP_6;        // 98
+		keymaps[1][XK_KP_Home&0xFF] =      TK_KP_7;        // 95
+		keymaps[1][XK_KP_Up&0xFF] =        TK_KP_8;        // 97
+		keymaps[1][XK_KP_Page_Up&0xFF] =   TK_KP_9;        // 9a
+		keymaps[1][XK_KP_Delete&0xFF] =    TK_KP_PERIOD;   // 9f // Keypad symbols
+		keymaps[1][XK_KP_Decimal&0xFF] =   TK_KP_PERIOD;   // ae
+		keymaps[1][XK_KP_Divide&0xFF] =    TK_KP_DIVIDE;   // af
+		keymaps[1][XK_KP_Multiply&0xFF] =  TK_KP_MULTIPLY; // aa
+		keymaps[1][XK_KP_Subtract&0xFF] =  TK_KP_MINUS;    // ad
+		keymaps[1][XK_KP_Add&0xFF] =       TK_KP_PLUS;     // ab
+		keymaps[1][XK_KP_Enter&0xFF] =     TK_KP_ENTER;    // 8d
+		keymaps[1][XK_KP_Equal&0xFF] =     TK_EQUALS;      // bd
+		keymaps[1][XK_Up&0xFF] =           TK_UP;          // 52 // Navigation
+		keymaps[1][XK_Down&0xFF] =         TK_DOWN;        // 54
+		keymaps[1][XK_Right&0xFF] =        TK_RIGHT;       // 53
+		keymaps[1][XK_Left&0xFF] =         TK_LEFT;        // 51
+		keymaps[1][XK_Insert&0xFF] =       TK_INSERT;      // 63
+		keymaps[1][XK_Home&0xFF] =         TK_HOME;        // 50
+		keymaps[1][XK_End&0xFF] =          TK_END;         // 57
+		keymaps[1][XK_Page_Up&0xFF] =      TK_PAGEUP;      // 55
+		keymaps[1][XK_Page_Down&0xFF] =    TK_PAGEDOWN;    // 56
+		keymaps[1][XK_F1&0xFF] =           TK_F1;          // be // Functionals
+		keymaps[1][XK_F2&0xFF] =           TK_F2;          // bf
+		keymaps[1][XK_F3&0xFF] =           TK_F3;          // c0
+		keymaps[1][XK_F4&0xFF] =           TK_F4;          // c1
+		keymaps[1][XK_F5&0xFF] =           TK_F5;          // c2
+		keymaps[1][XK_F6&0xFF] =           TK_F6;          // c3
+		keymaps[1][XK_F7&0xFF] =           TK_F7;          // c4
+		keymaps[1][XK_F8&0xFF] =           TK_F8;          // c5
+		keymaps[1][XK_F9&0xFF] =           TK_F9;          // c6
+		keymaps[1][XK_F10&0xFF] =          TK_F10;         // c7
+		keymaps[1][XK_F11&0xFF] =          TK_F11;         // c8
+		keymaps[1][XK_F12&0xFF] =          TK_F12;         // c9
+		keymaps[1][XK_Shift_R&0xFF] =      TK_SHIFT;       // e2 // Modifiers
+		keymaps[1][XK_Shift_L&0xFF] =      TK_SHIFT;       // e1
+		keymaps[1][XK_Control_R&0xFF] =    TK_CONTROL;     // e4
+		keymaps[1][XK_Control_L&0xFF] =    TK_CONTROL;     // e3
 	}
 
 	// XXX: Salvaged from somewhere, format it
@@ -320,7 +443,7 @@ namespace BearLibTerminal
 
 		try
 		{
-			if (m_on_redraw && m_on_redraw() > 0) SwapBuffers();
+			if (Handle(TK_REDRAW) > 0) SwapBuffers();
 		}
 		catch (std::exception& e)
 		{
@@ -332,167 +455,41 @@ namespace BearLibTerminal
 		m_redraw_barrier.NotifyAtMost(1);
 	}
 
-	static int DEF_keymap[256];
-	static int ODD_keymap[256];
-	static int MISC_keymap[256];
-
-	void X11_InitKeymap(void)
+	int X11Window::Private::TranslateKeycode(KeyCode kc)
 	{
-		for (auto& i: ODD_keymap) i = 0;
-		for (auto& i: MISC_keymap) i = 0;
-
-		// These X keysyms have 0xFF as the high byte
-		MISC_keymap[XK_BackSpace&0xFF] = TK_BACKSPACE;
-		MISC_keymap[XK_Tab&0xFF] = TK_TAB;
-		//MISC_keymap[XK_Clear&0xFF] = VK_CLEAR; // TODO
-		MISC_keymap[XK_Return&0xFF] = TK_RETURN;
-		MISC_keymap[XK_Pause&0xFF] = TK_PAUSE;
-		MISC_keymap[XK_Escape&0xFF] = TK_ESCAPE;
-		MISC_keymap[XK_Delete&0xFF] = TK_DELETE;
-
-		MISC_keymap[XK_KP_0&0xFF] = TK_NUMPAD0;		// Keypad 0-9
-		MISC_keymap[XK_KP_1&0xFF] = TK_NUMPAD1;
-		MISC_keymap[XK_KP_2&0xFF] = TK_NUMPAD2;
-		MISC_keymap[XK_KP_3&0xFF] = TK_NUMPAD3;
-		MISC_keymap[XK_KP_4&0xFF] = TK_NUMPAD4;
-		MISC_keymap[XK_KP_5&0xFF] = TK_NUMPAD5;
-		MISC_keymap[XK_KP_6&0xFF] = TK_NUMPAD6;
-		MISC_keymap[XK_KP_7&0xFF] = TK_NUMPAD7;
-		MISC_keymap[XK_KP_8&0xFF] = TK_NUMPAD8;
-		MISC_keymap[XK_KP_9&0xFF] = TK_NUMPAD9;
-		MISC_keymap[XK_KP_Insert&0xFF] = TK_NUMPAD0;
-		MISC_keymap[XK_KP_End&0xFF] = TK_NUMPAD1;
-		MISC_keymap[XK_KP_Down&0xFF] = TK_NUMPAD2;
-		MISC_keymap[XK_KP_Page_Down&0xFF] = TK_NUMPAD3;
-		MISC_keymap[XK_KP_Left&0xFF] = TK_NUMPAD4;
-		MISC_keymap[XK_KP_Begin&0xFF] = TK_NUMPAD5;
-		MISC_keymap[XK_KP_Right&0xFF] = TK_NUMPAD6;
-		MISC_keymap[XK_KP_Home&0xFF] = TK_NUMPAD7;
-		MISC_keymap[XK_KP_Up&0xFF] = TK_NUMPAD8;
-		MISC_keymap[XK_KP_Page_Up&0xFF] = TK_NUMPAD9;
-		MISC_keymap[XK_KP_Delete&0xFF] = TK_DECIMAL;//SDLK_KP_PERIOD;
-		MISC_keymap[XK_KP_Decimal&0xFF] = TK_DECIMAL;//SDLK_KP_PERIOD;
-		MISC_keymap[XK_KP_Divide&0xFF] = TK_DIVIDE;//SDLK_KP_DIVIDE;
-		MISC_keymap[XK_KP_Multiply&0xFF] = TK_MULTIPLY;//SDLK_KP_MULTIPLY;
-		MISC_keymap[XK_KP_Subtract&0xFF] = TK_SUBTRACT;//SDLK_KP_MINUS;
-		MISC_keymap[XK_KP_Add&0xFF] = TK_ADD;//SDLK_KP_PLUS;
-		MISC_keymap[XK_KP_Enter&0xFF] = TK_RETURN;//SDLK_KP_ENTER;
-		MISC_keymap[XK_KP_Equal&0xFF] = TK_EQUALS;//SDLK_KP_EQUALS;
-
-		MISC_keymap[XK_Up&0xFF] = TK_UP;
-		MISC_keymap[XK_Down&0xFF] = TK_DOWN;
-		MISC_keymap[XK_Right&0xFF] = TK_RIGHT;
-		MISC_keymap[XK_Left&0xFF] = TK_LEFT;
-		MISC_keymap[XK_Insert&0xFF] = TK_INSERT;
-		MISC_keymap[XK_Home&0xFF] = TK_HOME;
-		MISC_keymap[XK_End&0xFF] = TK_END;
-		MISC_keymap[XK_Page_Up&0xFF] = TK_PRIOR;//SDLK_PAGEUP;
-		MISC_keymap[XK_Page_Down&0xFF] = TK_NEXT;//SDLK_PAGEDOWN;
-
-		MISC_keymap[XK_F1&0xFF] = TK_F1;
-		MISC_keymap[XK_F2&0xFF] = TK_F2;
-		MISC_keymap[XK_F3&0xFF] = TK_F3;
-		MISC_keymap[XK_F4&0xFF] = TK_F4;
-		MISC_keymap[XK_F5&0xFF] = TK_F5;
-		MISC_keymap[XK_F6&0xFF] = TK_F6;
-		MISC_keymap[XK_F7&0xFF] = TK_F7;
-		MISC_keymap[XK_F8&0xFF] = TK_F8;
-		MISC_keymap[XK_F9&0xFF] = TK_F9;
-		MISC_keymap[XK_F10&0xFF] = TK_F10;
-		MISC_keymap[XK_F11&0xFF] = TK_F11;
-		MISC_keymap[XK_F12&0xFF] = TK_F12;
-		MISC_keymap[XK_Shift_R&0xFF] = TK_SHIFT;//SDLK_RSHIFT;
-		MISC_keymap[XK_Shift_L&0xFF] = TK_SHIFT;//SDLK_LSHIFT;
-		MISC_keymap[XK_Control_R&0xFF] = TK_CONTROL;//SDLK_RCTRL;
-		MISC_keymap[XK_Control_L&0xFF] = TK_CONTROL;//SDLK_LCTRL;
-
-		memset(DEF_keymap, 0, sizeof(DEF_keymap));
-		DEF_keymap[0x3C] = TK_PERIOD;
-		DEF_keymap[0x77] = TK_DELETE;
-		DEF_keymap[0x5B] = TK_DECIMAL;
-		DEF_keymap[0x3B] = TK_COMMA;
-		DEF_keymap[0x31] = TK_GRAVE;
-		DEF_keymap[0x14] = TK_MINUS;
-		DEF_keymap[0x15] = TK_EQUALS;
-		DEF_keymap[0x5E] = TK_BACKSLASH;
-		DEF_keymap[0x22] = TK_LBRACKET;
-		DEF_keymap[0x23] = TK_RBRACKET;
-		DEF_keymap[0x3D] = TK_SLASH;
-		DEF_keymap[0x33] = TK_BACKSLASH;
-		DEF_keymap[0x30] = TK_APOSTROPHE;
-		DEF_keymap[0x2F] = TK_SEMICOLON;
-		DEF_keymap[0x26] = TK_A;
-		DEF_keymap[0x38] = TK_B;
-		DEF_keymap[0x36] = TK_C;
-		DEF_keymap[0x28] = TK_D;
-		DEF_keymap[0x1A] = TK_E;
-		DEF_keymap[0x29] = TK_F;
-		DEF_keymap[0x2A] = TK_G;
-		DEF_keymap[0x2B] = TK_H;
-		DEF_keymap[0x1F] = TK_I;
-		DEF_keymap[0x2C] = TK_J;
-		DEF_keymap[0x2D] = TK_K;
-		DEF_keymap[0x2E] = TK_L;
-		DEF_keymap[0x3A] = TK_M;
-		DEF_keymap[0x39] = TK_N;
-		DEF_keymap[0x20] = TK_O;
-		DEF_keymap[0x21] = TK_P;
-		DEF_keymap[0x18] = TK_Q;
-		DEF_keymap[0x1B] = TK_R;
-		DEF_keymap[0x27] = TK_S;
-		DEF_keymap[0x1C] = TK_T;
-		DEF_keymap[0x1E] = TK_U;
-		DEF_keymap[0x37] = TK_V;
-		DEF_keymap[0x19] = TK_W;
-		DEF_keymap[0x35] = TK_X;
-		DEF_keymap[0x1D] = TK_Y;
-		DEF_keymap[0x34] = TK_Z;
-	}
-
-	int X11_TranslateKeycode(Display *display, KeyCode kc)
-	{
-		if (kc >= 0 && kc <= 0xFF && DEF_keymap[kc])
+		if (0 && kc >= 0 && kc <= 0xFF && keymaps[0][kc])
 		{
-			return DEF_keymap[kc];
+			return keymaps[0][kc];
 		}
 
-		int key = 0;
-
-		KeySym xsym = XKeycodeToKeysym(display, kc, 0);
-		if (xsym)
+		// Try to map keycode to some keyboard layout
+		int count = 0;
+		KeySym sym, *mapped = XGetKeyboardMapping(display, kc, 1, &count);
+		if (count > 0 && mapped != nullptr && mapped[0] != NoSymbol)
 		{
-			switch (xsym>>8)
-			{
-				case 0x1005FF:
-					break;
-				case 0x00:	// Latin 1
-					key = (int)(xsym & 0xFF);
-					break;
-				case 0x01:	// Latin 2
-				case 0x02:	// Latin 3
-				case 0x03:	// Latin 4
-				case 0x04:	// Katakana
-				case 0x05:	// Arabic
-				case 0x06:	// Cyrillic
-				case 0x07:	// Greek
-				case 0x08:	// Technical
-				case 0x0A:	// Publishing
-				case 0x0C:	// Hebrew
-				case 0x0D:	// Thai
-					// These are wrong, but it's better than nothing
-					key = (int)(xsym & 0xFF);
-					break;
-				case 0xFE:
-					key = ODD_keymap[xsym&0xFF];
-					break;
-				case 0xFF:
-					key = MISC_keymap[xsym&0xFF];
-					break;
-				default:
-				break;
-			}
+			sym = mapped[0];
 		}
-		return key;
+		XFree(mapped);
+
+		if (sym == 0)
+		{
+			return 0;
+		}
+
+		int block = sym >> 8;
+
+		if (block == 0xFF)
+		{
+			return keymaps[1][sym & 0xFF];
+		}
+		else if (block == 0 && sym == 32)
+		{
+			return TK_SPACE;
+		}
+		else
+		{
+			return 0;
+		}
 	}
 
 	std::future<void> X11Window::Post(std::function<void()> func)
@@ -535,28 +532,66 @@ namespace BearLibTerminal
 			}
 			else if (e.type == XlibKeyPress || e.type == XlibKeyRelease)
 			{
+				bool pressed = e.type == XlibKeyPress;
+
+				if (!pressed && XPending(m_private->display))
+				{
+					XEvent next;
+					XPeekEvent(m_private->display, &next);
+
+					if (next.type == XlibKeyPress && next.xkey.keycode == e.xkey.keycode && next.xkey.time == e.xkey.time)
+					{
+						// Pseudo-release in auto-repeat mode, ignore.
+						continue;
+					}
+				}
+
+				/*
+				char bf[100];
+				KeySym ks;
+				int nbytes = XLookupString(&e.xkey, bf, 256, &ks, NULL);
+				std::cout << "--> " << (long)ks << "\n";
+				//*/
+
+				int code = m_private->TranslateKeycode(e.xkey.keycode);
+				if (code == 0)
+				{
+					continue;
+				}
+
 				wchar_t buffer[255] = {0};
 				KeySym key;
 				Status status;
-
 				int rc = XwcLookupString(m_private->ic, &e.xkey, buffer, 255, &key, &status);
+				std::cout << "lookup keysym: " << (int)key << "\n";
 
-				unsigned int keycode = e.xkey.keycode;
-				int code = X11_TranslateKeycode(m_private->display, keycode);
-
-                std::uint32_t mask = (e.type == XlibKeyPress)? Keystroke::KeyPress: Keystroke::KeyRelease;
-				Keystroke stroke(mask, code, buffer[0]);
-				if (code != TK_SPACE && ((code >= TK_LBUTTON && code <= TK_DELETE) || rc == 0))
+				if (rc <= 0)
 				{
-					stroke.character = 0;
+					buffer[0] = (wchar_t)0;
 				}
-                else if (mask == Keystroke::KeyPress && buffer[0] > 0)
-                {
-                    stroke.type |= Keystroke::Unicode;
-                }
+				else if ((code >= TK_RETURN && code < TK_SPACE) || code >= TK_F1)
+				{
+					// These keys do not produce textual input
+					buffer[0] = (wchar_t)0;
+				}
+				else if ((int)buffer[0] < 32)
+				{
+					// Ctrl+? keys, produce ASCII control codes
+					buffer[0] = (wchar_t)0;
+				}
 
-				std::lock_guard<std::mutex> guard(m_lock);
-				if (m_on_input) m_on_input(stroke);
+				try
+				{
+					Event event(code|(pressed? 0: TK_KEY_RELEASED));
+					event[code] = pressed? 1: 0;
+					event[TK_CHAR] = (int)buffer[0];
+					Handle(std::move(event));
+				}
+				catch (std::exception& e)
+				{
+					LOG(Warning, "Error processing keyboard event: " << e.what());
+					continue;
+				}
 			}
 			else if (e.type == ConfigureNotify)
 			{
@@ -565,11 +600,11 @@ namespace BearLibTerminal
 				if (new_size.width != m_client_size.width || new_size.height != m_client_size.height)
 				{
 					m_client_size = new_size;
-					if (m_on_input)
-					{
-						Keystroke stroke(Keystroke::KeyPress, TK_WINDOW_RESIZE, m_client_size.width, m_client_size.height, 0);
-						m_on_input(stroke);
-					}
+
+					Event event(TK_RESIZE);
+					event[TK_WIDTH] = m_client_size.width; // FIXME: client size, not raw slot value
+					event[TK_HEIGHT] = m_client_size.height;
+					Handle(std::move(event));
 				}
 			}
 			else if (e.type == MotionNotify)
@@ -578,42 +613,40 @@ namespace BearLibTerminal
 				m_mouse_position.x = e.xmotion.x;
 				m_mouse_position.y = e.xmotion.y;
 
-				Keystroke stroke(Keystroke::MouseMove, TK_MOUSE_MOVE, m_mouse_position.x, m_mouse_position.y, 0);
-				ReportInput(stroke);
+				Event event(TK_MOUSE_MOVE);
+				event[TK_MOUSE_PIXEL_X] = m_mouse_position.x;
+				event[TK_MOUSE_PIXEL_Y] = m_mouse_position.y;
+				Handle(std::move(event));
 			}
 			else if (e.type == ButtonPress || e.type == ButtonRelease)
 			{
 				// OnMousePress/Release
-				Keystroke stroke(e.type == ButtonPress? Keystroke::KeyPress: Keystroke::KeyRelease, 0);
+				bool pressed = e.type == ButtonPress;
+
+				int code = 0;
 				if (e.xbutton.button == 1)
 				{
 					// LMB
-					stroke.scancode = TK_LBUTTON;
+					Handle(Event(TK_MOUSE_LEFT|(pressed? 0: TK_KEY_RELEASED), {{TK_MOUSE_LEFT, pressed? 1: 0}}));
 				}
 				else if (e.xbutton.button == 3)
 				{
 					// RMB
-					stroke.scancode = TK_RBUTTON;
+					Handle(Event(TK_MOUSE_RIGHT|(pressed? 0: TK_KEY_RELEASED), {{TK_MOUSE_RIGHT, pressed? 1: 0}}));
 				}
 				else if (e.xbutton.button == 4 && e.type == ButtonPress)
 				{
-					m_mouse_wheel -= 1;
-					stroke.scancode = TK_MOUSE_SCROLL;
+					Handle(Event(TK_MOUSE_WHEEL, {{TK_MOUSE_WHEEL, -1}}));
 				}
 				else if (e.xbutton.button == 5 && e.type == ButtonPress)
 				{
-					m_mouse_wheel += 1;
-					stroke.scancode = TK_MOUSE_SCROLL;
+					Handle(Event(TK_MOUSE_WHEEL, {{TK_MOUSE_WHEEL, +1}}));
 				}
 				else
 				{
 					// Not supported
 					continue;
 				}
-				stroke.x = m_mouse_position.x;
-				stroke.y = m_mouse_position.y;
-				stroke.z = m_mouse_wheel;
-				ReportInput(stroke);
 			}
 			else if (e.type == ClientMessage && e.xclient.data.l[0] == (long)m_private->invoke_message)
 			{
@@ -626,8 +659,7 @@ namespace BearLibTerminal
 			}
 			else if (e.type == ClientMessage && e.xclient.data.l[0] == (long)m_private->close_message)
 			{
-				Keystroke stroke(Keystroke::KeyPress, TK_CLOSE);
-				ReportInput(stroke);
+				Handle(Event(TK_CLOSE));
 			}
 		}
 
@@ -818,14 +850,13 @@ namespace BearLibTerminal
 			ButtonReleaseMask |
 			PointerMotionMask |
 			im_event_mask;
+
 		XSelectInput(m_private->display, m_private->window, event_mask);
 
 		m_private->close_message = XInternAtom(m_private->display, "WM_DELETE_WINDOW", False);
 		XSetWMProtocols(m_private->display, m_private->window, &m_private->close_message, 1);
 
 		m_private->invoke_message = XInternAtom(m_private->display, "WM_CUSTOM_INVOKE", False);
-
-		X11_InitKeymap();
 
 		return true;
 	}
@@ -875,12 +906,6 @@ namespace BearLibTerminal
 		{
 			m_private->glXSwapIntervalMESA(interval);
 		}
-	}
-
-	void X11Window::ReportInput(const Keystroke& keystroke)
-	{
-		std::lock_guard<std::mutex> guard(m_lock);
-		if (m_on_input) m_on_input(keystroke);
 	}
 }
 

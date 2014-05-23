@@ -42,7 +42,7 @@ namespace BearLibTerminal
 	State::State():
 		color(255, 255, 255, 255),
 		bkcolor(),
-		composition(TK_COMPOSITION_OFF),
+		composition(TK_OFF),
 		layer(0)
 	{ }
 }

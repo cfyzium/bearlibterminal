@@ -25,9 +25,11 @@
 
 #include <cstdint>
 #include <vector>
+#include <unordered_map>
 
 namespace BearLibTerminal
 {
+	/*
 	struct Keystroke
 	{
 		static constexpr std::uint32_t
@@ -52,28 +54,25 @@ namespace BearLibTerminal
 		char16_t character;
 		int x, y, z;
 	};
+	//*/
 
 	struct Event
 	{
 		enum class Domain
 		{
-			System,    // TK_CLOSE, TK_WINDOW_RESIZE, ...
-			Keyboard,  // TK_A, TK_0, ...
-			Mouse      // TK_LBUTTON, TK_MOUSE_MOVE, ...
-		};
-
-		struct Property
-		{
-			int slot;  // TK_A, TK_MOUSE_X, TK_CHAR
-			int value; // boolean or integer value of a slot
+			Internal,
+			System,    // TK_CLOSE, TK_RESIZE, etc.
+			Keyboard,  // TK_A, TK_0, etc.
+			Mouse      // TK_LBUTTON, TK_MOUSE_MOVE, etc.
 		};
 
 		Domain domain;
 		int code;
-		std::vector<Property> properties;
+		std::unordered_map<int, int> properties; // Slot -> value map
 
 		Event(int code);
-		Event(int code, std::vector<Property> properties);
+		Event(int code, std::unordered_map<int, int> properties);
+		int& operator[](int index);
 
 		static Domain GetDomainByCode(int code);
 	};

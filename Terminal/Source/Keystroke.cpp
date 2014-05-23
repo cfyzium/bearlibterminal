@@ -23,9 +23,11 @@
 #define BEARLIBTERMINAL_BUILDING_LIBRARY
 #include "BearLibTerminal.h"
 #include "Keystroke.hpp"
+#include <stdexcept>
 
 namespace BearLibTerminal
 {
+	/*
 	constexpr std::uint32_t Keystroke::None;
 	constexpr std::uint32_t Keystroke::KeyPress;
 	constexpr std::uint32_t Keystroke::KeyRelease;
@@ -56,6 +58,7 @@ namespace BearLibTerminal
 		character(0),
 		x(x), y(y), z(z)
 	{ }
+	//*/
 
 	// ------------------------------------------------------------------------
 
@@ -64,19 +67,35 @@ namespace BearLibTerminal
 		code(code)
 	{ }
 
-	Event::Event(int code, std::vector<Property> properties):
+	Event::Event(int code, std::unordered_map<int, int> properties):
 		domain(GetDomainByCode(code)),
 		code(code),
 		properties(std::move(properties))
 	{ }
 
+	int& Event::operator[](int index)
+	{
+		return properties[index];
+	}
+
 	Event::Domain Event::GetDomainByCode(int code)
 	{
-		if ((code & ~TK_KEY_RELEASED) < TK_F12)
+		if ((code & 0xFF) >= TK_A && (code & 0xFF) <= TK_CONTROL+1) // FIXME: TK_ALT constant
 		{
 			return Domain::Keyboard;
 		}
-		//else if (code < TK_MOUSE_SCROLL_DOWN)
+		else if ((code & 0xFF) >= TK_MOUSE_LEFT && (code & 0xFF) <= TK_MOUSE_PIXEL_Y)
+		{
+			return Domain::Mouse;
+		}
+		else if (code <= 0 || (code >= TK_CLOSE && code <= TK_RESTORED))
+		{
+			return Domain::System;
+		}
+		else if (code >= 0x1000)
+		{
+			return Domain::Internal;
+		}
 		else
 		{
 			throw std::runtime_error("Unknown event code");
