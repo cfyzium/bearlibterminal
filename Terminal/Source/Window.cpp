@@ -34,7 +34,7 @@
 namespace BearLibTerminal
 {
 	Window::Window():
-		m_synchronous_redraw(false),
+		m_event_handler_is_set(false),
 		m_proceed(false),
 		m_minimum_size(1, 1),
 		m_fullscreen(false),
@@ -46,45 +46,14 @@ namespace BearLibTerminal
 
 	void Window::SetEventHandler(EventHandler handler)
 	{
-		std::lock_guard<std::mutex> guard(m_lock);
 		m_event_handler = handler;
+		m_event_handler_is_set = true;
 	}
 
 	int Window::Handle(Event event)
 	{
-		std::lock_guard<std::mutex> guard(m_lock);
-		return m_event_handler? m_event_handler(std::move(event)): 0;
+		return m_event_handler_is_set? m_event_handler(std::move(event)): 0;
 	}
-
-	//void Window::SetOnRedraw(DrawEventHandler callback)
-	//{
-	//	std::lock_guard<std::mutex> guard(m_lock);
-	//	m_on_redraw = callback;
-	//}
-
-	//void Window::SetOnInput(InputEventHandler callback)
-	//{
-	//	std::lock_guard<std::mutex> guard(m_lock);
-	//	m_on_input = callback;
-	//}
-
-	//void Window::SetOnDeactivate(EventHandler callback)
-	//{
-	//	std::lock_guard<std::mutex> guard(m_lock);
-	//	m_on_deactivate = callback;
-	//}
-
-	//void Window::SetOnActivate(EventHandler callback)
-	//{
-	//	std::lock_guard<std::mutex> guard(m_lock);
-	//	m_on_activate = callback;
-	//}
-
-	//void Window::SetOnDestroy(EventHandler callback)
-	//{
-	//	std::lock_guard<std::mutex> guard(m_lock);
-	//	m_on_destroy = callback;
-	//}
 
 	void Window::SetSizeHints(Size increment, Size minimum_size)
 	{
@@ -128,7 +97,6 @@ namespace BearLibTerminal
 				}
 
 				ThreadFunction();
-				//if (m_on_destroy) m_on_destroy();
 				Handle(TK_DESTROY);
 			}
 			catch (std::exception& e)

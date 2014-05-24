@@ -1497,6 +1497,8 @@ namespace BearLibTerminal
 		{
 			m_input_condvar.notify_all();
 		}
+
+		return 0;
 	}
 
 	void Terminal::ConsumeEvent(Event& event)
@@ -1523,9 +1525,9 @@ namespace BearLibTerminal
 		{
 			std::lock_guard<std::mutex> guard(m_lock);
 
-			if (!m_options.input_sticky_close)
+			if (m_options.input_sticky_close)
 			{
-				return;
+				m_vars[TK_CLOSE] = 1;
 			}
 		}
 

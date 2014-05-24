@@ -339,58 +339,48 @@ namespace BearLibTerminal
 		return Size(rect.right-rect.left, rect.bottom-rect.top);
 	}
 
-	void WinApiWindow::Redraw()
-	{
-		std::lock_guard<std::mutex> guard(m_lock);
-		m_redraw_barrier.SetValue(0);
-		if ( m_handle == nullptr ) return;
-		InvalidateRect(m_handle, NULL, FALSE);
-		m_lock.unlock();
-		m_redraw_barrier.Wait();
-		m_lock.lock();
-	}
-
 	void WinApiWindow::Show()
 	{
-		std::lock_guard<std::mutex> guard(m_lock);
-		if ( m_handle != nullptr )
+		Post([=]
 		{
-			ShowWindow(m_handle, SW_SHOW);
-			SetForegroundWindow(m_handle);
-		}
+			if (m_handle != nullptr)
+			{
+				ShowWindow(m_handle, SW_SHOW);
+				SetForegroundWindow(m_handle);
+			}
+		});
 	}
 
 	void WinApiWindow::Hide()
 	{
-		std::lock_guard<std::mutex> guard(m_lock);
-		if ( m_handle != nullptr ) ShowWindow(m_handle, SW_HIDE);
+		Post([=]
+		{
+			if (m_handle != nullptr)
+			{
+				ShowWindow(m_handle, SW_HIDE);
+			}
+		});
 	}
-
-	struct InvokationSentry
-	{
-		std::function<void()> func;
-		Semaphore semaphore;
-	};
-
-	struct InvokationSentry2
-	{
-		std::packaged_task<void()> task;
-
-		InvokationSentry2(std::function<void()> func):
-			task(func)
-		{ }
-	};
 
 	std::future<void> WinApiWindow::Post(std::function<void()> func)
 	{
 		if (!m_handle)
 		{
-			throw std::runtime_error("posting closure to uninitialized window");
+			// This is more like logic error to invoke Post before window was constructed.
+			throw std::runtime_error("Posting closure to an uninitialized window");
 		}
 
 		auto task = new std::packaged_task<void()>(std::move(func));
 		auto future = task->get_future();
-		PostMessage(m_handle, WM_CUSTOM_POST, (WPARAM)NULL, (LPARAM)task);
+		if (PostMessage(m_handle, WM_CUSTOM_POST, (WPARAM)NULL, (LPARAM)task) == FALSE)
+		{
+			LOG(Error, "Failed to post closure on window thread (" << GetLastErrorStr() << ")");
+
+			// If the invoking side is waiting for result, this will raise std::future_error exception.
+			// Otherwise the error will be ignored.
+			delete task;
+		}
+
 		return std::move(future);
 	}
 
@@ -429,7 +419,7 @@ namespace BearLibTerminal
 
 	bool WinApiWindow::Construct()
 	{
-		std::lock_guard<std::mutex> guard(m_lock);
+		std::lock_guard<std::mutex> guard(m_lock); // XXX: Is lock required here?
 
 		if ( !CreateWindowObject() || !CreateOpenGLContext() )
 		{
@@ -642,24 +632,7 @@ namespace BearLibTerminal
 	{
 		try
 		{
-			/*
-			RECT rect;
-			GetClientRect(m_handle, &rect);
-			Size client_size(rect.right - rect.left, rect.bottom - rect.top);
-
-			if (client_size != m_client_size)
-			{
-				// This handles viewport size change allowing scene to stay in place during window resize
-				m_client_size = client_size;
-				glViewport(0, 0, client_size.width, client_size.height);
-				glMatrixMode(GL_PROJECTION);
-				glLoadIdentity();
-				glOrtho(0, client_size.width, client_size.height, 0, -1, +1);
-				glMatrixMode(GL_MODELVIEW);
-			}
-			//*/
-
-			if (m_on_redraw && m_on_redraw() > 0)
+			if (Handle(TK_REDRAW) > 0)
 			{
 				SwapBuffers();
 			}
@@ -675,55 +648,133 @@ namespace BearLibTerminal
 		GetClientRect(m_handle, &rect);
 		ValidateRect(m_handle, &rect);
 
-		// Open barrier
-		m_redraw_barrier.NotifyAtMost(1);
-
 		return FALSE;
 	}
 
-	static uint8_t MapNavigationScancodeToNumpad(uint8_t scancode)
+	static int MapNavigationScancodeToNumpad(uint8_t scancode)
 	{
-		typedef std::map<uint8_t, uint8_t> mapping_t;
-		static mapping_t mapping = []() -> mapping_t
+		static std::map<uint8_t, int> mapping =
 		{
-			mapping_t result;
-			result[VK_INSERT]	= TK_NUMPAD0;
-			result[VK_DELETE]	= TK_DECIMAL;
-			result[VK_END]		= TK_NUMPAD1;
-			result[VK_DOWN]		= TK_NUMPAD2;
-			result[VK_NEXT]		= TK_NUMPAD3;
-			result[VK_LEFT]		= TK_NUMPAD4;
-			result[VK_CLEAR]	= TK_NUMPAD5;
-			result[VK_RIGHT]	= TK_NUMPAD6;
-			result[VK_HOME]		= TK_NUMPAD7;
-			result[VK_UP]		= TK_NUMPAD8;
-			result[VK_PRIOR]	= TK_NUMPAD9;
-			return result;
-		}();
+			{VK_DELETE, TK_KP_PERIOD},
+			{VK_INSERT, TK_KP_0},
+			{VK_END,    TK_KP_1},
+			{VK_DOWN,   TK_KP_2},
+			{VK_NEXT,   TK_KP_3},
+			{VK_LEFT,   TK_KP_4},
+			{VK_CLEAR,  TK_KP_5},
+			{VK_RIGHT,  TK_KP_6},
+			{VK_HOME,   TK_KP_7},
+			{VK_UP,     TK_KP_8},
+			{VK_PRIOR,  TK_KP_9},
+			{VK_RETURN, TK_KP_ENTER}
+		};
 
 		return mapping[scancode];
 	}
 
-	static uint8_t MapOEMScancodeToCharacter(uint8_t scancode)
+	static wchar_t MapOEMScancodeToCharacter(uint8_t scancode)
 	{
-		typedef std::map<uint8_t, uint8_t> mapping_t;
-		static mapping_t mapping = []() -> mapping_t
+		static std::map<uint8_t, wchar_t> mapping =
 		{
-			mapping_t result;
-			result[VK_OEM_1]		= ';';
-			result[VK_OEM_PLUS]		= '=';
-			result[VK_OEM_COMMA]	= ',';
-			result[VK_OEM_MINUS]	= '-';
-			result[VK_OEM_PERIOD]	= '.';
-			result[VK_OEM_2]		= '/';
-			result[VK_OEM_3]		= '`';
-			result[VK_OEM_4]		= '[';
-			result[VK_OEM_5]		= '\\';
-			result[VK_OEM_6]		= ']';
-			result[VK_OEM_7]		= '\'';
-			result[VK_OEM_102]		= '\\';
-			return result;
-		}();
+			{VK_OEM_1,      L';'},
+			{VK_OEM_PLUS,   L'='},
+			{VK_OEM_COMMA,  L','},
+			{VK_OEM_MINUS,  L'-'},
+			{VK_OEM_PERIOD, L'.'},
+			{VK_OEM_2,      L'/'},
+			{VK_OEM_3,      L'`'},
+			{VK_OEM_4,      L'['},
+			{VK_OEM_5,      L'\\'},
+			{VK_OEM_6,      L']'},
+			{VK_OEM_7,      L'\''},
+			{VK_OEM_102,    L'\\'}
+		};
+
+		return mapping[scancode];
+	}
+
+	static int MapWindowsScancodeToTerminal(uint8_t scancode)
+	{
+		static std::map<uint8_t, int> mapping =
+		{
+			{'A',           TK_A},
+			{'B',           TK_B},
+			{'C',           TK_C},
+			{'D',           TK_D},
+			{'E',           TK_E},
+			{'F',           TK_F},
+			{'G',           TK_G},
+			{'H',           TK_H},
+			{'I',           TK_I},
+			{'J',           TK_J},
+			{'K',           TK_K},
+			{'L',           TK_L},
+			{'M',           TK_M},
+			{'N',           TK_N},
+			{'O',           TK_O},
+			{'P',           TK_P},
+			{'Q',           TK_Q},
+			{'R',           TK_R},
+			{'S',           TK_S},
+			{'T',           TK_T},
+			{'U',           TK_U},
+			{'V',           TK_V},
+			{'W',           TK_W},
+			{'X',           TK_X},
+			{'Y',           TK_Y},
+			{'Z',           TK_Z},
+			{'1',           TK_1},
+			{'2',           TK_2},
+			{'3',           TK_3},
+			{'4',           TK_4},
+			{'5',           TK_5},
+			{'6',           TK_6},
+			{'7',           TK_7},
+			{'8',           TK_8},
+			{'9',           TK_9},
+			{'0',           TK_0},
+			{VK_RETURN,     TK_RETURN},
+			{VK_ESCAPE,     TK_ESCAPE},
+			{VK_BACK,       TK_BACKSPACE},
+			{VK_TAB,        TK_TAB},
+			{VK_SPACE,      TK_SPACE},
+			{VK_OEM_MINUS,  TK_MINUS},
+			{VK_OEM_PLUS,   TK_EQUALS},
+			{VK_OEM_4,      TK_LBRACKET},
+			{VK_OEM_6,      TK_RBRACKET},
+			{VK_OEM_5,      TK_BACKSLASH},
+			{VK_OEM_1,      TK_SEMICOLON},
+			{VK_OEM_7,      TK_APOSTROPHE},
+			{VK_OEM_3,      TK_GRAVE},
+			{VK_OEM_COMMA,  TK_COMMA},
+			{VK_OEM_PERIOD, TK_PERIOD},
+			{VK_OEM_2,      TK_SLASH},
+			{VK_F1,         TK_F1},
+			{VK_F2,         TK_F2},
+			{VK_F3,         TK_F3},
+			{VK_F4,         TK_F4},
+			{VK_F5,         TK_F5},
+			{VK_F6,         TK_F6},
+			{VK_F7,         TK_F7},
+			{VK_F8,         TK_F8},
+			{VK_F9,         TK_F9},
+			{VK_F10,        TK_F10},
+			{VK_F11,        TK_F11},
+			{VK_F12,        TK_F12},
+			{VK_PAUSE,      TK_PAUSE},
+			{VK_INSERT,     TK_INSERT},
+			{VK_HOME,       TK_HOME},
+			{VK_PRIOR,      TK_PAGEUP},
+			{VK_DELETE,     TK_DELETE},
+			{VK_END,        TK_END},
+			{VK_NEXT,       TK_PAGEDOWN},
+			{VK_RIGHT,      TK_RIGHT},
+			{VK_LEFT,       TK_LEFT},
+			{VK_DOWN,       TK_DOWN},
+			{VK_UP,         TK_UP},
+			{VK_SHIFT,      TK_SHIFT},
+			{VK_CONTROL,    TK_CONTROL},
+		};
 
 		return mapping[scancode];
 	}
@@ -762,21 +813,21 @@ namespace BearLibTerminal
 
 	LRESULT WinApiWindow::WindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
 	{
-		if ( uMsg == WM_CLOSE )
+		if (uMsg == WM_CLOSE)
 		{
 			// Emulate pressing virtual VK_CLOSE button
-			ReportInput(Keystroke(Keystroke::KeyPress, TK_CLOSE));
+			Handle(Event(TK_CLOSE));
 			return FALSE;
 		}
-		else if ( uMsg == WM_PAINT )
+		else if (uMsg == WM_PAINT)
 		{
 			return HandleWmPaint(wParam, lParam);
 		}
-		else if ( uMsg == WM_ERASEBKGND )
+		else if (uMsg == WM_ERASEBKGND)
 		{
 			return TRUE;
 		}
-		else if ( uMsg == WM_CHAR )
+		else if (uMsg == WM_CHAR)
 		{
 			// This handles all keys with printable characters, as well as
 			// * Escape, Tab, Backspace, Enter
@@ -786,38 +837,49 @@ namespace BearLibTerminal
 			bool extended = (lParam & (1<<24)) > 0;
 			scancode = MapVirtualKeyW(scancode, MAPVK_VSC_TO_VK);
 
-			if ( scancode == VK_INSERT ||
-				 scancode == VK_DELETE ||
-				(scancode >= VK_PRIOR && scancode <= VK_DOWN) ||
-				(charcode == '/' && extended) )
+			if (scancode == VK_INSERT ||
+			    scancode == VK_DELETE ||
+			   (scancode >= VK_PRIOR && scancode <= VK_DOWN) ||
+			   (charcode == '/' && extended))
 			{
 				// Ignore, handled by WM_KEYxxx
 			}
-			else if ( scancode == VK_ESCAPE ||
-					  scancode == VK_TAB ||
-					  scancode == VK_BACK ||
-					  scancode == VK_RETURN )
+			else if (scancode == VK_ESCAPE ||
+			         scancode == VK_TAB ||
+			         scancode == VK_BACK ||
+			         scancode == VK_RETURN)
 			{
-				ReportInput(Keystroke(Keystroke::KeyPress, scancode));
+				int code = MapWindowsScancodeToTerminal(scancode);
+				if (code > 0)
+				{
+					Handle(Event(code, {{code, 1}, {TK_CHAR, 0}}));
+				}
 			}
 			else
 			{
 				// Convert OEM scancodes (brackets, commas, etc.)
-				if ( scancode == VK_OEM_102 ||
-					(scancode >= VK_OEM_1 && scancode <= VK_OEM_3) ||
-					(scancode >= VK_OEM_4 && scancode <= VK_OEM_7) )
+				if (scancode == VK_OEM_102 ||
+				   (scancode >= VK_OEM_1 && scancode <= VK_OEM_3) ||
+				   (scancode >= VK_OEM_4 && scancode <= VK_OEM_7))
 				{
 					//scancode = MapOEMScancodeToCharacter(scancode);
 				}
 
-				if ( scancode == VK_OEM_102 ) scancode = VK_OEM_5;
+				if (scancode == VK_OEM_102) scancode = VK_OEM_5;
 
-				ReportInput(Keystroke(Keystroke::KeyPress|Keystroke::Unicode, scancode, charcode));
+				int code = MapWindowsScancodeToTerminal(scancode);
+				if (code > 0)
+				{
+					Event event(code);
+					event[code] = 1; // Pressed
+					event[TK_CHAR] = charcode;
+					Handle(event);
+				}
 			}
 
 			return FALSE;
 		}
-		else if ( uMsg == WM_KEYDOWN || uMsg == WM_SYSKEYDOWN || uMsg == WM_KEYUP || uMsg == WM_SYSKEYUP )
+		else if (uMsg == WM_KEYDOWN || uMsg == WM_SYSKEYDOWN || uMsg == WM_KEYUP || uMsg == WM_SYSKEYUP)
 		{
 			// This handles keys not handled by WM_CHAR message
 			// * Ctrl, Shift
@@ -833,11 +895,15 @@ namespace BearLibTerminal
 
 			if (uMsg == WM_SYSKEYDOWN || uMsg == WM_SYSKEYUP)
 			{
-				std::set<int> scancodes = {TK_F10, TK_ALT, TK_RETURN, TK_A, TK_G};
+				int code = MapWindowsScancodeToTerminal(scancode);
+				std::set<int> codes = {TK_F10, TK_ALT, TK_RETURN, TK_A, TK_G};
 
-				if (scancodes.count(scancode))
+				if (codes.count(code))
 				{
-					ReportInput(Keystroke(pressed? Keystroke::KeyPress: Keystroke::KeyRelease, scancode));
+					Event event(code|(pressed? 0: TK_KEY_RELEASED));
+					event[code] = pressed? 1: 0;
+					event[TK_CHAR] = 0;
+					Handle(event);
 					return FALSE;
 				}
 				else
@@ -846,40 +912,60 @@ namespace BearLibTerminal
 				}
 			}
 
-			if ( scancode == VK_CONTROL ||
-				 scancode == VK_SHIFT ||
-				 scancode == VK_PAUSE ||
-				(scancode >= VK_F1 && scancode <= VK_F12) ||
-				(scancode >= VK_NUMPAD0 && scancode <= VK_DIVIDE) )
+			if (scancode == VK_CONTROL ||
+			    scancode == VK_SHIFT ||
+			    scancode == VK_PAUSE ||
+			   (scancode >= VK_F1 && scancode <= VK_F12) || // Functional keys
+			   (scancode >= VK_NUMPAD0 && scancode <= VK_DIVIDE)) // Numpad keys
 			{
-				ReportInput(Keystroke(pressed? Keystroke::KeyPress: Keystroke::KeyRelease, scancode));
+				int code = MapWindowsScancodeToTerminal(scancode);
+				if (code > 0)
+				{
+					Event event(code|(pressed? 0: TK_KEY_RELEASED));
+					event[code] = pressed? 1: 0;
+					event[TK_CHAR] = 0;
+					Handle(event);
+				}
 			}
-			else if ( scancode == VK_CLEAR ||
-					  scancode == VK_INSERT ||
-					  scancode == VK_DELETE ||
-					 (scancode >= VK_PRIOR && scancode <= VK_DOWN) )
+			else if (scancode == VK_CLEAR ||
+					 scancode == VK_INSERT ||
+					 scancode == VK_DELETE ||
+					(scancode >= VK_PRIOR && scancode <= VK_DOWN)) // Navigation keys
 			{
-				if ( !extended ) scancode = MapNavigationScancodeToNumpad(scancode);
-				ReportInput(Keystroke(pressed? Keystroke::KeyPress: Keystroke::KeyRelease, scancode));
+				int code = MapWindowsScancodeToTerminal(scancode);
+				if ( !extended ) code = MapNavigationScancodeToNumpad(scancode);
+				if (code > 0)
+				{
+					Event event(code|(pressed? 0: TK_KEY_RELEASED));
+					event[code] = pressed? 1: 0;
+					event[TK_CHAR] = 0;
+					Handle(event);
+				}
 			}
-			else if ( !pressed )
+			else if (!pressed)
 			{
 				// Handle key release since WM_CHAR does not intercept those
 				// OEM must be converted both on press and on release
 
 				wchar_t charcode = 0;
 
-				if ( scancode == VK_OEM_102 ||
-					(scancode >= VK_OEM_1 && scancode <= VK_OEM_3) ||
-					(scancode >= VK_OEM_4 && scancode <= VK_OEM_7) )
+				if (scancode == VK_OEM_102 ||
+				   (scancode >= VK_OEM_1 && scancode <= VK_OEM_3) ||
+				   (scancode >= VK_OEM_4 && scancode <= VK_OEM_7))
 				{
-					//scancode = MapOEMScancodeToCharacter(scancode);
-					charcode = (wchar_t)MapOEMScancodeToCharacter(scancode);
+					charcode = MapOEMScancodeToCharacter(scancode);
 				}
 
-				if ( scancode == VK_OEM_102 ) scancode = VK_OEM_5;
+				if (scancode == VK_OEM_102) scancode = VK_OEM_5;
 
-				ReportInput(Keystroke((pressed? Keystroke::KeyPress|Keystroke::Unicode: Keystroke::KeyRelease), scancode, charcode));
+				int code = MapWindowsScancodeToTerminal(scancode);
+				if (code > 0)
+				{
+					Event event(code|TK_KEY_RELEASED);
+					event[code] = 0;
+					event[TK_CHAR] = 0;
+					Handle(event);
+				}
 			}
 
 			return FALSE;
@@ -888,57 +974,66 @@ namespace BearLibTerminal
 		{
 			return MNC_CLOSE << 16;
 		}
-		else if ( uMsg == WM_MOUSEMOVE )
+		else if (uMsg == WM_MOUSEMOVE)
 		{
 			Point precise_position(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
 
-			if ( precise_position.x < 0 ) precise_position.x = 0;
-			if ( precise_position.y < 0 ) precise_position.y = 0;
+			if (precise_position.x < 0) precise_position.x = 0;
+			if (precise_position.y < 0) precise_position.y = 0;
 
-			Keystroke stroke(Keystroke::MouseMove, TK_MOUSE_MOVE, precise_position.x, precise_position.y, 0);
-			ReportInput(stroke);
+			Event event(TK_MOUSE_MOVE);
+			event[TK_MOUSE_PIXEL_X] = precise_position.x;
+			event[TK_MOUSE_PIXEL_Y] = precise_position.y;
+			Handle(event);
 
 			return 0;
 		}
-		else if ( uMsg == WM_MOUSEWHEEL )
+		else if (uMsg == WM_MOUSEWHEEL)
 		{
 			int delta = GET_WHEEL_DELTA_WPARAM(wParam) / WHEEL_DELTA;
 			m_mouse_wheel += delta;
 
-			Keystroke stroke(Keystroke::MouseScroll, TK_MOUSE_SCROLL, 0, 0, m_mouse_wheel);
-			ReportInput(stroke);
+			Event event(TK_MOUSE_WHEEL);
+			event[TK_MOUSE_WHEEL] = delta > 0? 1: -1; // FIXME: multiple events in case of large delta
+			Handle(event);
 
 			return 0;
 		}
-		else if ( uMsg == WM_LBUTTONDOWN || uMsg == WM_LBUTTONUP )
+		else if (uMsg == WM_LBUTTONDOWN || uMsg == WM_LBUTTONUP)
 		{
-			Keystroke stroke(uMsg == WM_LBUTTONUP? Keystroke::KeyRelease: Keystroke::KeyPress, TK_LBUTTON);
-			ReportInput(stroke);
+			bool pressed = uMsg == WM_LBUTTONDOWN;
+			Event event(TK_MOUSE_LEFT|(pressed? 0: TK_KEY_RELEASED));
+			event[TK_MOUSE_LEFT] = pressed? 1: 0;
+			Handle(event);
 
 			return 0;
 		}
-		else if ( uMsg == WM_RBUTTONDOWN || uMsg == WM_RBUTTONUP )
+		else if (uMsg == WM_RBUTTONDOWN || uMsg == WM_RBUTTONUP)
 		{
-			Keystroke stroke(uMsg == WM_RBUTTONUP? Keystroke::KeyRelease: Keystroke::KeyPress, TK_RBUTTON);
-			ReportInput(stroke);
+			bool pressed = uMsg == WM_RBUTTONDOWN;
+			Event event(TK_MOUSE_RIGHT|(pressed? 0: TK_KEY_RELEASED));
+			event[TK_MOUSE_RIGHT] = pressed? 1: 0;
+			Handle(event);
 
 			return 0;
 		}
-		else if ( uMsg == WM_MBUTTONDOWN || uMsg == WM_MBUTTONUP )
+		else if (uMsg == WM_MBUTTONDOWN || uMsg == WM_MBUTTONUP)
 		{
-			Keystroke stroke(uMsg == WM_MBUTTONUP? Keystroke::KeyRelease: Keystroke::KeyPress, TK_MBUTTON);
-			ReportInput(stroke);
+			bool pressed = uMsg == WM_MBUTTONDOWN;
+			Event event(TK_MOUSE_MIDDLE|(pressed? 0: TK_KEY_RELEASED));
+			event[TK_MOUSE_MIDDLE] = pressed? 1: 0;
+			Handle(event);
 
 			return 0;
 		}
-		else if ( uMsg == WM_ACTIVATE )
+		else if (uMsg == WM_ACTIVATE)
 		{
-			if ( wParam == WA_ACTIVE || wParam == WA_CLICKACTIVE )
+			if (wParam == WA_ACTIVE || wParam == WA_CLICKACTIVE)
 			{
-				if ( m_on_activate ) m_on_activate();
+				Handle(Event(TK_ACTIVATED));
 			}
 		}
-		else if ( uMsg == WM_SIZE )
+		else if (uMsg == WM_SIZE)
 		{
 			if (wParam == SIZE_MAXIMIZED || (wParam == SIZE_RESTORED && m_maximized))
 			{
@@ -949,8 +1044,10 @@ namespace BearLibTerminal
 				m_client_size.width = rect.right - rect.left;
 				m_client_size.height = rect.bottom - rect.top;
 
-				Keystroke stroke(Keystroke::KeyPress, TK_WINDOW_RESIZE, m_client_size.width, m_client_size.height, 0);
-				if (m_on_input) m_on_input(stroke);
+				Event event(TK_RESIZE);
+				event[TK_WIDTH] = m_client_size.width;
+				event[TK_HEIGHT] = m_client_size.height;
+				Handle(event);
 			}
 
 			return TRUE;
@@ -962,12 +1059,14 @@ namespace BearLibTerminal
 			m_client_size.width = rect.right - rect.left;
 			m_client_size.height = rect.bottom - rect.top;
 
-			Keystroke stroke(Keystroke::KeyPress, TK_WINDOW_RESIZE, m_client_size.width, m_client_size.height, 0);
-			if (m_on_input) m_on_input(stroke);
+			Event event(TK_RESIZE);
+			event[TK_WIDTH] = m_client_size.width;
+			event[TK_HEIGHT] = m_client_size.height;
+			Handle(event);
 
 			return FALSE;
 		}
-		else if ( uMsg == WM_SIZING )
+		else if (uMsg == WM_SIZING)
 		{
 			DWORD style = GetWindowLongW(m_handle, GWL_STYLE);
 			auto rect = (RECT*)lParam;
@@ -1006,8 +1105,7 @@ namespace BearLibTerminal
 				rect->bottom += delta;
 			}
 
-			Keystroke stroke(Keystroke::KeyPress, TK_INVALIDATE_VIEWPORT);
-			ReportInput(stroke);
+			Handle(Event(TK_INVALIDATE));
 
 			return TRUE;
 		}
@@ -1020,11 +1118,6 @@ namespace BearLibTerminal
 		}
 
 		return DefWindowProc(m_handle, uMsg, wParam, lParam);
-	}
-
-	void WinApiWindow::ReportInput(const Keystroke& keystroke)
-	{
-		if ( m_on_input ) m_on_input(keystroke);
 	}
 }
 

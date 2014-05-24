@@ -51,7 +51,6 @@ namespace BearLibTerminal
 		void SetTitle(const std::wstring& title);
 		void SetIcon(const std::wstring& filename);
 		void SetClientSize(const Size& size);
-		void Redraw();
 		void Show();
 		void Hide();
 		std::future<void> Post(std::function<void()> func);
@@ -75,7 +74,6 @@ namespace BearLibTerminal
 		static LRESULT CALLBACK SharedWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 		LRESULT WindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam);
 		LRESULT HandleWmPaint(WPARAM wParam, LPARAM lParam);
-		void ReportInput(const Keystroke& keystroke);
 	protected:
 		std::wstring m_class_name;
 		HWND m_handle;
