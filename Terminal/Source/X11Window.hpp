@@ -59,15 +59,14 @@ namespace BearLibTerminal
 		void DestroyUnlocked();
 		bool CreateWindowObject();
 		void DestroyWindowObject();
-		//void ReportInput(Event event);
 		void HandleRepaint();
 		void UpdateSizeHints();
 	protected:
 		struct Private;
 		std::unique_ptr<Private> m_private;
 		Semaphore m_redraw_barrier;
-		Point m_mouse_position;
-		int m_mouse_wheel;
+		uint64_t m_last_mouse_click;
+		int m_consecutive_mouse_clicks;
 		bool m_resizeable;
 	};
 }

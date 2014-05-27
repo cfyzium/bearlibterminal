@@ -26,14 +26,17 @@
 #include "OpenGL.hpp"
 #include "Log.hpp"
 #include "Encoding.hpp"
+#include "Utility.hpp"
 #include <X11/Xlib.h>
 #include <X11/Xmu/Xmu.h>
 #include <GL/glx.h>
 #include <unistd.h>
 #include <sys/time.h>
-#include "BearLibTerminal.h"
 #include <future>
 #include <iostream>
+
+#define BEARLIBTERMINAL_BUILDING_LIBRARY
+#include "BearLibTerminal.h"
 
 // X11 hack because X.h #defines these names without any regards to others
 #define XlibKeyPress 2
@@ -278,7 +281,8 @@ namespace BearLibTerminal
 
 	X11Window::X11Window():
 		m_private(new Private()),
-		m_mouse_wheel(0),
+		m_last_mouse_click(0),
+		m_consecutive_mouse_clicks(1),
 		m_resizeable(false)
 	{ }
 
@@ -601,7 +605,7 @@ namespace BearLibTerminal
 				{
 					m_client_size = new_size;
 
-					Event event(TK_RESIZE);
+					Event event(TK_RESIZED);
 					event[TK_WIDTH] = m_client_size.width; // FIXME: client size, not raw slot value
 					event[TK_HEIGHT] = m_client_size.height;
 					Handle(std::move(event));
@@ -610,12 +614,9 @@ namespace BearLibTerminal
 			else if (e.type == MotionNotify)
 			{
 				// OnMouseMove
-				m_mouse_position.x = e.xmotion.x;
-				m_mouse_position.y = e.xmotion.y;
-
 				Event event(TK_MOUSE_MOVE);
-				event[TK_MOUSE_PIXEL_X] = m_mouse_position.x;
-				event[TK_MOUSE_PIXEL_Y] = m_mouse_position.y;
+				event[TK_MOUSE_PIXEL_X] = e.xmotion.x;
+				event[TK_MOUSE_PIXEL_Y] = e.xmotion.y;
 				Handle(std::move(event));
 			}
 			else if (e.type == ButtonPress || e.type == ButtonRelease)
@@ -623,16 +624,42 @@ namespace BearLibTerminal
 				// OnMousePress/Release
 				bool pressed = e.type == ButtonPress;
 
-				int code = 0;
+				if (e.xbutton.button >= 1 && e.xbutton.button <= 3)
+				{
+					uint64_t now = gettime();
+					uint64_t delta = now - m_last_mouse_click;
+					m_last_mouse_click = now;
+
+					if (pressed && delta < 500) // FIXME: harcode
+					{
+						m_consecutive_mouse_clicks += 1;
+					}
+					else
+					{
+						m_consecutive_mouse_clicks = 1;
+					}
+				}
+
 				if (e.xbutton.button == 1)
 				{
-					// LMB
-					Handle(Event(TK_MOUSE_LEFT|(pressed? 0: TK_KEY_RELEASED), {{TK_MOUSE_LEFT, pressed? 1: 0}}));
+					Event event(TK_MOUSE_LEFT | (pressed? 0: TK_KEY_RELEASED));
+					event[TK_MOUSE_LEFT] = pressed? 1: 0;
+					event[TK_MOUSE_CLICKS] = m_consecutive_mouse_clicks;
+					Handle(event);
+				}
+				else if (e.xbutton.button == 2)
+				{
+					Event event(TK_MOUSE_MIDDLE | (pressed? 0: TK_KEY_RELEASED));
+					event[TK_MOUSE_MIDDLE] = pressed? 1: 0;
+					event[TK_MOUSE_CLICKS] = m_consecutive_mouse_clicks;
+					Handle(event);
 				}
 				else if (e.xbutton.button == 3)
 				{
-					// RMB
-					Handle(Event(TK_MOUSE_RIGHT|(pressed? 0: TK_KEY_RELEASED), {{TK_MOUSE_RIGHT, pressed? 1: 0}}));
+					Event event(TK_MOUSE_RIGHT | (pressed? 0: TK_KEY_RELEASED));
+					event[TK_MOUSE_RIGHT] = pressed? 1: 0;
+					event[TK_MOUSE_CLICKS] = m_consecutive_mouse_clicks;
+					Handle(event);
 				}
 				else if (e.xbutton.button == 4 && e.type == ButtonPress)
 				{

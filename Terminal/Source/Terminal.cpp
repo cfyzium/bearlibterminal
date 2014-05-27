@@ -192,13 +192,13 @@ namespace BearLibTerminal
 
 		if (updated.output_vsync != m_options.output_vsync)
 		{
-			m_window->Invoke([&]{m_window->SetVSync(updated.output_vsync);});
+			m_window->SetVSync(updated.output_vsync);
 		}
 
 		// All options and parameters must be validated, may try to apply them
 		if (!new_tilesets.empty())
 		{
-			m_window->Invoke([&](){ApplyTilesets(new_tilesets);});
+			ApplyTilesets(new_tilesets);
 		}
 
 		// Primary sanity check: if there is no base font, lots of things are gonna fail
@@ -262,7 +262,7 @@ namespace BearLibTerminal
 
 			// Must readd dynamic tileset.
 			// NOTE: SHOULD NOT fail.
-			m_window->Invoke([=](){UpdateDynamicTileset(m_world.state.cellsize);});
+			UpdateDynamicTileset(m_world.state.cellsize);
 
 			viewport_size_changed = true;
 			LOG(Debug, L"SetOptions: new cell size is " << m_world.state.cellsize);
@@ -294,8 +294,11 @@ namespace BearLibTerminal
 			m_viewport_modified = true;
 		}
 
+		// Do not touch input lock. Input handlers should just take main lock if necessary.
+		/*
 		// Briefly grab input lock so that input routines do not contend for m_options
 		std::lock_guard<std::mutex> input_guard(m_input_lock);
+		//*/
 
 		m_options = updated;
 	}
@@ -1411,7 +1414,7 @@ namespace BearLibTerminal
 			ConsumeIrrelevantEvents();
 			return 0;
 		}
-		else if (event.code == TK_RESIZE)
+		else if (event.code == TK_RESIZED)
 		{
 			std::lock_guard<std::mutex> guard(m_lock);
 
@@ -1503,7 +1506,7 @@ namespace BearLibTerminal
 
 	void Terminal::ConsumeEvent(Event& event)
 	{
-		if (event.code == TK_RESIZE)
+		if (event.code == TK_RESIZED)
 		{
 			std::lock_guard<std::mutex> guard(m_lock);
 

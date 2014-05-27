@@ -144,6 +144,7 @@
 #define TK_MOUSE_Y          0x88
 #define TK_MOUSE_PIXEL_X    0x89 /* Cursor position in pixels */
 #define TK_MOUSE_PIXEL_Y    0x8A
+#define TK_MOUSE_CLICKS     0x8B /* Number of consecutive clicks */
 
 /*
  * If key was released instead of pressed, it's code will be OR'ed with VK_KEY_RELEASED:
@@ -171,7 +172,7 @@
  * Other events
  */
 #define TK_CLOSE            0xE0
-#define TK_RESIZE           0xE1
+#define TK_RESIZED          0xE1
 #define TK_FULLSCREEN       0xE2
 #define TK_MAXIMIZED        0xE3
 #define TK_MINIMIZED        0xE4

@@ -603,7 +603,7 @@ luaterminal_constants[] =
 	{"F12",              TK_F12},
 	{"MOUSE_MOVE",       TK_MOUSE_MOVE},
 	{"MOUSE_SCROLL",     TK_MOUSE_WHEEL},
-	{"WINDOW_RESIZE",    TK_RESIZE},
+	{"RESIZED",          TK_RESIZED},
 	{"MOUSE_X",          TK_MOUSE_X},
 	{"MOUSE_Y",          TK_MOUSE_Y},
 	{"MOUSE_PIXEL_X",    TK_MOUSE_PIXEL_X},

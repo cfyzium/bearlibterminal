@@ -665,7 +665,8 @@ namespace BearLibTerminal
 
 		if (type == AtlasTexture::Type::Sprite)
 		{
-			// Allocate whole texture for this image
+			// Allocate whole texture for this image.
+			// +2 is because of the border for correct tiling when scaled.
 			m_textures.emplace_back(type, Size(RoundUpTo(size.width+2, 4), RoundUpTo(size.height+2, 4)));
 			LOG(Trace, "Added sprite texture #" << (uint64_t)&m_textures.back());
 			return m_textures.back().Add(bitmap, region);
@@ -697,26 +698,41 @@ namespace BearLibTerminal
 		slot->texture->Remove(slot);
 		if (slot->texture->IsEmpty())
 		{
-			// Remove texture
 			auto i = std::find_if(m_textures.begin(), m_textures.end(), [&](const AtlasTexture& j){return &j == slot->texture;});
 			if (i == m_textures.end())
 			{
 				throw std::runtime_error("Atlas::Remove(...): ownership mismatch");
 			}
-			LOG(Trace, "Erasing texture #" << (uint64_t)&(*i));
+
+			// Remove texture
+			LOG(Trace, "Scheduling texture #" << (uint64_t)&(*i) << " for removal");
+			m_scheduled_for_removal.push_back(std::move(*i));
 			m_textures.erase(i);
 		}
 	}
 
 	void Atlas::Refresh()
 	{
-		for (auto& i: m_textures) i.Refresh();
+		for (auto& i: m_textures)
+		{
+			i.Refresh();
+		}
+
+		if (!m_scheduled_for_removal.empty())
+		{
+			m_scheduled_for_removal.clear();
+		}
 	}
 
 	void Atlas::Dispose()
 	{
-		for (auto& i: m_textures) i.Dispose();
+		for (auto& i: m_textures)
+		{
+			i.Dispose();
+		}
+
 		m_textures.clear();
+		m_scheduled_for_removal.clear();
 	}
 
 	// Prototype

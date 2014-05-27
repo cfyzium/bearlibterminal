@@ -119,6 +119,7 @@ namespace BearLibTerminal
 
 	private:
 		std::list<AtlasTexture> m_textures;
+		std::list<AtlasTexture> m_scheduled_for_removal;
 	};
 }
 

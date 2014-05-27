@@ -39,7 +39,7 @@ void TestWindowResize()
 			{
 				proceed = false;
 			}
-			else if (key == TK_RESIZE)
+			else if (key == TK_RESIZED)
 			{
 				// ?..
 			}

@@ -36,8 +36,10 @@ namespace BearLibTerminal
 		typedef std::uint32_t handle_t;
 
 		Texture();
+		Texture(Texture&& texture);
 		Texture(const Bitmap& bitmap);
 		virtual ~Texture();
+		Texture& operator=(Texture&& texture);
 		void Dispose();
 		void Bind();
 		void Update(const Bitmap& bitmap);
@@ -50,14 +52,9 @@ namespace BearLibTerminal
 		static void Unbind();
 		static handle_t BoundId();
 
-		// NonCopyable, NonAssignable
-		Texture(Texture&&) = delete;
-		Texture& operator=(Texture&&) = delete;
-
 	protected:
 		handle_t m_handle;
 		Size m_size;
-		//static handle_t m_currently_bound_handle;
 		static std::atomic<uint32_t> m_currently_bound_handle;
 	};
 }
