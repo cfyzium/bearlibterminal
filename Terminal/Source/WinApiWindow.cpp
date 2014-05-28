@@ -583,8 +583,10 @@ namespace BearLibTerminal
 
 	void WinApiWindow::SetVSync(bool enabled)
 	{
-		int interval = enabled? 1: 0;
-		if (m_wglSwapIntervalEXT) m_wglSwapIntervalEXT(interval);
+		Post([=]
+		{
+			if (m_wglSwapIntervalEXT) m_wglSwapIntervalEXT(enabled? 1: 0);
+		});
 	}
 
 	void WinApiWindow::DestroyWindowObject()
@@ -1044,7 +1046,7 @@ namespace BearLibTerminal
 				m_client_size.width = rect.right - rect.left;
 				m_client_size.height = rect.bottom - rect.top;
 
-				Event event(TK_RESIZE);
+				Event event(TK_RESIZED);
 				event[TK_WIDTH] = m_client_size.width;
 				event[TK_HEIGHT] = m_client_size.height;
 				Handle(event);
@@ -1059,7 +1061,7 @@ namespace BearLibTerminal
 			m_client_size.width = rect.right - rect.left;
 			m_client_size.height = rect.bottom - rect.top;
 
-			Event event(TK_RESIZE);
+			Event event(TK_RESIZED);
 			event[TK_WIDTH] = m_client_size.width;
 			event[TK_HEIGHT] = m_client_size.height;
 			Handle(event);
