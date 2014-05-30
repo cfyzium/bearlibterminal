@@ -386,7 +386,7 @@ namespace BearLibTerminal
 	{
 		// Possible options: nonblocking, events, precise_mouse, sticky_close, cursor_symbol, cursor_blink_rate
 
-		if (group.attributes.count(L"precise-mousemove") && !try_parse(group.attributes[L"precise-mousemove"], options.input_precise_mouse))
+		if (group.attributes.count(L"precise-mouse") && !try_parse(group.attributes[L"precise-mousemove"], options.input_precise_mouse))
 		{
 			throw std::runtime_error("input.precise-mouse cannot be parsed");
 		}
@@ -396,7 +396,15 @@ namespace BearLibTerminal
 			throw std::runtime_error("input.sticky-close cannot be parsed");
 		}
 
-		// FIXME: input.keyboard and input.mouse flags
+		if (group.attributes.count(L"keyboard") && !try_parse(group.attributes[L"keyboard"], options.input_keyboard))
+		{
+			throw std::runtime_error("input.keyboard cannot be parsed");
+		}
+
+		if (group.attributes.count(L"mouse") && !try_parse(group.attributes[L"mouse"], options.input_mouse))
+		{
+			throw std::runtime_error("input.mouse cannot be parsed");
+		}
 
 		if (group.attributes.count(L"cursor-symbol") && !try_parse(group.attributes[L"cursor-symbol"], options.input_cursor_symbol))
 		{
@@ -1462,32 +1470,21 @@ namespace BearLibTerminal
 		}
 		else if (event.code == TK_A && get_locked(m_vars[TK_ALT], m_input_lock))
 		{
-			// TODO: dump atlas
-			/*
 			std::lock_guard<std::mutex> guard(m_lock);
 			m_world.tiles.atlas.Dump();
-			*/
 			return 0;
 		}
 		else if (event.code == TK_G && get_locked(m_vars[TK_ALT], m_input_lock))
 		{
-			// TODO: toggle grid
-			/*
 			m_show_grid = !m_show_grid;
-			// Redraw must be called from separate thread since calling it from user thread is impossible
-			// and calling from window thread will simply deadblock.
-			std::thread([=]{m_window->Redraw();}).detach();
-			*/
+			Redraw(true);
 			return 0;
 		}
 		else if (event.code == TK_RETURN && get_locked(m_vars[TK_ALT], m_input_lock))
 		{
-			// TODO: toggle fullscreen
-			/*
 			// Alt+Enter
 			m_viewport_modified = true;
 			m_window->ToggleFullscreen();
-			*/
 			return 0;
 		}
 

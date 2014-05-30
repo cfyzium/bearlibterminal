@@ -210,6 +210,8 @@ namespace BearLibTerminal
 		keymaps[1][XK_Shift_L&0xFF] =      TK_SHIFT;       // e1
 		keymaps[1][XK_Control_R&0xFF] =    TK_CONTROL;     // e4
 		keymaps[1][XK_Control_L&0xFF] =    TK_CONTROL;     // e3
+		keymaps[1][XK_Alt_R&0xFF] =        TK_ALT;         // ea
+		keymaps[1][XK_Alt_L&0xFF] =        TK_ALT;         // e9
 	}
 
 	// XXX: Salvaged from somewhere, format it
@@ -461,7 +463,7 @@ namespace BearLibTerminal
 
 	int X11Window::Private::TranslateKeycode(KeyCode kc)
 	{
-		if (0 && kc >= 0 && kc <= 0xFF && keymaps[0][kc])
+		if (kc >= 0 && kc <= 0xFF && keymaps[0][kc])
 		{
 			return keymaps[0][kc];
 		}
@@ -550,13 +552,6 @@ namespace BearLibTerminal
 					}
 				}
 
-				/*
-				char bf[100];
-				KeySym ks;
-				int nbytes = XLookupString(&e.xkey, bf, 256, &ks, NULL);
-				std::cout << "--> " << (long)ks << "\n";
-				//*/
-
 				int code = m_private->TranslateKeycode(e.xkey.keycode);
 				if (code == 0)
 				{
@@ -567,7 +562,6 @@ namespace BearLibTerminal
 				KeySym key;
 				Status status;
 				int rc = XwcLookupString(m_private->ic, &e.xkey, buffer, 255, &key, &status);
-				std::cout << "lookup keysym: " << (int)key << "\n";
 
 				if (rc <= 0)
 				{
