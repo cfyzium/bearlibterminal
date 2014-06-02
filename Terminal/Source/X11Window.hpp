@@ -41,7 +41,6 @@ namespace BearLibTerminal
 		void SetTitle(const std::wstring& title);
 		void SetIcon(const std::wstring& filename);
 		void SetClientSize(const Size& size);
-		void Redraw();
 		void Show();
 		void Hide();
 		std::future<void> Post(std::function<void()> func);
@@ -64,7 +63,6 @@ namespace BearLibTerminal
 	protected:
 		struct Private;
 		std::unique_ptr<Private> m_private;
-		Semaphore m_redraw_barrier;
 		uint64_t m_last_mouse_click;
 		int m_consecutive_mouse_clicks;
 		bool m_resizeable;

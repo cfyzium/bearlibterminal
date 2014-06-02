@@ -382,35 +382,6 @@ namespace BearLibTerminal
 		UpdateSizeHints();
 	}
 
-	void X11Window::Redraw()
-	{
-		std::unique_lock<std::mutex> guard(m_lock);
-
-		int retries = 5;
-		m_redraw_barrier.SetValue(0);
-		do
-		{
-			XClearArea
-			(
-				m_private->display,
-				m_private->window,
-				0,
-				0,
-				m_client_size.width,
-				m_client_size.height,
-				True
-			);
-
-			guard.unlock();
-			if (m_redraw_barrier.WaitFor(50))
-			{
-				break;
-			}
-			guard.lock();
-		}
-		while (retries --> 0);
-	}
-
 	void X11Window::Show()
 	{
 		std::lock_guard<std::mutex> guard(m_lock);
@@ -456,9 +427,6 @@ namespace BearLibTerminal
 			LOG(Fatal, L"Rendering routine has thrown an exception: " << e.what());
 			m_proceed = false;
 		}
-
-		// Open barrier
-		m_redraw_barrier.NotifyAtMost(1);
 	}
 
 	int X11Window::Private::TranslateKeycode(KeyCode kc)
@@ -696,9 +664,6 @@ namespace BearLibTerminal
 			if (!PumpEvents()) usleep(500);
 		}
 
-		// Notify possible pending refreshes (TODO: duplicate? there is one in Destroy too)
-		m_redraw_barrier.Notify();
-
 		LOG(Trace, "Leaving X11-specific window thread function");
 	}
 
@@ -725,9 +690,6 @@ namespace BearLibTerminal
 	{
 		std::lock_guard<std::mutex> guard(m_lock);
 		DestroyUnlocked();
-
-		// Unblock possibly waiting client thread
-		m_redraw_barrier.Notify();
 	}
 
 	bool X11Window::CreateWindowObject()
