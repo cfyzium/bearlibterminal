@@ -88,7 +88,7 @@ namespace BearLibTerminal
 		{
 			return Domain::Mouse;
 		}
-		else if (code <= 0 || (code >= TK_CLOSE && code <= TK_RESTORED))
+		else if (code <= 0 || (code >= TK_CLOSE && code <= TK_RESIZED))
 		{
 			return Domain::System;
 		}

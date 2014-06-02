@@ -245,6 +245,7 @@ namespace BearLibTerminal
 			// TODO: Do UTF-8 check
 
 			uint32_t ch = 0;
+			/*
 			switch (extraBytesToRead)
 			{
 				case 5: ch += (uint8_t)value[index++]; ch <<= 6; // illegal UTF-8
@@ -254,6 +255,13 @@ namespace BearLibTerminal
 				case 1: ch += (uint8_t)value[index++]; ch <<= 6;
 				case 0: ch += (uint8_t)value[index++];
 			}
+			/*/
+			for (int i=extraBytesToRead; i>=0; i--)
+			{
+				ch += (uint8_t)value[index++];
+				if (i > 0) ch <<= 6;
+			}
+			//*/
 			ch -= kOffsetsFromUTF8[extraBytesToRead];
 
 			if (ch <= kUnicodeMaxBmp)

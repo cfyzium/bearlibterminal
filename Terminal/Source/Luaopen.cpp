@@ -416,24 +416,6 @@ int luaterminal_read(lua_State* L)
 	return 2;
 }
 
-int luaterminal_read_ext(lua_State* L)
-{
-	int flags = lua_tonumber(L, 1);
-	int code = terminal_read_ext(flags);
-	int released = 0;
-
-	//if (!(flags & TK_READ_CHAR))
-	//{
-	released = (code & TK_KEY_RELEASED) > 0;
-	code = code & 0xFF;
-	//}
-
-	lua_pushnumber(L, code);
-	lua_pushboolean(L, released);
-
-	return 2;
-}
-
 int luaterminal_read_str(lua_State* L)
 {
 	// rc, str = terminal.read_str(x, y, str[, max])
@@ -491,7 +473,6 @@ static const luaL_Reg luaterminal_lib[] =
 	{"state", luaterminal_state},
 	{"check", luaterminal_check},
 	{"read", luaterminal_read},
-	{"read_ext", luaterminal_read_ext},
 	{"read_str", luaterminal_read_str},
 	{"color_from_name", luaterminal_color_from_name},
 	{"color_from_argb", luaterminal_color_from_argb},
@@ -620,9 +601,7 @@ luaterminal_constants[] =
 	{"COMPOSITION_OFF",  TK_OFF},
 	{"COMPOSITION_ON",   TK_ON},
 	{"INPUT_NONE",       TK_INPUT_NONE},
-	{"INPUT_CANCELLED",  TK_INPUT_CANCELLED},
-	{"READ_NOREMOVE",    TK_READ_NOREMOVE},
-	{"READ_NOBLOCK",     TK_READ_NOBLOCK}
+	{"INPUT_CANCELLED",  TK_INPUT_CANCELLED}
 };
 
 int luaopen_BearLibTerminal(lua_State* L)

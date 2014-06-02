@@ -11,17 +11,24 @@
 void UpdateInputFilter(bool press, bool release, bool move, bool scroll)
 {
 	std::ostringstream s;
+	/*
 	s << "input.events=";
 	if (press) s << "+keypress";
 	if (release) s << "+keyrelease";
 	if (move) s << "+mousemove";
 	if (scroll) s << "+mousescroll";
+	/*/
+	//s << "input.keyboard=" << ((press || release)? "true": "false");
+	//s << "input.mouse=" << ((move || scroll)? "true": "false");
+	s << "input.mouse=true";
+	//*/
 	terminal_set(s.str().c_str());
 }
 
 void UpdatePreciseMovement(bool flag)
 {
-	std::string s = std::string("input.precise-mousemove=") + (flag? "true": "false");
+	//std::string s = std::string("input.precise-mousemove=") + (flag? "true": "false");
+	std::string s = std::string("input.precise-mouse=") + (flag? "true": "false");
 	terminal_set(s.c_str());
 }
 

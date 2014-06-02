@@ -55,7 +55,7 @@ namespace BearLibTerminal
 		int Print(int x, int y, const std::wstring& str);
 		int HasInput();
 		int GetState(int code);
-		int ReadExtended(int flags);
+		int Read();
 		int ReadString(int x, int y, wchar_t* buffer, int max);
 		const Encoding<char>& GetEncoding() const;
 	private:
@@ -70,29 +70,20 @@ namespace BearLibTerminal
 		void ConfigureViewport();
 		void PutInternal(int x, int y, int dx, int dy, wchar_t code, Color* colors);
 		void PrepareFreshCharacters();
-		//void ConsumeStroke(const Keystroke& stroke);
 		void ConsumeEvent(Event& event);
 		void ConsumeIrrelevantEvents();
-		bool HasInputInternalUnlocked();//std::uint32_t mask);
-		//Keystroke ReadKeystroke(int flags, int timeout);
-		//Keystroke DequeueKeystroke(std::uint32_t mask, int flags);
-		//void PutBack(const Keystroke& stroke);
-		//int ReadVirtualCode(int flags);
-		//int ReadCharacter(int flags);
-		Event ReadEvent(int flags, int timeout);
+		bool HasInputInternalUnlocked();
+		Event ReadEvent(int timeout);
 		int ReadStringInternalBlocking(int x, int y, wchar_t* buffer, int max);
 		int ReadStringInternalNonblocking(wchar_t* buffer, int max);
 		void HandleDestroy();
 		int Redraw(bool async);
-		//void OnWindowInput(Keystroke keystroke);
 		int OnWindowEvent(Event event);
-		//void OnWindowActivate();
 	private:
 		enum state_t {kHidden, kVisible, kClosed} m_state;
 		mutable std::mutex m_lock;
 		mutable std::mutex m_input_lock;
 		std::unique_ptr<Window> m_window;
-		//std::deque<Keystroke> m_input_queue;
 		std::deque<Event> m_input_queue;
 		std::condition_variable m_input_condvar;
 		std::array<std::int32_t, 0x100> m_vars;

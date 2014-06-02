@@ -167,16 +167,13 @@
 #define TK_COMPOSITION      0xC7 /* Current composition state */
 #define TK_VISIBILITY       0xC8 /* Window visibility */
 #define TK_CHAR             0xC9 /* Last Unicode character */
+#define TK_EVENT            0xCA /* Last dequeued event */
 
 /*
  * Other events
  */
 #define TK_CLOSE            0xE0
 #define TK_RESIZED          0xE1
-#define TK_FULLSCREEN       0xE2
-#define TK_MAXIMIZED        0xE3
-#define TK_MINIMIZED        0xE4
-#define TK_RESTORED         0xE5
 
 /*
  * Generic mode enum.
@@ -190,12 +187,6 @@
  */
 #define TK_INPUT_NONE          0
 #define TK_INPUT_CANCELLED    -1
-
-/*
- * Extended reading flags
- */
-#define TK_READ_NOREMOVE       1 /* Do not remove the event from input queue */
-#define TK_READ_NOBLOCK        2 /* Do not block execution if input is not ready */
 
 /*
  * Terminal uses unsigned 32-bit value for color representation in ARGB order (0xAARRGGBB), e. g.
@@ -242,7 +233,6 @@ TERMINAL_API int terminal_print32(int x, int y, const int32_t* s);
 TERMINAL_API int terminal_has_input();
 TERMINAL_API int terminal_state(int code);
 TERMINAL_API int terminal_read();
-TERMINAL_API int terminal_read_ext(int flags);
 TERMINAL_API int terminal_read_str8(int x, int y, int8_t* buffer, int max);
 TERMINAL_API int terminal_read_str16(int x, int y, int16_t* buffer, int max);
 TERMINAL_API int terminal_read_str32(int x, int y, int32_t* buffer, int max);

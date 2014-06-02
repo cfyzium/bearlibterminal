@@ -163,13 +163,7 @@ int terminal_state(int code)
 int terminal_read()
 {
 	if (!g_instance) return TK_CLOSE;
-	return g_instance->ReadExtended(0);
-}
-
-int terminal_read_ext(int flags)
-{
-	if (!g_instance) return 0;
-	return g_instance->ReadExtended(flags);
+	return g_instance->Read();
 }
 
 template<typename char_t, typename enc_t> int read_str(int x, int y, char_t* buffer, int max, enc_t& encoding)

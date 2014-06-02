@@ -386,7 +386,7 @@ namespace BearLibTerminal
 	{
 		// Possible options: nonblocking, events, precise_mouse, sticky_close, cursor_symbol, cursor_blink_rate
 
-		if (group.attributes.count(L"precise-mouse") && !try_parse(group.attributes[L"precise-mousemove"], options.input_precise_mouse))
+		if (group.attributes.count(L"precise-mouse") && !try_parse(group.attributes[L"precise-mouse"], options.input_precise_mouse))
 		{
 			throw std::runtime_error("input.precise-mouse cannot be parsed");
 		}
@@ -932,7 +932,7 @@ namespace BearLibTerminal
 		return (code >= 0 && code < (int)m_vars.size())? m_vars[code]: 0;
 	}
 
-	Event Terminal::ReadEvent(int flags, int timeout)
+	Event Terminal::ReadEvent(int timeout)
 	{
 		std::unique_lock<std::mutex> lock(m_input_lock);
 
@@ -941,11 +941,8 @@ namespace BearLibTerminal
 			return Event(TK_CLOSE);
 		}
 
-		bool noremove = (flags & TK_READ_NOREMOVE);
-
-		if (flags & TK_READ_NOBLOCK) timeout = 0;
-
 		bool timed_out = false;
+
 		if (timeout > 0)
 		{
 			timed_out = !m_input_condvar.wait_for
@@ -959,14 +956,9 @@ namespace BearLibTerminal
 		if ((timeout > 0 && !timed_out) || (timeout == 0 && HasInputInternalUnlocked()))
 		{
 			Event event = m_input_queue.front();
-
-			if (!noremove)
-			{
-				ConsumeEvent(event);
-				m_input_queue.pop_front();
-				ConsumeIrrelevantEvents();
-			}
-
+			ConsumeEvent(event);
+			m_input_queue.pop_front();
+			ConsumeIrrelevantEvents();
 			return event;
 		}
 		else if (m_state == kClosed)
@@ -981,9 +973,9 @@ namespace BearLibTerminal
 		}
 	}
 
-	int Terminal::ReadExtended(int flags)
+	int Terminal::Read()
 	{
-		return ReadEvent(flags, std::numeric_limits<int>::max()).code;
+		return ReadEvent(std::numeric_limits<int>::max()).code;
 	}
 
 	/**
@@ -1045,7 +1037,7 @@ namespace BearLibTerminal
 			put_buffer(show_cursor);
 			Refresh();
 
-			auto event = ReadEvent(0, m_options.input_cursor_blink_rate);
+			auto event = ReadEvent(m_options.input_cursor_blink_rate);
 
 			if (event.code == TK_INPUT_NONE)
 			{
@@ -1538,6 +1530,8 @@ namespace BearLibTerminal
 				m_vars[slot.first] = slot.second;
 			}
 		}
+
+		m_vars[TK_EVENT] = event.code;
 	}
 
 	void Terminal::ConsumeIrrelevantEvents()
