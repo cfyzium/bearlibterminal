@@ -1531,6 +1531,11 @@ namespace BearLibTerminal
 			}
 		}
 
+		if (!event.properties.count(TK_CHAR))
+		{
+			m_vars[TK_CHAR] = 0;
+		}
+
 		m_vars[TK_EVENT] = event.code;
 	}
 
