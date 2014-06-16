@@ -1062,11 +1062,11 @@ namespace BearLibTerminal
 					show_cursor = true;
 				}
 			}
-			else if (m_vars[TK_CHAR])
+			else if (m_vars[TK_WCHAR])
 			{
 				if (cursor < max)
 				{
-					buffer[cursor++] = (wchar_t)m_vars[TK_CHAR];
+					buffer[cursor++] = (wchar_t)m_vars[TK_WCHAR];
 					show_cursor = true;
 				}
 			}
@@ -1523,17 +1523,30 @@ namespace BearLibTerminal
 			}
 		}
 
+		if (!event.properties.count(TK_WCHAR))
+		{
+			// Clear CHAR/WCHAR states if event does not produce any characters
+			m_vars[TK_CHAR] = m_vars[TK_WCHAR] = 0;
+		}
+		else
+		{
+			int code = m_encoding->Convert((wchar_t)event.properties[TK_WCHAR]);
+
+			if (m_encoding->GetName() == L"utf-8" && code > 127)
+			{
+				// Use ASCII replacement character for codes not mapped to ANSI
+				code = 0x1A;
+			}
+
+			event.properties[TK_CHAR] = code;
+		}
+
 		for (auto& slot: event.properties)
 		{
 			if (slot.first >= 0 && slot.first < m_vars.size())
 			{
 				m_vars[slot.first] = slot.second;
 			}
-		}
-
-		if (!event.properties.count(TK_CHAR))
-		{
-			m_vars[TK_CHAR] = 0;
 		}
 
 		m_vars[TK_EVENT] = event.code;

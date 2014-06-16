@@ -550,7 +550,7 @@ namespace BearLibTerminal
 				{
 					Event event(code|(pressed? 0: TK_KEY_RELEASED));
 					event[code] = pressed? 1: 0;
-					event[TK_CHAR] = (int)buffer[0];
+					event[TK_WCHAR] = (int)buffer[0];
 					Handle(std::move(event));
 				}
 				catch (std::exception& e)

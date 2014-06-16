@@ -854,7 +854,7 @@ namespace BearLibTerminal
 				int code = MapWindowsScancodeToTerminal(scancode);
 				if (code > 0)
 				{
-					Handle(Event(code, {{code, 1}, {TK_CHAR, 0}}));
+					Handle(Event(code, {{code, 1}}));
 				}
 			}
 			else
@@ -874,7 +874,7 @@ namespace BearLibTerminal
 				{
 					Event event(code);
 					event[code] = 1; // Pressed
-					event[TK_CHAR] = charcode;
+					event[TK_WCHAR] = charcode;
 					Handle(event);
 				}
 			}
@@ -904,7 +904,6 @@ namespace BearLibTerminal
 				{
 					Event event(code|(pressed? 0: TK_KEY_RELEASED));
 					event[code] = pressed? 1: 0;
-					event[TK_CHAR] = 0;
 					Handle(event);
 					return FALSE;
 				}
@@ -925,7 +924,6 @@ namespace BearLibTerminal
 				{
 					Event event(code|(pressed? 0: TK_KEY_RELEASED));
 					event[code] = pressed? 1: 0;
-					event[TK_CHAR] = 0;
 					Handle(event);
 				}
 			}
@@ -940,7 +938,6 @@ namespace BearLibTerminal
 				{
 					Event event(code|(pressed? 0: TK_KEY_RELEASED));
 					event[code] = pressed? 1: 0;
-					event[TK_CHAR] = 0;
 					Handle(event);
 				}
 			}
@@ -965,7 +962,6 @@ namespace BearLibTerminal
 				{
 					Event event(code|TK_KEY_RELEASED);
 					event[code] = 0;
-					event[TK_CHAR] = 0;
 					Handle(event);
 				}
 			}

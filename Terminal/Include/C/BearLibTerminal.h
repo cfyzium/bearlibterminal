@@ -165,8 +165,8 @@
 #define TK_BKCOLOR			0xC5 /* Current background color */
 #define TK_LAYER			0xC6 /* Current layer */
 #define TK_COMPOSITION      0xC7 /* Current composition state */
-#define TK_VISIBILITY       0xC8 /* Window visibility */
-#define TK_CHAR             0xC9 /* Last Unicode character */
+#define TK_CHAR             0xC8 /* Translated ANSI code of last produced character */
+#define TK_WCHAR            0xC9 /* Unicode codepoint of last produced character */
 #define TK_EVENT            0xCA /* Last dequeued event */
 
 /*

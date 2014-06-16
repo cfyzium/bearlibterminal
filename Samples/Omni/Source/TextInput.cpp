@@ -141,9 +141,9 @@ void TestTextInput()
 				{
 					break;
 				}
-				else if (terminal_check(TK_CHAR))
+				else if (terminal_check(TK_WCHAR))
 				{
-					character = terminal_state(TK_CHAR);
+					character = terminal_state(TK_WCHAR);
 					//char_result = 0;
 				}
 				else if (key < TK_KEY_RELEASED)
