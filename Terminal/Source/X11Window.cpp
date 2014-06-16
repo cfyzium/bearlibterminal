@@ -625,11 +625,11 @@ namespace BearLibTerminal
 				}
 				else if (e.xbutton.button == 4 && e.type == ButtonPress)
 				{
-					Handle(Event(TK_MOUSE_WHEEL, {{TK_MOUSE_WHEEL, -1}}));
+					Handle(Event(TK_MOUSE_SCROLL, {{TK_MOUSE_WHEEL, -1}}));
 				}
 				else if (e.xbutton.button == 5 && e.type == ButtonPress)
 				{
-					Handle(Event(TK_MOUSE_WHEEL, {{TK_MOUSE_WHEEL, +1}}));
+					Handle(Event(TK_MOUSE_SCROLL, {{TK_MOUSE_WHEEL, +1}}));
 				}
 				else
 				{

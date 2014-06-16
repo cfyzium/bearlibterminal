@@ -139,12 +139,13 @@
 #define TK_MOUSE_X1         0x83
 #define TK_MOUSE_X2         0x84
 #define TK_MOUSE_MOVE       0x85 /* Movement event */
-#define TK_MOUSE_WHEEL      0x86 /* Wheel scroll event and state*/
-#define TK_MOUSE_X          0x87 /* Cusor position in cells */
-#define TK_MOUSE_Y          0x88
-#define TK_MOUSE_PIXEL_X    0x89 /* Cursor position in pixels */
-#define TK_MOUSE_PIXEL_Y    0x8A
-#define TK_MOUSE_CLICKS     0x8B /* Number of consecutive clicks */
+#define TK_MOUSE_SCROLL     0x86 /* Mouse scroll event */
+#define TK_MOUSE_WHEEL      0x87 /* Scroll direction and amount */
+#define TK_MOUSE_X          0x88 /* Cusor position in cells */
+#define TK_MOUSE_Y          0x89
+#define TK_MOUSE_PIXEL_X    0x8A /* Cursor position in pixels */
+#define TK_MOUSE_PIXEL_Y    0x8B
+#define TK_MOUSE_CLICKS     0x8C /* Number of consecutive clicks */
 
 /*
  * If key was released instead of pressed, it's code will be OR'ed with VK_KEY_RELEASED:

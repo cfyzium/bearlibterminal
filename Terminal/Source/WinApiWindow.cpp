@@ -991,7 +991,7 @@ namespace BearLibTerminal
 			int delta = GET_WHEEL_DELTA_WPARAM(wParam) / WHEEL_DELTA;
 			m_mouse_wheel += delta;
 
-			Event event(TK_MOUSE_WHEEL);
+			Event event(TK_MOUSE_SCROLL);
 			event[TK_MOUSE_WHEEL] = delta > 0? 1: -1; // FIXME: multiple events in case of large delta
 			Handle(event);
 
