@@ -80,8 +80,9 @@ namespace BearLibTerminal
 		m_handle(nullptr),
 		m_device_context(nullptr),
 		m_rendering_context(nullptr),
-		m_mouse_wheel(0),
 		m_maximized(false),
+		m_last_mouse_click(0),
+		m_consecutive_mouse_clicks(1),
 		m_wglSwapIntervalEXT(nullptr)
 	{ }
 
@@ -781,6 +782,23 @@ namespace BearLibTerminal
 		return mapping[scancode];
 	}
 
+	else if (uMsg == WM_LBUTTONDOWN || uMsg == WM_LBUTTONUP)
+	else if (uMsg == WM_RBUTTONDOWN || uMsg == WM_RBUTTONUP)
+	else if (uMsg == WM_MBUTTONDOWN || uMsg == WM_MBUTTONUP)
+	else if (uMsg == WM_XBUTTONDOWN || uMsg == WM_XBUTTONUP)
+
+	static std::map<int, std::pair<bool, int>> kMouseButtonMapping = // WM_XXX -> {is_pressed, TK_XXX}
+	{
+		{WM_LBUTTONDOWN, {true,  TK_MOUSE_LEFT}},
+		{WM_LBUTTONUP,   {false, TK_MOUSE_LEFT}},
+		{WM_RBUTTONDOWN, {true,  TK_MOUSE_RIGHT}},
+		{WM_RBUTTONUP,   {false, TK_MOUSE_RIGHT}},
+		{WM_MBUTTONDOWN, {true,  TK_MOUSE_MIDDLE}},
+		{WM_MBUTTONUP,   {false, TK_MOUSE_MIDDLE}},
+		{WM_XBUTTONDOWN, {true,  TK_MOUSE_X1}}, // It's actually either X1 or X2 depending on wParam
+		{WM_XBUTTONUP,   {false, TK_MOUSE_X1}},
+	};
+
 	BOOL UnadjustWindowRect(LPRECT prc, DWORD dwStyle, BOOL fMenu)
 	{
 		RECT rc;
@@ -989,40 +1007,41 @@ namespace BearLibTerminal
 		else if (uMsg == WM_MOUSEWHEEL)
 		{
 			int delta = GET_WHEEL_DELTA_WPARAM(wParam) / WHEEL_DELTA;
-			m_mouse_wheel += delta;
-
 			Event event(TK_MOUSE_SCROLL);
 			event[TK_MOUSE_WHEEL] = delta > 0? 1: -1; // FIXME: multiple events in case of large delta
 			Handle(event);
 
 			return 0;
 		}
-		else if (uMsg == WM_LBUTTONDOWN || uMsg == WM_LBUTTONUP)
+		else if (kMouseButtonMapping.count(uMsg))
 		{
-			bool pressed = uMsg == WM_LBUTTONDOWN;
-			Event event(TK_MOUSE_LEFT|(pressed? 0: TK_KEY_RELEASED));
-			event[TK_MOUSE_LEFT] = pressed? 1: 0;
-			Handle(event);
+			auto& desc = kMouseButtonMapping[uMsg];
+			bool pressed = desc.second.first;
+			int code = desc.second.second;
 
-			return 0;
-		}
-		else if (uMsg == WM_RBUTTONDOWN || uMsg == WM_RBUTTONUP)
-		{
-			bool pressed = uMsg == WM_RBUTTONDOWN;
-			Event event(TK_MOUSE_RIGHT|(pressed? 0: TK_KEY_RELEASED));
-			event[TK_MOUSE_RIGHT] = pressed? 1: 0;
-			Handle(event);
+			if (code == TK_MOUSE_X1)
+			{
+				// Higher word of wParam if 1 for X1 and 2 for X2.
+				code += (HIWORD(wParam)-1);
+			}
 
-			return 0;
-		}
-		else if (uMsg == WM_MBUTTONDOWN || uMsg == WM_MBUTTONUP)
-		{
-			bool pressed = uMsg == WM_MBUTTONDOWN;
-			Event event(TK_MOUSE_MIDDLE|(pressed? 0: TK_KEY_RELEASED));
-			event[TK_MOUSE_MIDDLE] = pressed? 1: 0;
-			Handle(event);
+			uint64_t now = gettime();
+			uint64_t delta = now - m_last_mouse_click;
+			m_last_mouse_click = now;
 
-			return 0;
+			if (pressed && delta < GetDoubleClickTime()) // TODO: Maybe, an option to match X11?
+			{
+				m_consecutive_mouse_clicks += 1;
+			}
+			else
+			{
+				m_consecutive_mouse_clicks = 1;
+			}
+
+			Event event(code | (pressed? 0: TK_KEY_RELEASED));
+			event[code] = pressed? 1: 0;
+			event[TK_MOUSE_CLICKS] = m_consecutive_mouse_clicks;
+			Handle(event);
 		}
 		else if (uMsg == WM_ACTIVATE)
 		{

@@ -80,8 +80,9 @@ namespace BearLibTerminal
 		HDC m_device_context;
 		HGLRC m_rendering_context;
 		Semaphore m_redraw_barrier;
-		int m_mouse_wheel;
 		bool m_maximized;
+		uint64_t m_last_mouse_click;
+		int m_consecutive_mouse_clicks;
 
 		typedef BOOL (WINAPI *PFN_WGLSWAPINTERVALEXT)(int interval);
 		PFN_WGLSWAPINTERVALEXT m_wglSwapIntervalEXT;

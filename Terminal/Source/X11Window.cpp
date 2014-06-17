@@ -586,13 +586,17 @@ namespace BearLibTerminal
 				// OnMousePress/Release
 				bool pressed = e.type == ButtonPress;
 
-				if (e.xbutton.button >= 1 && e.xbutton.button <= 3)
+				bool is_button =
+					(e.xbutton.button >= 1 && e.xbutton.button <= 3) ||
+					(e.xbutton.button >= 6 && e.xbutton.button <= 7);
+
+				if (is_button)
 				{
 					uint64_t now = gettime();
 					uint64_t delta = now - m_last_mouse_click;
 					m_last_mouse_click = now;
 
-					if (pressed && delta < 500) // FIXME: harcode
+					if (pressed && delta < 500) // FIXME: harcode, make an input.mouse-click-speed option.
 					{
 						m_consecutive_mouse_clicks += 1;
 					}
@@ -602,24 +606,23 @@ namespace BearLibTerminal
 					}
 				}
 
-				if (e.xbutton.button == 1)
+				if (is_button)
 				{
-					Event event(TK_MOUSE_LEFT | (pressed? 0: TK_KEY_RELEASED));
-					event[TK_MOUSE_LEFT] = pressed? 1: 0;
-					event[TK_MOUSE_CLICKS] = m_consecutive_mouse_clicks;
-					Handle(event);
-				}
-				else if (e.xbutton.button == 2)
-				{
-					Event event(TK_MOUSE_MIDDLE | (pressed? 0: TK_KEY_RELEASED));
-					event[TK_MOUSE_MIDDLE] = pressed? 1: 0;
-					event[TK_MOUSE_CLICKS] = m_consecutive_mouse_clicks;
-					Handle(event);
-				}
-				else if (e.xbutton.button == 3)
-				{
-					Event event(TK_MOUSE_RIGHT | (pressed? 0: TK_KEY_RELEASED));
-					event[TK_MOUSE_RIGHT] = pressed? 1: 0;
+					static int mapping[] =
+					{
+						0,               // None
+						TK_MOUSE_LEFT,   // LMB
+						TK_MOUSE_MIDDLE, // MMB
+						TK_MOUSE_RIGHT,  // RMB
+						0,               // Wheel up
+						0,               // Wheel down
+						TK_MOUSE_X1,     // X1
+						TK_MOUSE_X2      // X2
+					};
+
+					int code = mapping[e.xbutton.button];
+					Event event(code | (pressed? 0: TK_KEY_RELEASED));
+					event[code] = pressed? 1: 0;
 					event[TK_MOUSE_CLICKS] = m_consecutive_mouse_clicks;
 					Handle(event);
 				}
