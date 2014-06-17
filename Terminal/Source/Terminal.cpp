@@ -36,10 +36,10 @@ namespace BearLibTerminal
 {
 	static std::vector<float> kScaleSteps =
 	{
-		0.25f, 0.5f, 1.0f, 1.5f, 2.0f, 3.0f, 4.0f
+		0.5f, 1.0f, 1.25f, 1.5f, 2.0f, 3.0f, 4.0f
 	};
 
-	static int kScaleStartStep = 2;
+	static int kScaleStartStep = 1;
 
 	Terminal::Terminal():
 		m_state{kHidden},
@@ -1479,36 +1479,46 @@ namespace BearLibTerminal
 		}
 		else if (event.code == TK_A && alt)
 		{
+			// Alt+A: dump atlas textures to disk.
 			std::lock_guard<std::mutex> guard(m_lock);
 			m_world.tiles.atlas.Dump();
 			return 0;
 		}
 		else if (event.code == TK_G && alt)
 		{
+			// Alt+G: toggle grid
 			m_show_grid = !m_show_grid;
 			Redraw(true);
 			return 0;
 		}
 		else if (event.code == TK_RETURN && alt)
 		{
-			// Alt+Enter
+			// Alt+ENTER: toggle fullscreen.
 			m_viewport_modified = true;
 			m_window->ToggleFullscreen();
 			return 0;
 		}
-		else if ((event.code == TK_MINUS || event.code == TK_EQUALS) && alt)
+		else if ((event.code == TK_MINUS || event.code == TK_EQUALS || event.code == TK_KP_MINUS || event.code == TK_KP_PLUS) && alt)
 		{
-			if (event.code == TK_MINUS && m_scale_step > 0)
+			// Alt+(plus/minus): adjust user window scaling.
+			if ((event.code == TK_MINUS || event.code == TK_KP_MINUS) && m_scale_step > 0)
 			{
 				m_scale_step -= 1;
 			}
-			else if (event.code == TK_EQUALS && m_scale_step < kScaleSteps.size()-1)
+			else if ((event.code == TK_EQUALS || event.code == TK_KP_PLUS) && m_scale_step < kScaleSteps.size()-1)
 			{
 				m_scale_step += 1;
 			}
 
 			float scale_factor = kScaleSteps[m_scale_step];
 			m_window->SetClientSize(m_world.state.cellsize * m_world.stage.size * scale_factor);
+			return 0;
+		}
+		else if ((event.code & 0xFF) == TK_ALT)
+		{
+			std::lock_guard<std::mutex> guard(m_input_lock);
+			ConsumeEvent(event);
+			return 0;
 		}
 
 		std::lock_guard<std::mutex> guard(m_input_lock);
