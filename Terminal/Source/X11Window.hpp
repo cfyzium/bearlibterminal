@@ -59,13 +59,14 @@ namespace BearLibTerminal
 		bool CreateWindowObject();
 		void DestroyWindowObject();
 		void HandleRepaint();
-		void UpdateSizeHints();
+		void UpdateSizeHints(Size size=Size());
 	protected:
 		struct Private;
 		std::unique_ptr<Private> m_private;
 		uint64_t m_last_mouse_click;
 		int m_consecutive_mouse_clicks;
 		bool m_resizeable;
+		bool m_client_resize;
 	};
 }
 

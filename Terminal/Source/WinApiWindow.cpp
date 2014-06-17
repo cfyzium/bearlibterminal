@@ -916,7 +916,7 @@ namespace BearLibTerminal
 			if (uMsg == WM_SYSKEYDOWN || uMsg == WM_SYSKEYUP)
 			{
 				int code = MapWindowsScancodeToTerminal(scancode);
-				std::set<int> codes = {TK_F10, TK_ALT, TK_RETURN, TK_A, TK_G};
+				std::set<int> codes = {TK_F10, TK_ALT, TK_RETURN, TK_A, TK_G, TK_MINUS, TK_EQUALS};
 
 				if (codes.count(code))
 				{

@@ -66,9 +66,16 @@ namespace BearLibTerminal
 			return BasicSize<T>(width-other.width, height-other.height);
 		}
 
-		BasicSize<T> operator*(T factor) const
+		template<typename U> BasicSize<T> operator*(U factor) const
 		{
-			return BasicSize<T>(width*factor, height*factor);
+			return BasicSize<T>(T(width*factor), T(height*factor));
+		}
+
+		template<typename U> BasicSize<T>& operator*=(U factor)
+		{
+			width *= factor;
+			height *= factor;
+			return *this;
 		}
 
 		BasicSize<T> operator*(BasicSize<T> factor) const
@@ -76,9 +83,16 @@ namespace BearLibTerminal
 			return BasicSize<T>(width*factor.width, height*factor.height);
 		}
 
-		BasicSize<T> operator/(T factor) const
+		template<typename U> BasicSize<T> operator/(U factor) const
 		{
-			return BasicSize<T>(width/factor, height/factor);
+			return BasicSize<T>(T(width/factor), T(height/factor));
+		}
+
+		template<typename U> BasicSize<T>& operator/=(U factor)
+		{
+			width /= factor;
+			height /= factor;
+			return *this;
 		}
 
 		BasicSize<T> operator/(BasicSize<T> factors) const

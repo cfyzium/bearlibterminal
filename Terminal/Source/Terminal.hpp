@@ -95,6 +95,7 @@ namespace BearLibTerminal
 		bool m_show_grid;
 		bool m_viewport_modified;
 		Rectangle m_viewport_scissors;
+		int m_scale_step;
 	};
 }
 

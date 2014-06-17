@@ -27,6 +27,7 @@
 #include "Log.hpp"
 #include "Encoding.hpp"
 #include "Utility.hpp"
+#include "Geometry.hpp"
 #include <X11/Xlib.h>
 #include <X11/Xmu/Xmu.h>
 #include <GL/glx.h>
@@ -285,7 +286,8 @@ namespace BearLibTerminal
 		m_private(new Private()),
 		m_last_mouse_click(0),
 		m_consecutive_mouse_clicks(1),
-		m_resizeable(false)
+		m_resizeable(false),
+		m_client_resize(false)
 	{ }
 
 	X11Window::~X11Window()
@@ -324,8 +326,10 @@ namespace BearLibTerminal
 		);
 	}
 
-	void X11Window::UpdateSizeHints()
+	void X11Window::UpdateSizeHints(Size size) // FIXME: wtf
 	{
+		if (size.Area() == 0) size = m_client_size;
+
 		auto hints = m_private->size_hints;
 
 		if (m_resizeable)
@@ -339,8 +343,10 @@ namespace BearLibTerminal
 		else
 		{
 			hints->flags = PMinSize | PMaxSize;
-			hints->min_width = hints->max_width = m_client_size.width;
-			hints->min_height = hints->max_height = m_client_size.height;
+			//hints->min_width = hints->max_width = m_client_size.width;
+			//hints->min_height = hints->max_height = m_client_size.height;
+			hints->min_width = hints->max_width = size.width;
+			hints->min_height = hints->max_height = size.height;
 		}
 
 		XSetWMNormalHints(m_private->display, m_private->window, hints);
@@ -349,10 +355,13 @@ namespace BearLibTerminal
 	void X11Window::SetClientSize(const Size& size)
 	{
 		std::lock_guard<std::mutex> guard(m_lock);
-		if ( m_private->window == 0 ) return;
-		m_client_size = size;
-		UpdateSizeHints();
-		XResizeWindow(m_private->display, m_private->window, size.width, size.height);
+		if (m_private->window == 0) return;
+		Post([=]
+		{
+			m_client_resize = true;
+			UpdateSizeHints(size);
+			XResizeWindow(m_private->display, m_private->window, size.width, size.height);
+		});
 	}
 
 	void X11Window::SetResizeable(bool resizeable)
@@ -566,6 +575,13 @@ namespace BearLibTerminal
 				if (new_size.width != m_client_size.width || new_size.height != m_client_size.height)
 				{
 					m_client_size = new_size;
+
+					Handle(Event(TK_INVALIDATE));
+					if (m_client_resize)
+					{
+						HandleRepaint();
+						m_client_resize = false;
+					}
 
 					Event event(TK_RESIZED);
 					event[TK_WIDTH] = m_client_size.width; // FIXME: client size, not raw slot value

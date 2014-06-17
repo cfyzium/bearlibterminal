@@ -14,6 +14,7 @@
 #include "BearLibTerminal.h"
 #include <cmath>
 #include <future>
+#include <vector>
 
 #include <iostream>
 
@@ -33,11 +34,19 @@ namespace BearLibTerminal
 
 namespace BearLibTerminal
 {
+	static std::vector<float> kScaleSteps =
+	{
+		0.25f, 0.5f, 1.0f, 1.5f, 2.0f, 3.0f, 4.0f
+	};
+
+	static int kScaleStartStep = 2;
+
 	Terminal::Terminal():
 		m_state{kHidden},
 		m_vars{},
 		m_show_grid{false},
-		m_viewport_modified{false}
+		m_viewport_modified{false},
+		m_scale_step(kScaleStartStep)
 	{
 		// Reset logger (this is terrible)
 		g_logger = std::unique_ptr<Log>(new Log());
@@ -286,10 +295,11 @@ namespace BearLibTerminal
 		if (viewport_size_changed)
 		{
 			// Resize window object
-			Size viewport_size = m_world.stage.size * m_world.state.cellsize;
+			float scale_factor = kScaleSteps[m_scale_step];
+			Size viewport_size = m_world.stage.size * m_world.state.cellsize * scale_factor;
 			m_vars[TK_CLIENT_WIDTH] = viewport_size.width;
 			m_vars[TK_CLIENT_HEIGHT] = viewport_size.height;
-			m_window->SetSizeHints(m_world.state.cellsize, updated.window_minimum_size);
+			m_window->SetSizeHints(m_world.state.cellsize*scale_factor, updated.window_minimum_size);
 			m_window->SetClientSize(viewport_size);
 			m_viewport_modified = true;
 		}
@@ -1126,8 +1136,11 @@ namespace BearLibTerminal
 			else
 			{
 				// Center
-				stage_area.left += (viewport_size.width-stage_size.width)/2;
-				stage_area.top += (viewport_size.height-stage_size.height)/2;
+				float scale_factor = kScaleSteps[m_scale_step];
+				stage_area.width *= scale_factor;
+				stage_area.height *= scale_factor;
+				stage_area.left += (viewport_size.width-stage_area.width)/2;
+				stage_area.top += (viewport_size.height-stage_area.height)/2;
 			}
 		}
 
@@ -1382,6 +1395,8 @@ namespace BearLibTerminal
 
 	int Terminal::OnWindowEvent(Event event)
 	{
+		bool alt = get_locked(m_vars[TK_ALT], m_input_lock);
+
 		if (event.code == TK_DESTROY)
 		{
 			HandleDestroy();
@@ -1418,11 +1433,12 @@ namespace BearLibTerminal
 		{
 			std::lock_guard<std::mutex> guard(m_lock);
 
+			float scale_factor = kScaleSteps[m_scale_step];
 			Size& cellsize = m_world.state.cellsize;
 			Size size
 			(
-				std::floor(event[TK_WIDTH]/(float)cellsize.width),
-				std::floor(event[TK_HEIGHT]/(float)cellsize.height)
+				std::floor(event[TK_WIDTH]/scale_factor/cellsize.width),
+				std::floor(event[TK_HEIGHT]/scale_factor/cellsize.height)
 			);
 
 			if (size == m_world.stage.size)
@@ -1441,11 +1457,12 @@ namespace BearLibTerminal
 		{
 			std::lock_guard<std::mutex> guard(m_lock);
 
+			float scale_factor = kScaleSteps[m_scale_step];
 			Size& cellsize = m_world.state.cellsize;
 			Point location
 			(
-				std::floor(event[TK_MOUSE_PIXEL_X]/(float)cellsize.width),
-				std::floor(event[TK_MOUSE_PIXEL_Y]/(float)cellsize.height)
+				std::floor(event[TK_MOUSE_PIXEL_X]/scale_factor/cellsize.width),
+				std::floor(event[TK_MOUSE_PIXEL_Y]/scale_factor/cellsize.height)
 			);
 
 			if (!m_options.input_precise_mouse && m_vars[TK_MOUSE_X] == location.x && m_vars[TK_MOUSE_Y] == location.y)
@@ -1460,24 +1477,38 @@ namespace BearLibTerminal
 				event[TK_MOUSE_Y] = location.y;
 			}
 		}
-		else if (event.code == TK_A && get_locked(m_vars[TK_ALT], m_input_lock))
+		else if (event.code == TK_A && alt)
 		{
 			std::lock_guard<std::mutex> guard(m_lock);
 			m_world.tiles.atlas.Dump();
 			return 0;
 		}
-		else if (event.code == TK_G && get_locked(m_vars[TK_ALT], m_input_lock))
+		else if (event.code == TK_G && alt)
 		{
 			m_show_grid = !m_show_grid;
 			Redraw(true);
 			return 0;
 		}
-		else if (event.code == TK_RETURN && get_locked(m_vars[TK_ALT], m_input_lock))
+		else if (event.code == TK_RETURN && alt)
 		{
 			// Alt+Enter
 			m_viewport_modified = true;
 			m_window->ToggleFullscreen();
 			return 0;
+		}
+		else if ((event.code == TK_MINUS || event.code == TK_EQUALS) && alt)
+		{
+			if (event.code == TK_MINUS && m_scale_step > 0)
+			{
+				m_scale_step -= 1;
+			}
+			else if (event.code == TK_EQUALS && m_scale_step < kScaleSteps.size()-1)
+			{
+				m_scale_step += 1;
+			}
+
+			float scale_factor = kScaleSteps[m_scale_step];
+			m_window->SetClientSize(m_world.state.cellsize * m_world.stage.size * scale_factor);
 		}
 
 		std::lock_guard<std::mutex> guard(m_input_lock);
