@@ -306,9 +306,10 @@ namespace BearLibTerminal
 			m_viewport_modified = true;
 		}
 
-		if (updated.window_fullscreen != m_window->IsFullscreen())
+		if (updated.window_toggle_fullscreen)
 		{
 			m_window->ToggleFullscreen();
+			updated.window_toggle_fullscreen = false;
 		}
 
 		// Do not touch input lock. Input handlers should just take main lock if necessary.
@@ -398,9 +399,19 @@ namespace BearLibTerminal
 			throw std::runtime_error("window.minimum-size value is out of range");
 		}
 
-		if (group.attributes.count(L"fullscreen") && !try_parse(group.attributes[L"fullscreen"], options.window_fullscreen))
+		if (group.attributes.count(L"fullscreen"))
 		{
-			throw std::runtime_error("window.fullscreen value cannot be parsed");
+			bool desired_state = false;
+
+			if (!try_parse(group.attributes[L"fullscreen"], desired_state))
+			{
+				throw std::runtime_error("window.fullscreen value cannot be parsed");
+			}
+
+			if (desired_state != m_window->IsFullscreen())
+			{
+				options.window_toggle_fullscreen = true;
+			}
 		}
 	}
 
