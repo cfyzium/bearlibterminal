@@ -61,7 +61,8 @@ namespace BearLibTerminal
 
 	Terminal::~Terminal()
 	{
-		m_window.reset();
+		m_window->Stop();
+		m_window.reset(); // TODO: is it needed?
 	}
 
 	int Terminal::SetOptions(const std::wstring& value)
@@ -1232,7 +1233,10 @@ namespace BearLibTerminal
 		// will mean that Terminal is currently busy. Calling window implementation
 		// SHOULD be prepared to reschedule painting to a later time.
 		std::unique_lock<std::mutex> guard(m_lock, std::try_to_lock);
-		if (!guard.owns_lock()) return -1; // TODO: enum TODO: timed try
+		if (!guard.owns_lock())
+		{
+			return -1; // TODO: enum TODO: timed try
+		}
 		/*/
 		std::unique_lock<std::mutex> guard(m_lock);
 		//*/
@@ -1379,8 +1383,6 @@ namespace BearLibTerminal
 	 */
 	void Terminal::HandleDestroy()
 	{
-		LOG(Debug, "OnWindowClose callback is called");
-
 		std::lock_guard<std::mutex> guard(m_lock);
 		m_state = kClosed;
 
@@ -1511,6 +1513,7 @@ namespace BearLibTerminal
 			}
 
 			float scale_factor = kScaleSteps[m_scale_step];
+			m_window->SetSizeHints(m_world.state.cellsize*scale_factor, m_options.window_minimum_size);
 			m_window->SetClientSize(m_world.state.cellsize * m_world.stage.size * scale_factor);
 			return 0;
 		}

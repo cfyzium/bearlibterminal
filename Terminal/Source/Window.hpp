@@ -68,6 +68,8 @@ namespace BearLibTerminal
 		virtual void ToggleFullscreen() { }
 		void Invoke(std::function<void()> func);
 		bool IsFullscreen() const;
+		void Run();
+		void Stop();
 		static std::unique_ptr<Window> Create();
 	protected:
 		Window();
@@ -75,8 +77,6 @@ namespace BearLibTerminal
 		virtual bool Construct() = 0;
 		virtual void Destroy() = 0; // noexcept(true)
 		virtual bool PumpEvents() = 0;
-		void Run();
-		void Stop();
 		int Handle(Event event);
 		EventHandler m_event_handler;
 		std::atomic<bool> m_event_handler_is_set;

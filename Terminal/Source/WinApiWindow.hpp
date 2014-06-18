@@ -71,6 +71,7 @@ namespace BearLibTerminal
 		bool CreateOpenGLContext();
 		void DestroyWindowObject();
 		void DestroyOpenGLContext();
+		void Redraw();
 		static LRESULT CALLBACK SharedWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 		LRESULT WindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam);
 		LRESULT HandleWmPaint(WPARAM wParam, LPARAM lParam);
@@ -83,6 +84,7 @@ namespace BearLibTerminal
 		bool m_maximized;
 		uint64_t m_last_mouse_click;
 		int m_consecutive_mouse_clicks;
+		bool m_suppress_wm_paint_once;
 
 		typedef BOOL (WINAPI *PFN_WGLSWAPINTERVALEXT)(int interval);
 		PFN_WGLSWAPINTERVALEXT m_wglSwapIntervalEXT;

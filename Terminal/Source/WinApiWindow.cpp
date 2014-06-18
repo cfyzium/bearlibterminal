@@ -33,6 +33,7 @@
 #include "OpenGL.hpp"
 #include "Resource.hpp"
 #include "Geometry.hpp"
+#include "Utility.hpp"
 
 #include <Mmsystem.h>
 
@@ -83,6 +84,7 @@ namespace BearLibTerminal
 		m_maximized(false),
 		m_last_mouse_click(0),
 		m_consecutive_mouse_clicks(1),
+		m_suppress_wm_paint_once(false),
 		m_wglSwapIntervalEXT(nullptr)
 	{ }
 
@@ -617,6 +619,14 @@ namespace BearLibTerminal
 		}
 	}
 
+	void WinApiWindow::Redraw()
+	{
+		if (Handle(TK_REDRAW) > 0)
+		{
+			SwapBuffers();
+		}
+	}
+
 	LRESULT CALLBACK WinApiWindow::SharedWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	{
 		WinApiWindow* p = (WinApiWindow*)GetWindowLongPtrW(hwnd, GWLP_USERDATA);
@@ -626,24 +636,23 @@ namespace BearLibTerminal
 			p->WindowProc(uMsg, wParam, lParam);
 	}
 
-	uint64_t tt_val = 0;
-	uint64_t tt_num = 0;
-	uint64_t tt_las = 0;
-
-
 	LRESULT WinApiWindow::HandleWmPaint(WPARAM wParam, LPARAM lParam)
 	{
-		try
+		if (!m_suppress_wm_paint_once)
 		{
-			if (Handle(TK_REDRAW) > 0)
+			try
 			{
-				SwapBuffers();
+				Redraw();
+			}
+			catch (std::exception& e)
+			{
+				LOG(Fatal, L"Rendering routine has thrown an exception: " << e.what());
+				m_proceed = false;
 			}
 		}
-		catch ( std::exception& e )
+		else
 		{
-			LOG(Fatal, L"Rendering routine has thrown an exception: " << e.what());
-			m_proceed = false;
+			m_suppress_wm_paint_once = false;
 		}
 
 		// Mark window area as processed
@@ -782,11 +791,6 @@ namespace BearLibTerminal
 		return mapping[scancode];
 	}
 
-	else if (uMsg == WM_LBUTTONDOWN || uMsg == WM_LBUTTONUP)
-	else if (uMsg == WM_RBUTTONDOWN || uMsg == WM_RBUTTONUP)
-	else if (uMsg == WM_MBUTTONDOWN || uMsg == WM_MBUTTONUP)
-	else if (uMsg == WM_XBUTTONDOWN || uMsg == WM_XBUTTONUP)
-
 	static std::map<int, std::pair<bool, int>> kMouseButtonMapping = // WM_XXX -> {is_pressed, TK_XXX}
 	{
 		{WM_LBUTTONDOWN, {true,  TK_MOUSE_LEFT}},
@@ -920,9 +924,16 @@ namespace BearLibTerminal
 
 				if (codes.count(code))
 				{
+					// Set Alt state
+					Handle({TK_ALT, {{TK_ALT, 1}}});
+
 					Event event(code|(pressed? 0: TK_KEY_RELEASED));
 					event[code] = pressed? 1: 0;
 					Handle(event);
+
+					// Clear Alt state
+					Handle({TK_ALT|TK_KEY_RELEASED, {{TK_ALT, 0}}});
+
 					return FALSE;
 				}
 				else
@@ -1008,7 +1019,7 @@ namespace BearLibTerminal
 		{
 			int delta = GET_WHEEL_DELTA_WPARAM(wParam) / WHEEL_DELTA;
 			Event event(TK_MOUSE_SCROLL);
-			event[TK_MOUSE_WHEEL] = delta > 0? 1: -1; // FIXME: multiple events in case of large delta
+			event[TK_MOUSE_WHEEL] = delta > 0? -1: +1; // FIXME: multiple events in case of large delta
 			Handle(event);
 
 			return 0;
@@ -1016,8 +1027,8 @@ namespace BearLibTerminal
 		else if (kMouseButtonMapping.count(uMsg))
 		{
 			auto& desc = kMouseButtonMapping[uMsg];
-			bool pressed = desc.second.first;
-			int code = desc.second.second;
+			bool pressed = desc.first;
+			int code = desc.second;
 
 			if (code == TK_MOUSE_X1)
 			{
@@ -1067,6 +1078,13 @@ namespace BearLibTerminal
 				Handle(event);
 			}
 
+			m_suppress_wm_paint_once = true;
+			Post([=]
+			{
+				Handle(TK_INVALIDATE);
+				Redraw();
+			});
+
 			return TRUE;
 		}
 		else if (uMsg == WM_EXITSIZEMOVE)
@@ -1076,10 +1094,34 @@ namespace BearLibTerminal
 			m_client_size.width = rect.right - rect.left;
 			m_client_size.height = rect.bottom - rect.top;
 
-			Event event(TK_RESIZED);
-			event[TK_WIDTH] = m_client_size.width;
-			event[TK_HEIGHT] = m_client_size.height;
-			Handle(event);
+			Size snapped = m_cell_size*std::floor(m_client_size/m_cell_size.As<float>());
+
+			if (snapped != m_client_size)
+			{
+				m_client_size = snapped;
+
+				DWORD style = GetWindowLongW(m_handle, GWL_STYLE);
+				RECT rectangle = {0, 0, m_client_size.width, m_client_size.height};
+				AdjustWindowRect(&rectangle, style, FALSE);
+				SetWindowPos
+				(
+					m_handle,
+					HWND_NOTOPMOST,
+					0, 0,
+					rectangle.right-rectangle.left,
+					rectangle.bottom-rectangle.top,
+					SWP_NOMOVE
+				);
+			}
+
+			m_suppress_wm_paint_once = true;
+			Post([=]
+			{
+				Handle(TK_INVALIDATE);
+				Redraw();
+			});
+
+			Handle({TK_RESIZED, {{TK_WIDTH, m_client_size.width}, {TK_HEIGHT, m_client_size.height}}});
 
 			return FALSE;
 		}
@@ -1090,41 +1132,50 @@ namespace BearLibTerminal
 
 			RECT client_rect = *rect;
 			UnadjustWindowRect(&client_rect, style, FALSE);
-			int client_width = client_rect.right - client_rect.left;
-			int client_height = client_rect.bottom - client_rect.top;
+			Size size(client_rect.right - client_rect.left, client_rect.bottom - client_rect.top);
 
-			int projected_width = (int)std::round(client_width/(float)m_cell_size.width);
-			int projected_height = (int)std::round(client_height / (float)m_cell_size.height);
-			if (projected_width < m_minimum_size.width) projected_width = m_minimum_size.width;
-			if (projected_height < m_minimum_size.height) projected_height = m_minimum_size.height;
+			Size minimum = m_minimum_size * m_cell_size;
 
-			if (wParam == WMSZ_LEFT || wParam == WMSZ_TOPLEFT || wParam == WMSZ_BOTTOMLEFT)
+			if (size.width < minimum.width)
 			{
-				int delta = projected_width*m_cell_size.width - client_width;
-				rect->left -= delta;
+				int delta = minimum.width - size.width;
+
+				if (wParam == WMSZ_LEFT || wParam == WMSZ_TOPLEFT || wParam == WMSZ_BOTTOMLEFT)
+				{
+					rect->left -= delta;
+				}
+				else if (wParam == WMSZ_RIGHT || wParam == WMSZ_TOPRIGHT || wParam == WMSZ_BOTTOMRIGHT)
+				{
+					rect->right += delta;
+				}
 			}
 
-			if (wParam == WMSZ_TOP || wParam == WMSZ_TOPLEFT || wParam == WMSZ_TOPRIGHT)
+			if (size.height < minimum.height)
 			{
-				int delta = projected_height*m_cell_size.height - client_height;
-				rect->top -= delta;
-			}
+				int delta = minimum.height - size.height;
 
-			if (wParam == WMSZ_RIGHT || wParam == WMSZ_TOPRIGHT || wParam == WMSZ_BOTTOMRIGHT)
-			{
-				int delta = projected_width*m_cell_size.width - client_width;
-				rect->right += delta;
-			}
-
-			if (wParam == WMSZ_BOTTOM || wParam == WMSZ_BOTTOMLEFT || wParam == WMSZ_BOTTOMRIGHT)
-			{
-				int delta = projected_height*m_cell_size.height - client_height;
-				rect->bottom += delta;
+				if (wParam == WMSZ_TOP || wParam == WMSZ_TOPLEFT || wParam == WMSZ_TOPRIGHT)
+				{
+					rect->top -= delta;
+				}
+				else if (wParam == WMSZ_BOTTOM || wParam == WMSZ_BOTTOMLEFT || wParam == WMSZ_BOTTOMRIGHT)
+				{
+					rect->bottom += delta;
+				}
 			}
 
 			Handle(Event(TK_INVALIDATE));
 
 			return TRUE;
+		}
+		else if (uMsg == WM_GETMINMAXINFO)
+		{
+			auto info = (MINMAXINFO*)lParam;
+			//info->ptMaxSize.x = LONG_MAX;
+			//info->ptMaxSize.y = LONG_MAX;
+			info->ptMaxTrackSize.x = LONG_MAX;
+			info->ptMaxTrackSize.y = LONG_MAX;
+			return FALSE;
 		}
 		else if (uMsg == WM_CUSTOM_POST)
 		{
