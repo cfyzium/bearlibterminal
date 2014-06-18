@@ -46,7 +46,8 @@ namespace BearLibTerminal
 		m_vars{},
 		m_show_grid{false},
 		m_viewport_modified{false},
-		m_scale_step(kScaleStartStep)
+		m_scale_step(kScaleStartStep),
+		m_scale_factor(kScaleSteps[kScaleStartStep])
 	{
 		// Reset logger (this is terrible)
 		g_logger = std::unique_ptr<Log>(new Log());
@@ -305,6 +306,11 @@ namespace BearLibTerminal
 			m_viewport_modified = true;
 		}
 
+		if (updated.window_fullscreen != m_window->IsFullscreen())
+		{
+			m_window->ToggleFullscreen();
+		}
+
 		// Do not touch input lock. Input handlers should just take main lock if necessary.
 		/*
 		// Briefly grab input lock so that input routines do not contend for m_options
@@ -390,6 +396,11 @@ namespace BearLibTerminal
 		if (options.window_minimum_size.width < 1 || options.window_minimum_size.height < 1)
 		{
 			throw std::runtime_error("window.minimum-size value is out of range");
+		}
+
+		if (group.attributes.count(L"fullscreen") && !try_parse(group.attributes[L"fullscreen"], options.window_fullscreen))
+		{
+			throw std::runtime_error("window.fullscreen value cannot be parsed");
 		}
 	}
 
@@ -1431,6 +1442,11 @@ namespace BearLibTerminal
 			ConsumeIrrelevantEvents();
 			return 0;
 		}
+		else if (event.code == TK_STATE_UPDATE)
+		{
+			ConsumeEvent(event);
+			return 0;
+		}
 		else if (event.code == TK_RESIZED)
 		{
 			std::lock_guard<std::mutex> guard(m_lock);
@@ -1512,9 +1528,9 @@ namespace BearLibTerminal
 				m_scale_step += 1;
 			}
 
-			float scale_factor = kScaleSteps[m_scale_step];
-			m_window->SetSizeHints(m_world.state.cellsize*scale_factor, m_options.window_minimum_size);
-			m_window->SetClientSize(m_world.state.cellsize * m_world.stage.size * scale_factor);
+			m_scale_factor = kScaleSteps[m_scale_step];
+			m_window->SetSizeHints(m_world.state.cellsize * m_scale_factor, m_options.window_minimum_size);
+			m_window->SetClientSize(m_world.state.cellsize * m_world.stage.size * m_scale_factor);
 			return 0;
 		}
 		else if ((event.code & 0xFF) == TK_ALT)

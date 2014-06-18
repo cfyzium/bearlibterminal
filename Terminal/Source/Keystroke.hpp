@@ -29,33 +29,6 @@
 
 namespace BearLibTerminal
 {
-	/*
-	struct Keystroke
-	{
-		static constexpr std::uint32_t
-			None        = 0,
-			KeyPress    = (1<<0),
-			KeyRelease  = (1<<1),
-			Keys        = KeyPress|KeyRelease,
-			MouseMove   = (1<<2),
-			MouseScroll = (1<<3),
-			Mouse       = MouseMove|MouseScroll,
-			Unicode     = (1<<4),
-			All = Keys|Mouse|Unicode;
-
-		typedef std::uint32_t Type;
-
-		Keystroke(Type type, std::uint8_t scancode); // keypress/keyrelease events
-		Keystroke(Type type, std::uint8_t scancode, char16_t character); // character-producing keypress event
-		Keystroke(Type type, std::uint8_t scancode, int x, int y, int z); // mouse events
-
-		Type type;
-		std::uint8_t scancode;
-		char16_t character;
-		int x, y, z;
-	};
-	//*/
-
 	struct Event
 	{
 		enum class Domain

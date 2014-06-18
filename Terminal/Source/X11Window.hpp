@@ -51,6 +51,7 @@ namespace BearLibTerminal
 		bool PumpEvents();
 		void SetResizeable(bool resizeable);
 		Size GetActualSize();
+		void ToggleFullscreen();
 	protected:
 		void ThreadFunction();
 		bool Construct();

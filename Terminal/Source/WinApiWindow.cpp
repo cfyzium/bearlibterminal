@@ -329,6 +329,7 @@ namespace BearLibTerminal
 			}
 
 			m_fullscreen = !m_fullscreen;
+			Handle({TK_STATE_UPDATE, {{TK_FULLSCREEN, (int)m_fullscreen}}});
 
 			// Force window update
 			InvalidateRect(m_handle, NULL, FALSE);

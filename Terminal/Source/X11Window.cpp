@@ -391,6 +391,49 @@ namespace BearLibTerminal
 		UpdateSizeHints();
 	}
 
+	void X11Window::ToggleFullscreen()
+	{
+		Post([=]
+		{
+			if (!m_resizeable)
+			{
+				XSizeHints *sizehints = XAllocSizeHints();
+				long flags = 0;
+				XGetWMNormalHints(m_private->display, m_private->window, sizehints, &flags);
+				if (m_fullscreen)
+				{
+					// Leaving fullscreen mode
+					sizehints->flags |= PMinSize | PMaxSize;
+					sizehints->min_width = sizehints->max_width = m_client_size.width;
+					sizehints->min_height = sizehints->max_height = m_client_size.height;
+				}
+				else
+				{
+					// Entering fullscreen mode
+					sizehints->flags &= ~(PMinSize | PMaxSize);
+				}
+				XSetWMNormalHints(m_private->display, m_private->window, sizehints);
+				XFree(sizehints);
+			}
+
+			XEvent e;
+			memset(&e, 0, sizeof(e));
+			e.xclient.type = ClientMessage;
+			e.xclient.window = m_private->window;
+			e.xclient.message_type = XInternAtom(m_private->display, "_NET_WM_STATE", False);
+			e.xclient.format = 32;
+			e.xclient.data.l[0] = m_fullscreen? 0: 1;
+			e.xclient.data.l[1] = XInternAtom(m_private->display, "_NET_WM_STATE_FULLSCREEN", False);
+			XSendEvent(m_private->display, DefaultRootWindow(m_private->display), False, SubstructureRedirectMask | SubstructureNotifyMask, &e);
+
+			m_fullscreen = !m_fullscreen;
+
+			Handle({TK_STATE_UPDATE, {{TK_FULLSCREEN, (int)m_fullscreen}}});
+			Handle(TK_INVALIDATE);
+			HandleRepaint();
+		});
+	}
+
 	void X11Window::Show()
 	{
 		std::lock_guard<std::mutex> guard(m_lock);
@@ -574,7 +617,11 @@ namespace BearLibTerminal
 				Size new_size(e.xconfigure.width, e.xconfigure.height);
 				if (new_size.width != m_client_size.width || new_size.height != m_client_size.height)
 				{
-					m_client_size = new_size;
+					if (!m_fullscreen)
+					{
+						// X11 spams ConfigureNotify events with different sizes
+						m_client_size = new_size;
+					}
 
 					Handle(Event(TK_INVALIDATE));
 					if (m_client_resize)
@@ -584,8 +631,8 @@ namespace BearLibTerminal
 					}
 
 					Event event(TK_RESIZED);
-					event[TK_WIDTH] = m_client_size.width; // FIXME: client size, not raw slot value
-					event[TK_HEIGHT] = m_client_size.height;
+					event[TK_WIDTH] = new_size.width;
+					event[TK_HEIGHT] = new_size.height;
 					Handle(std::move(event));
 				}
 			}

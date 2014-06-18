@@ -69,6 +69,9 @@ namespace BearLibTerminal
 		return m_client_size;
 	}
 
+	void Window::ToggleFullscreen()
+	{ }
+
 	bool Window::IsFullscreen() const
 	{
 		return m_fullscreen;

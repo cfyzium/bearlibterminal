@@ -42,6 +42,7 @@
 #define TK_DESTROY       0x1003
 #define TK_ACTIVATED     0x1004
 #define TK_DEACTIVATED   0x1005
+#define TK_STATE_UPDATE  0x1006
 
 namespace BearLibTerminal
 {
@@ -65,7 +66,7 @@ namespace BearLibTerminal
 		virtual void SwapBuffers() = 0;
 		virtual void SetVSync(bool enabled) = 0;
 		virtual void SetResizeable(bool resizeable) = 0;
-		virtual void ToggleFullscreen() { }
+		virtual void ToggleFullscreen();
 		void Invoke(std::function<void()> func);
 		bool IsFullscreen() const;
 		void Run();

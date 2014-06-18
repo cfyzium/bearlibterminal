@@ -37,6 +37,8 @@ namespace BearLibTerminal
 		virtual std::wstring Convert(const std::basic_string<CharT>& value) const = 0;
 		virtual std::basic_string<CharT> Convert(const std::wstring& value) const = 0;
 		virtual std::wstring GetName() const = 0;
+		bool operator==(const Encoding& another) const {return GetName() == another.GetName();}
+		bool operator!=(const Encoding& another) const {return GetName() != another.GetName();}
 	};
 
 	std::unique_ptr<Encoding<char>> GetUnibyteEncoding(const std::wstring& name);

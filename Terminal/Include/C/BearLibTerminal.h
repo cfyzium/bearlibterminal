@@ -169,6 +169,7 @@
 #define TK_CHAR             0xC8 /* Translated ANSI code of last produced character */
 #define TK_WCHAR            0xC9 /* Unicode codepoint of last produced character */
 #define TK_EVENT            0xCA /* Last dequeued event */
+#define TK_FULLSCREEN       0xCB /* Fullscreen state */
 
 /*
  * Other events
