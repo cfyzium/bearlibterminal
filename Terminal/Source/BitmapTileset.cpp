@@ -218,47 +218,7 @@ namespace BearLibTerminal
 
 	bool BitmapTileset::Save()
 	{
-		if (!m_cache.IsEmpty())
-		{
-			Point offset;
-			if (m_alignment == Tile::Alignment::Center)
-			{
-				// TODO: round in a way to compensate state.half_cellsize rounding error
-				offset = Point(-m_tile_size.width/2, -m_tile_size.height/2);
-			}
-
-			// Iterate tiles left to right, top to bottom.
-			for (int y=0; y<m_grid_size.height; y++)
-			{
-				for (int x=0; x<m_grid_size.width; x++)
-				{
-					int i = y*m_grid_size.width + x;
-					wchar_t j = m_codepage->Convert(i);
-					if (j != kUnicodeReplacementCharacter)
-					{
-						uint16_t code = m_base_code + j;
-						Rectangle region(Point(x*m_tile_size.width, y*m_tile_size.height), m_tile_size);
-						auto tile_slot = m_container.atlas.Add(m_cache, region);
-						tile_slot->offset = offset;
-						tile_slot->alignment = m_alignment;
-						tile_slot->bounds = m_bbox_size;
-						m_tiles[code] = tile_slot;
-						m_container.slots[code] = tile_slot;
-					}
-				}
-			}
-
-			// Not needed anymore
-			m_cache = Bitmap();
-		}
-		else
-		{
-			for (auto i: m_tiles) // TODO: strict tileset priority
-			{
-				m_container.slots[i.first] = i.second;
-			}
-		}
-
+		// Tiles are provided on-demand.
 		return true;
 	}
 
@@ -291,6 +251,7 @@ namespace BearLibTerminal
 		{
 			// Tileset contains exactly one tile with the same dimensions and
 			// all other parameters are the same.
+			// Note that Reload is only used new objects so m_cache is not empty yet.
 			m_tiles.begin()->second->Update(tileset.m_cache);
 		}
 		else
@@ -318,14 +279,37 @@ namespace BearLibTerminal
 
 	bool BitmapTileset::Provides(uint16_t code)
 	{
-		return m_tiles.count(code) > 0;
+		int index = m_codepage->Convert((wchar_t)(code - m_base_code)); // FIXME: negative
+		return (index >= 0 && index <= m_grid_size.Area());
 	}
 
 	void BitmapTileset::Prepare(uint16_t code)
 	{
 		if (!m_tiles.count(code))
 		{
-			throw std::runtime_error("BitmapTileset::Prepare: request for a tile which is not provided by this tileset");
+			Point offset;
+			if (m_alignment == Tile::Alignment::Center)
+			{
+				// TODO: round in a way to compensate state.half_cellsize rounding error
+				offset = Point(-m_tile_size.width/2, -m_tile_size.height/2);
+			}
+
+			int index = m_codepage->Convert((wchar_t)(code-m_base_code));
+			int column = index % m_grid_size.width;
+			int row = (index-column) / m_grid_size.width;
+
+			Rectangle region(Point(column*m_tile_size.width, row*m_tile_size.height), m_tile_size);
+			auto tile_slot = m_container.atlas.Add(m_cache, region);
+			tile_slot->offset = offset;
+			tile_slot->alignment = m_alignment;
+			tile_slot->bounds = m_bbox_size;
+			m_tiles[code] = tile_slot;
+
+			if (m_tiles.size() == m_grid_size.Area())
+			{
+				// Every tile was added to container, cache is not necessary anymore.
+				m_cache = Bitmap();
+			}
 		}
 
 		m_container.slots[code] = std::dynamic_pointer_cast<Slot>(m_tiles[code]);

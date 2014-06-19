@@ -745,10 +745,20 @@ namespace BearLibTerminal
 		const auto put_and_increment = [&](int code)
 		{
 			// Convert from unicode to tileset codepage
-			if (codepage) code = codepage->Convert((wchar_t)code);
+			if (codepage)
+			{
+				code = codepage->Convert((wchar_t)code);
+			}
 
 			// Offset tile index
-			code += base;
+			if (code >= 0)
+			{
+				code += base;
+			}
+			else
+			{
+				code = kUnicodeReplacementCharacter;
+			}
 
 			if (combine)
 			{
@@ -1603,7 +1613,7 @@ namespace BearLibTerminal
 		{
 			int code = m_encoding->Convert((wchar_t)event.properties[TK_WCHAR]);
 
-			if (m_encoding->GetName() == L"utf-8" && code > 127)
+			if (code < 0 || (m_encoding->GetName() == L"utf-8" && code > 127))
 			{
 				// Use ASCII replacement character for codes not mapped to ANSI
 				code = 0x1A;

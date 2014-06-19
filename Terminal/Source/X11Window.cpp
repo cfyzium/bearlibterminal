@@ -617,23 +617,23 @@ namespace BearLibTerminal
 				Size new_size(e.xconfigure.width, e.xconfigure.height);
 				if (new_size.width != m_client_size.width || new_size.height != m_client_size.height)
 				{
+					Handle(TK_INVALIDATE);
+
 					if (!m_fullscreen)
 					{
 						// X11 spams ConfigureNotify events with different sizes
 						m_client_size = new_size;
+						Event event(TK_RESIZED);
+						event[TK_WIDTH] = new_size.width;
+						event[TK_HEIGHT] = new_size.height;
+						Handle(event);
 					}
 
-					Handle(Event(TK_INVALIDATE));
-					if (m_client_resize)
+					//if (m_client_resize)
 					{
 						HandleRepaint();
 						m_client_resize = false;
 					}
-
-					Event event(TK_RESIZED);
-					event[TK_WIDTH] = new_size.width;
-					event[TK_HEIGHT] = new_size.height;
-					Handle(std::move(event));
 				}
 			}
 			else if (e.type == MotionNotify)

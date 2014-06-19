@@ -436,8 +436,6 @@ namespace BearLibTerminal
 			}
 		}
 
-		//LOG(Trace, L"Rasterized glyph for code " << (int)code << L" (unicode " << (int)unicode << L"), size = " << glyph.GetSize() << ", bx=" << bx << ", by=" << by << L", offset = " << offset);
-
 		auto tile_slot = m_container.atlas.Add(glyph, Rectangle(glyph.GetSize()));
 		tile_slot->offset = offset;
 		tile_slot->alignment = m_alignment;

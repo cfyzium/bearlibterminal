@@ -255,8 +255,26 @@ namespace BearLibTerminal
 			throw std::runtime_error("AtlasTexture3::Update(...): ownership mismatch");
 		}
 
-		m_texture.Update(slot->texture_region, bitmap);
-		m_canvas.BlitUnchecked(bitmap, slot->texture_region.Location());
+		m_update_requests.push_back(UpdateRequest());
+		auto& request = m_update_requests.back();
+
+		// Save data. Note that texture has 1-texel border around the tile.
+		request.area = slot->space;
+		request.data = Bitmap(request.area.Size(), Color()); // FIXME: size check
+		request.data.BlitUnchecked(bitmap, Point(1, 1));
+
+		// Expand borders
+		Size size = bitmap.GetSize();
+		for (int x=1; x<=size.width; x++)
+		{
+			request.data(x, 0) = request.data(x, 1);
+			request.data(x, size.height) = request.data(x, size.height-1);
+		}
+		for (int y=1; y<=size.height; y++)
+		{
+			request.data(0, y) = request.data(1, y);
+			request.data(size.width, y) = request.data(size.width-1, y);
+		}
 	}
 
 	void AtlasTexture::Remove(std::shared_ptr<TileSlot> slot)
@@ -312,10 +330,30 @@ namespace BearLibTerminal
 
 	void AtlasTexture::Refresh()
 	{
+		// Keep canvas up to date.
+		for (auto& request: m_update_requests)
+		{
+			m_canvas.BlitUnchecked(request.data, request.area.Location());
+		}
+
 		if (m_is_dirty)
 		{
+			// Complete texture update
 			m_texture.Update(m_canvas);
 			m_is_dirty = false;
+		}
+		else
+		{
+			// Partial update
+			for (auto& request: m_update_requests)
+			{
+				m_texture.Update(request.area, request.data); // FIXME: check bounds
+			}
+		}
+
+		if (!m_update_requests.empty())
+		{
+			m_update_requests.clear();
 		}
 
 		Bind();

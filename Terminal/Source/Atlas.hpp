@@ -78,6 +78,12 @@ namespace BearLibTerminal
 		void Update(const Bitmap& bitmap);
 	};
 
+	struct UpdateRequest
+	{
+		Rectangle area;
+		Bitmap data;
+	};
+
 	class AtlasTexture
 	{
 	public:
@@ -106,6 +112,7 @@ namespace BearLibTerminal
 		bool m_is_dirty;
 		std::list<Rectangle> m_spaces;
 		std::list<std::shared_ptr<TileSlot>> m_slots;
+		std::list<UpdateRequest> m_update_requests;
 	};
 
 	class Atlas

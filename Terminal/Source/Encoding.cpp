@@ -136,7 +136,7 @@ namespace BearLibTerminal
 	int CustomCodepage::Convert(wchar_t value) const
 	{
 		auto i = m_backward.find(value);
-		return (i == m_backward.end())? 0x1A: i->second; // 0x1A is an ASCII substitute character
+		return (i == m_backward.end())? -1: i->second; // Can't use ASCII substitute as it may not be ASCII
 	}
 
 	std::wstring CustomCodepage::Convert(const std::string& value) const
