@@ -61,6 +61,7 @@ namespace BearLibTerminal
 		void DestroyWindowObject();
 		void HandleRepaint();
 		void UpdateSizeHints(Size size=Size());
+		void Demaximize();
 	protected:
 		struct Private;
 		std::unique_ptr<Private> m_private;

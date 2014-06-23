@@ -35,6 +35,7 @@
 #include <sys/time.h>
 #include <future>
 #include <iostream>
+#include <limits.h>
 
 #define BEARLIBTERMINAL_BUILDING_LIBRARY
 #include "BearLibTerminal.h"
@@ -63,6 +64,9 @@ namespace BearLibTerminal
 		XIC ic;
 		Atom close_message;
 		Atom invoke_message;
+		Atom wm_state;
+		Atom wm_maximized_horz;
+		Atom wm_maximized_vert;
 		XSizeHints* size_hints;
 		int keymaps[2][256];
 
@@ -317,7 +321,7 @@ namespace BearLibTerminal
 		(
 			m_private->display,
 			m_private->window,
-			XInternAtom(m_private->display, "_NET_WM_NAME", false),
+			m_private->wm_state, //XInternAtom(m_private->display, "_NET_WM_NAME", false),
 			XInternAtom(m_private->display, "UTF8_STRING",  false),
 			8,
 			PropModeReplace,
@@ -358,7 +362,7 @@ namespace BearLibTerminal
 		if (m_private->window == 0) return;
 		Post([=]
 		{
-			m_client_resize = true;
+			Demaximize();
 			UpdateSizeHints(size);
 			XResizeWindow(m_private->display, m_private->window, size.width, size.height);
 		});
@@ -368,27 +372,25 @@ namespace BearLibTerminal
 	{
 		if (m_resizeable && !resizeable)
 		{
-			// Try to demaximize just in case
-			XEvent xev;
-			memset(&xev, 0, sizeof(xev));
-			Atom wm_state  =  XInternAtom(m_private->display, "_NET_WM_STATE", False);
-			Atom max_horz  =  XInternAtom(m_private->display, "_NET_WM_STATE_MAXIMIZED_HORZ", False);
-			Atom max_vert  =  XInternAtom(m_private->display, "_NET_WM_STATE_MAXIMIZED_VERT", False);
-
-			memset(&xev, 0, sizeof(xev));
-			xev.type = ClientMessage;
-			xev.xclient.window = m_private->window;
-			xev.xclient.message_type = wm_state;
-			xev.xclient.format = 32;
-			xev.xclient.data.l[0] = 0;//_NET_WM_STATE_REMOVE;
-			xev.xclient.data.l[1] = max_horz;
-			xev.xclient.data.l[2] = max_vert;
-
-			Status st = XSendEvent(m_private->display, DefaultRootWindow(m_private->display), False, SubstructureNotifyMask, &xev);
+			Demaximize();
 		}
 
 		m_resizeable = resizeable;
 		UpdateSizeHints();
+	}
+
+	void X11Window::Demaximize()
+	{
+		XEvent xev;
+		memset(&xev, 0, sizeof(xev));
+		xev.type = ClientMessage;
+		xev.xclient.window = m_private->window;
+		xev.xclient.message_type = m_private->wm_state;
+		xev.xclient.format = 32;
+		xev.xclient.data.l[0] = 0; // FIXME: _NET_WM_STATE_REMOVE;
+		xev.xclient.data.l[1] = m_private->wm_maximized_horz;
+		xev.xclient.data.l[2] = m_private->wm_maximized_vert;
+		XSendEvent(m_private->display, DefaultRootWindow(m_private->display), False, SubstructureNotifyMask, &xev);
 	}
 
 	void X11Window::ToggleFullscreen()
@@ -420,7 +422,7 @@ namespace BearLibTerminal
 			memset(&e, 0, sizeof(e));
 			e.xclient.type = ClientMessage;
 			e.xclient.window = m_private->window;
-			e.xclient.message_type = XInternAtom(m_private->display, "_NET_WM_STATE", False);
+			e.xclient.message_type = m_private->wm_state;
 			e.xclient.format = 32;
 			e.xclient.data.l[0] = m_fullscreen? 0: 1;
 			e.xclient.data.l[1] = XInternAtom(m_private->display, "_NET_WM_STATE_FULLSCREEN", False);
@@ -629,11 +631,7 @@ namespace BearLibTerminal
 						Handle(event);
 					}
 
-					//if (m_client_resize)
-					{
-						HandleRepaint();
-						m_client_resize = false;
-					}
+					HandleRepaint();
 				}
 			}
 			else if (e.type == MotionNotify)
@@ -906,6 +904,10 @@ namespace BearLibTerminal
 		XSetWMProtocols(m_private->display, m_private->window, &m_private->close_message, 1);
 
 		m_private->invoke_message = XInternAtom(m_private->display, "WM_CUSTOM_INVOKE", False);
+
+		m_private->wm_state = XInternAtom(m_private->display, "_NET_WM_STATE", False);
+		m_private->wm_maximized_horz = XInternAtom(m_private->display, "_NET_WM_STATE_MAXIMIZED_HORZ", False);
+		m_private->wm_maximized_vert = XInternAtom(m_private->display, "_NET_WM_STATE_MAXIMIZED_VERT", False);
 
 		return true;
 	}

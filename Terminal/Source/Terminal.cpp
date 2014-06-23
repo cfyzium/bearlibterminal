@@ -36,18 +36,18 @@ namespace BearLibTerminal
 {
 	static std::vector<float> kScaleSteps =
 	{
-		0.5f, 1.0f, 1.25f, 1.5f, 2.0f, 3.0f, 4.0f
+		0.75f, 1.0f, 1.25f, 1.5f, 2.0f, 3.0f
 	};
 
-	static int kScaleStartStep = 1;
+	static int kScaleDefault = 1;
 
 	Terminal::Terminal():
 		m_state{kHidden},
 		m_vars{},
 		m_show_grid{false},
 		m_viewport_modified{false},
-		m_scale_step(kScaleStartStep),
-		m_scale_factor(kScaleSteps[kScaleStartStep])
+		m_scale_step(kScaleDefault),
+		m_scale_factor(kScaleSteps[kScaleDefault])
 	{
 		// Reset logger (this is terrible)
 		g_logger = std::unique_ptr<Log>(new Log());
@@ -244,6 +244,13 @@ namespace BearLibTerminal
 		if (updated.window_resizeable != m_options.window_resizeable)
 		{
 			m_window->SetResizeable(updated.window_resizeable);
+		}
+
+		if (updated.window_resizeable && m_scale_step != kScaleDefault)
+		{
+			// No scaling in resizeable mode, at least not yet.
+			m_scale_step = kScaleDefault;
+			viewport_size_changed = true;
 		}
 
 		// If the size of cell has changed -OR- new basic tileset has been specified
@@ -571,7 +578,6 @@ namespace BearLibTerminal
 
 		m_window->Invoke([&]()
 		{
-			//OnWindowRedraw();
 			Redraw(false);
 			m_window->SwapBuffers();
 		});
@@ -1539,6 +1545,12 @@ namespace BearLibTerminal
 		}
 		else if ((event.code == TK_MINUS || event.code == TK_EQUALS || event.code == TK_KP_MINUS || event.code == TK_KP_PLUS) && alt)
 		{
+			if (get_locked(m_options.window_resizeable, m_lock))
+			{
+				// No scaling in resizeable mode, at least not yet.
+				return 0;
+			}
+
 			// Alt+(plus/minus): adjust user window scaling.
 			if ((event.code == TK_MINUS || event.code == TK_KP_MINUS) && m_scale_step > 0)
 			{
@@ -1552,6 +1564,7 @@ namespace BearLibTerminal
 			m_scale_factor = kScaleSteps[m_scale_step];
 			m_window->SetSizeHints(m_world.state.cellsize * m_scale_factor, m_options.window_minimum_size);
 			m_window->SetClientSize(m_world.state.cellsize * m_world.stage.size * m_scale_factor);
+
 			return 0;
 		}
 		else if ((event.code & 0xFF) == TK_ALT)
