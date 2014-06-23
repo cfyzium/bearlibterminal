@@ -41,16 +41,20 @@ namespace BearLibTerminal
 		bool operator!=(const Encoding& another) const {return GetName() != another.GetName();}
 	};
 
-	std::unique_ptr<Encoding<char>> GetUnibyteEncoding(const std::wstring& name);
+	typedef Encoding<char> Encoding8;
+	typedef Encoding<char16_t> Encoding16;
+	typedef Encoding<char32_t> Encoding32;
+
+	std::unique_ptr<Encoding8> GetUnibyteEncoding(const std::wstring& name);
 
 	/*
 	 * NOTE: these are not necessarily proper UTF codecs; only to the extent
 	 * the terminal library understands UTF, i. e. UCS-2.
 	 * FIXME: probably better name them UTF8/UCS2/UCS4
 	 */
-	extern std::unique_ptr<Encoding<char>> UTF8;
-	extern std::unique_ptr<Encoding<char16_t>> UTF16;
-	extern std::unique_ptr<Encoding<char32_t>> UTF32;
+	extern std::unique_ptr<Encoding8>  UTF8;
+	extern std::unique_ptr<Encoding16> UTF16;
+	extern std::unique_ptr<Encoding32> UTF32;
 
 	static const uint16_t kUnicodeReplacementCharacter = 0xFFFD;
 }

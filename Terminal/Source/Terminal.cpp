@@ -46,8 +46,7 @@ namespace BearLibTerminal
 		m_vars{},
 		m_show_grid{false},
 		m_viewport_modified{false},
-		m_scale_step(kScaleDefault),
-		m_scale_factor(kScaleSteps[kScaleDefault])
+		m_scale_step(kScaleDefault)
 	{
 		// Reset logger (this is terrible)
 		g_logger = std::unique_ptr<Log>(new Log());
@@ -1111,11 +1110,13 @@ namespace BearLibTerminal
 					show_cursor = true;
 				}
 			}
-			else if (m_vars[TK_WCHAR])
+			//else if (m_vars[TK_WCHAR])
+			else if (wchar_t ch = GetState(TK_WCHAR))
 			{
 				if (cursor < max)
 				{
-					buffer[cursor++] = (wchar_t)m_vars[TK_WCHAR];
+					//buffer[cursor++] = (wchar_t)m_vars[TK_WCHAR];
+					buffer[cursor++] = ch;
 					show_cursor = true;
 				}
 			}
@@ -1137,19 +1138,12 @@ namespace BearLibTerminal
 	{
 		Size viewport_size = m_window->GetActualSize();
 		Size stage_size = m_world.stage.size * m_world.state.cellsize;
+		m_stage_area = Rectangle(stage_size);
+		m_stage_area_factor = SizeF(1, 1);
 
-		glDisable(GL_DEPTH_TEST);
-
-		glClearColor(0, 0, 0, 1);
-		glViewport(0, 0, viewport_size.width, viewport_size.height);
-
-		glMatrixMode(GL_PROJECTION);
-		glLoadIdentity();
-
-		Rectangle stage_area(0, 0, stage_size.width, stage_size.height);
 		if (viewport_size != stage_size)
 		{
-			if (m_window->IsFullscreen())
+			if (m_vars[TK_FULLSCREEN])
 			{
 				// Stretch
 				float viewport_ratio = viewport_size.width / (float)viewport_size.height;
@@ -1159,45 +1153,49 @@ namespace BearLibTerminal
 				{
 					// Viewport is wider
 					float factor = viewport_size.height / (float)stage_size.height;
-					stage_area.height = viewport_size.height;
-					stage_area.width = stage_size.width * factor;
-					stage_area.left = (viewport_size.width - stage_area.width)/2;
+					m_stage_area.height = viewport_size.height;
+					m_stage_area.width = stage_size.width * factor;
+					m_stage_area.left = (viewport_size.width - m_stage_area.width)/2;
 				}
 				else
 				{
 					// Stage is wider
 					float factor = viewport_size.width / (float)stage_size.width;
-					stage_area.width = viewport_size.width;
-					stage_area.height = stage_size.height * factor;
-					stage_area.top = (viewport_size.height - stage_area.height)/2;
+					m_stage_area.width = viewport_size.width;
+					m_stage_area.height = stage_size.height * factor;
+					m_stage_area.top = (viewport_size.height - m_stage_area.height)/2;
 				}
 			}
 			else
 			{
 				// Center
 				float scale_factor = kScaleSteps[m_scale_step];
-				stage_area.width *= scale_factor;
-				stage_area.height *= scale_factor;
-				stage_area.left += (viewport_size.width-stage_area.width)/2;
-				stage_area.top += (viewport_size.height-stage_area.height)/2;
+				m_stage_area.width *= scale_factor;
+				m_stage_area.height *= scale_factor;
+				m_stage_area.left += (viewport_size.width-m_stage_area.width)/2;
+				m_stage_area.top += (viewport_size.height-m_stage_area.height)/2;
 			}
+
+			m_stage_area_factor = stage_size/m_stage_area.Size().As<float>();
 		}
 
-		float hf = stage_size.width/(float)stage_area.width;
-		float vf = stage_size.height/(float)stage_area.height;
+		glDisable(GL_DEPTH_TEST);
+		glClearColor(0, 0, 0, 1);
+		glViewport(0, 0, viewport_size.width, viewport_size.height);
+		glMatrixMode(GL_PROJECTION);
+		glLoadIdentity();
 		glOrtho
 		(
-			-stage_area.left*hf,
-			(viewport_size.width - stage_area.left)*hf,
-			(viewport_size.height - stage_area.top)*vf,
-			-stage_area.top*vf,
+			-m_stage_area.left * m_stage_area_factor.width,
+			(viewport_size.width - m_stage_area.left) * m_stage_area_factor.width,
+			(viewport_size.height - m_stage_area.top) * m_stage_area_factor.height,
+			-m_stage_area.top * m_stage_area_factor.height,
 			-1,
 			+1
 		);
 
 		glMatrixMode(GL_MODELVIEW);
 		glLoadIdentity();
-
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -1205,10 +1203,10 @@ namespace BearLibTerminal
 		{
 			m_viewport_scissors = Rectangle
 			(
-				stage_area.left,
-				viewport_size.height - stage_area.height - stage_area.top,
-				stage_area.width,
-				stage_area.height
+				m_stage_area.left,
+				viewport_size.height - m_stage_area.height - m_stage_area.top,
+				m_stage_area.width,
+				m_stage_area.height
 			);
 		}
 		else
@@ -1502,13 +1500,30 @@ namespace BearLibTerminal
 		{
 			std::lock_guard<std::mutex> guard(m_lock);
 
-			float scale_factor = kScaleSteps[m_scale_step];
+			int& pixel_x = event[TK_MOUSE_PIXEL_X];
+			int& pixel_y = event[TK_MOUSE_PIXEL_Y];
+
+			// Shift coordinates relative to stage area
+			pixel_x -= m_stage_area.left;
+			pixel_y -= m_stage_area.top;
+
+			// Scale coordinates back to virtual pixels.
+			pixel_x *= m_stage_area_factor.width;
+			pixel_y *= m_stage_area_factor.height;
+
+			// Cell location of mouse pointer
 			Size& cellsize = m_world.state.cellsize;
 			Point location
 			(
-				std::floor(event[TK_MOUSE_PIXEL_X]/scale_factor/cellsize.width),
-				std::floor(event[TK_MOUSE_PIXEL_Y]/scale_factor/cellsize.height)
+				std::floor(pixel_x/(float)cellsize.width),
+				std::floor(pixel_y/(float)cellsize.height)
 			);
+
+			if (!Rectangle(m_world.stage.size).Contains(location))
+			{
+				// Mouse if out of stage.
+				return 0;
+			}
 
 			if (!m_options.input_precise_mouse && m_vars[TK_MOUSE_X] == location.x && m_vars[TK_MOUSE_Y] == location.y)
 			{
@@ -1561,9 +1576,8 @@ namespace BearLibTerminal
 				m_scale_step += 1;
 			}
 
-			m_scale_factor = kScaleSteps[m_scale_step];
-			m_window->SetSizeHints(m_world.state.cellsize * m_scale_factor, m_options.window_minimum_size);
-			m_window->SetClientSize(m_world.state.cellsize * m_world.stage.size * m_scale_factor);
+			m_window->SetSizeHints(m_world.state.cellsize * kScaleSteps[m_scale_step], m_options.window_minimum_size);
+			m_window->SetClientSize(m_world.state.cellsize * m_world.stage.size * kScaleSteps[m_scale_step]);
 
 			return 0;
 		}

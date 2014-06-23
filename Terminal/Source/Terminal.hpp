@@ -57,7 +57,7 @@ namespace BearLibTerminal
 		int GetState(int code);
 		int Read();
 		int ReadString(int x, int y, wchar_t* buffer, int max);
-		const Encoding<char>& GetEncoding() const;
+		const Encoding8& GetEncoding() const;
 	private:
 		void SetOptionsInternal(const std::wstring& params);
 		void ApplyTilesets(std::map<uint16_t, std::unique_ptr<Tileset>>& tilesets);
@@ -87,16 +87,17 @@ namespace BearLibTerminal
 		std::deque<Event> m_input_queue;
 		std::condition_variable m_input_condvar;
 		std::array<std::int32_t, 0x100> m_vars;
-		std::unique_ptr<Encoding<char>> m_encoding;
+		std::unique_ptr<Encoding8> m_encoding;
 		World m_world;
 		Options m_options;
 		std::list<uint16_t> m_fresh_codes;
-		std::map<std::wstring, std::unique_ptr<Encoding<char>>> m_codepage_cache;
+		std::map<std::wstring, std::unique_ptr<Encoding8>> m_codepage_cache;
 		bool m_show_grid;
 		bool m_viewport_modified;
 		Rectangle m_viewport_scissors;
 		int m_scale_step;
-		float m_scale_factor;
+		Rectangle m_stage_area;
+		SizeF m_stage_area_factor;
 	};
 }
 
