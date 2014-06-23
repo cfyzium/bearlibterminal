@@ -86,6 +86,8 @@ namespace BearLibTerminal
 		uint64_t m_last_mouse_click;
 		int m_consecutive_mouse_clicks;
 		bool m_suppress_wm_paint_once;
+		bool m_mouse_cursor_enabled;
+		bool m_mouse_cursor_visible;
 
 		typedef BOOL (WINAPI *PFN_WGLSWAPINTERVALEXT)(int interval);
 		PFN_WGLSWAPINTERVALEXT m_wglSwapIntervalEXT;

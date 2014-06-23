@@ -1529,10 +1529,26 @@ namespace BearLibTerminal
 				std::floor(pixel_y/(float)cellsize.height)
 			);
 
-			if (!Rectangle(m_world.stage.size).Contains(location))
+			if (location.x < 0)
 			{
-				// Mouse if out of stage.
-				return 0;
+				location.x = 0;
+				pixel_x = 0;
+			}
+			else if (location.x >= m_world.stage.size.width)
+			{
+				location.x = m_world.stage.size.width-1;
+				pixel_x = m_world.stage.size.width*cellsize.width-1;
+			}
+
+			if (location.y < 0)
+			{
+				location.y = 0;
+				pixel_y = 0;
+			}
+			else if (location.y >= m_world.stage.size.height)
+			{
+				location.y = m_world.stage.size.height-1;
+				pixel_y = m_world.stage.size.height*cellsize.height-1;
 			}
 
 			if (!m_options.input_precise_mouse && m_vars[TK_MOUSE_X] == location.x && m_vars[TK_MOUSE_Y] == location.y)

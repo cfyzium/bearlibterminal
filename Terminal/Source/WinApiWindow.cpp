@@ -85,6 +85,8 @@ namespace BearLibTerminal
 		m_last_mouse_click(0),
 		m_consecutive_mouse_clicks(1),
 		m_suppress_wm_paint_once(false),
+		m_mouse_cursor_enabled(true),
+		m_mouse_cursor_visible(true),
 		m_wglSwapIntervalEXT(nullptr)
 	{ }
 
@@ -338,40 +340,7 @@ namespace BearLibTerminal
 
 	void WinApiWindow::SetCursorVisibility(bool visible)
 	{
-		Post([=]
-		{
-			HCURSOR previous = nullptr;
-
-			if (visible)
-			{
-				previous = SetCursor(LoadCursor(NULL, IDC_ARROW));
-			}
-			else
-			{
-				BYTE mask[] = {0};
-
-				HCURSOR dummy = CreateCursor
-				(
-					GetModuleHandle(NULL),
-					0, 0,
-					1, 1,
-					mask, mask
-				);
-
-				if (dummy == nullptr)
-				{
-					LOG(Error, "Failed to create dummy invisible cursor (" << GetLastErrorStr() << ")");
-					return;
-				}
-
-				previous = SetCursor(dummy);
-			}
-
-			if (previous != nullptr)
-			{
-				DestroyCursor(previous);
-			}
-		});
+		Post([=]{m_mouse_cursor_enabled = visible;});
 	}
 
 	Size WinApiWindow::GetActualSize()
@@ -1210,11 +1179,23 @@ namespace BearLibTerminal
 		else if (uMsg == WM_GETMINMAXINFO)
 		{
 			auto info = (MINMAXINFO*)lParam;
-			//info->ptMaxSize.x = LONG_MAX;
-			//info->ptMaxSize.y = LONG_MAX;
 			info->ptMaxTrackSize.x = LONG_MAX;
 			info->ptMaxTrackSize.y = LONG_MAX;
 			return FALSE;
+		}
+		else if (uMsg == WM_SETCURSOR)
+		{
+			WORD ht = LOWORD(lParam);
+			if (ht == HTCLIENT && !m_mouse_cursor_enabled && m_mouse_cursor_visible)
+			{
+				m_mouse_cursor_visible = false;
+				ShowCursor(false);
+			}
+			else if (!m_mouse_cursor_visible && (m_mouse_cursor_enabled || ht != HTCLIENT))
+			{
+				m_mouse_cursor_visible = true;
+				ShowCursor(true);
+			}
 		}
 		else if (uMsg == WM_CUSTOM_POST)
 		{
