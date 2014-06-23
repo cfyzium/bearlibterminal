@@ -44,6 +44,7 @@ void TestMouse()
 	bool precise_mouse = false;
 	int mlx = -1, mly = -1;
 	int mrx = -1, mry = -1;
+	bool cursor_visible = true;
 
 	while (terminal_has_input()) terminal_read(); // Flush input
 	UpdateInputFilter(keypress, keyrelease, mousemove, mousescroll);
@@ -159,6 +160,11 @@ void TestMouse()
 			{
 				mrx = terminal_state(TK_MOUSE_X);
 				mry = terminal_state(TK_MOUSE_Y);
+			}
+			else if (code == TK_SPACE)
+			{
+				cursor_visible = !cursor_visible;
+				terminal_setf("input.mouse-cursor=%s", cursor_visible? "true": "false");
 			}
 		}
 		while (proceed && terminal_has_input());

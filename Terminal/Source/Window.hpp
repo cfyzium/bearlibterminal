@@ -67,6 +67,7 @@ namespace BearLibTerminal
 		virtual void SetVSync(bool enabled) = 0;
 		virtual void SetResizeable(bool resizeable) = 0;
 		virtual void ToggleFullscreen();
+		virtual void SetCursorVisibility(bool visible) = 0;
 		void Invoke(std::function<void()> func);
 		bool IsFullscreen() const;
 		void Run();

@@ -436,6 +436,31 @@ namespace BearLibTerminal
 		});
 	}
 
+	void X11Window::SetCursorVisibility(bool visible)
+	{
+		Post([=]
+		{
+			if (visible)
+			{
+				XUndefineCursor(m_private->display, m_private->window);
+			}
+			else
+			{
+				Cursor cursor;
+				Pixmap dummy;
+				XColor black;
+				static char data[] = {0, 0, 0, 0, 0, 0, 0, 0};
+				black.red = black.green = black.blue = 0;
+
+				dummy = XCreateBitmapFromData(m_private->display, m_private->window, data, 8, 8);
+				cursor = XCreatePixmapCursor(m_private->display, dummy, dummy, &black, &black, 0, 0);
+				XDefineCursor(m_private->display, m_private->window, cursor);
+				XFreeCursor(m_private->display, cursor);
+				XFreePixmap(m_private->display, dummy);
+			}
+		});
+	}
+
 	void X11Window::Show()
 	{
 		std::lock_guard<std::mutex> guard(m_lock);

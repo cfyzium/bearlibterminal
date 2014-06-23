@@ -336,6 +336,44 @@ namespace BearLibTerminal
 		});
 	}
 
+	void WinApiWindow::SetCursorVisibility(bool visible)
+	{
+		Post([=]
+		{
+			HCURSOR previous = nullptr;
+
+			if (visible)
+			{
+				previous = SetCursor(LoadCursor(NULL, IDC_ARROW));
+			}
+			else
+			{
+				BYTE mask[] = {0};
+
+				HCURSOR dummy = CreateCursor
+				(
+					GetModuleHandle(NULL),
+					0, 0,
+					1, 1,
+					mask, mask
+				);
+
+				if (dummy == nullptr)
+				{
+					LOG(Error, "Failed to create dummy invisible cursor (" << GetLastErrorStr() << ")");
+					return;
+				}
+
+				previous = SetCursor(dummy);
+			}
+
+			if (previous != nullptr)
+			{
+				DestroyCursor(previous);
+			}
+		});
+	}
+
 	Size WinApiWindow::GetActualSize()
 	{
 		RECT rect;

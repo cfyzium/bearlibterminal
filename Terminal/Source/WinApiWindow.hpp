@@ -60,6 +60,7 @@ namespace BearLibTerminal
 		void SetVSync(bool enabled);
 		void SetResizeable(bool resizeable);
 		void ToggleFullscreen();
+		void SetCursorVisibility(bool visible);
 		Size GetActualSize();
 	protected:
 		void ThreadFunction();

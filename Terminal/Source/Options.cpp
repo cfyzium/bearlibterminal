@@ -27,6 +27,7 @@ namespace BearLibTerminal
 		input_sticky_close(true),
 		input_cursor_symbol((uint16_t)'_'),
 		input_cursor_blink_rate(500),
+		input_mouse_cursor(true),
 		log_filename(g_logger->GetFile()),
 		log_level(g_logger->GetLevel()),
 		log_mode(g_logger->GetMode())

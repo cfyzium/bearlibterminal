@@ -227,6 +227,11 @@ namespace BearLibTerminal
 			m_encoding = GetUnibyteEncoding(updated.terminal_encoding);
 		}
 
+		if (updated.input_mouse_cursor != m_options.input_mouse_cursor)
+		{
+			m_window->SetCursorVisibility(updated.input_mouse_cursor);
+		}
+
 		// Apply on per-option basis
 		bool viewport_size_changed = false;
 
@@ -456,6 +461,11 @@ namespace BearLibTerminal
 		}
 
 		if (options.input_cursor_blink_rate <= 0) options.input_cursor_blink_rate = 1;
+
+		if (group.attributes.count(L"mouse-cursor") && !try_parse(group.attributes[L"mouse-cursor"], options.input_mouse_cursor))
+		{
+			throw std::runtime_error("input.mouse-cursor cannot be parsed");
+		}
 	}
 
 	void Terminal::ValidateOutputOptions(OptionGroup& group, Options& options)

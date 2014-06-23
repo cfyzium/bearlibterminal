@@ -41,6 +41,7 @@ namespace BearLibTerminal
 		bool input_sticky_close;
 		uint16_t input_cursor_symbol;
 		int input_cursor_blink_rate;
+		bool input_mouse_cursor;
 
 		// Log
 		std::wstring log_filename;
