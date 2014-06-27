@@ -242,8 +242,13 @@ void TestKeyboard()
 		if (terminal_state(TK_RETURN))
 		{
 			// Main keyboard
-			FillRectangle(6+30, 1+6, 4, 1, pressed_key);
-			FillRectangle(6+31, 1+8, 3, 1, pressed_key);
+			const wchar_t* region =
+				L"▗▄▄▄▄▖\n"
+				L"▐████▌\n"
+				L"▝▜███▌\n"
+				L" ▐███▌\n"
+				L" ▝▀▀▀▘\n";
+			terminal_wprintf(6+29, 6, L"[color=%d]%ls", pressed_key, region);
 		}
 
 		if (terminal_check(TK_KP_ENTER))

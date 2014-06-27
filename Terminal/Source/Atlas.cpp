@@ -178,7 +178,7 @@ namespace BearLibTerminal
 			m_canvas(location.x+x, location.y-1) = m_canvas(location.x+x, location.y);
 			m_canvas(location.x+x, location.y+region.height) = m_canvas(location.x+x, location.y+region.height-1);
 		}
-		for (int y=0; y<region.height; y++)
+		for (int y=-1; y<region.height+1; y++)
 		{
 			m_canvas(location.x-1, location.y+y) = m_canvas(location.x, location.y+y);
 			m_canvas(location.x+region.width, location.y+y) = m_canvas(location.x+region.width-1, location.y+y);
@@ -270,7 +270,7 @@ namespace BearLibTerminal
 			request.data(x, 0) = request.data(x, 1);
 			request.data(x, size.height) = request.data(x, size.height-1);
 		}
-		for (int y=1; y<=size.height; y++)
+		for (int y=0; y<=size.height+1; y++)
 		{
 			request.data(0, y) = request.data(1, y);
 			request.data(size.width, y) = request.data(size.width-1, y);
