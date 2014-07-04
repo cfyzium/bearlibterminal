@@ -8,6 +8,12 @@
 #include "Common.hpp"
 #include <sstream>
 
+struct
+{
+	int x, y, width, height;
+}
+double_click_area = {1, 11, 17, 4}; // FIXME: common rectangle struct
+
 void TestMouse()
 {
 	terminal_set("window.title='Omni: mouse input'");
@@ -18,6 +24,7 @@ void TestMouse()
 	int mlx = -1, mly = -1;
 	int mrx = -1, mry = -1;
 	int scroll = 0;
+	bool plate = false;
 
 	// Flush input
 	while (terminal_has_input())
@@ -84,6 +91,16 @@ void TestMouse()
 		);
 		terminal_put(1, 8, 0x25CB);
 
+		terminal_print(double_click_area.x, double_click_area.y-1, "Double-click here:");
+		terminal_color(plate? "darker orange": "darker gray");
+		for (int x=double_click_area.x; x<=double_click_area.x+double_click_area.width; x++)
+		{
+			for (int y=double_click_area.y; y<=double_click_area.y+double_click_area.height; y++)
+			{
+				terminal_put(x, y, 0x2588); // FIXME: fill_area
+			}
+		}
+
 		int mx = terminal_state(TK_MOUSE_X);
 		int my = terminal_state(TK_MOUSE_Y);
 		terminal_color(0x60FFFFFF);
@@ -123,6 +140,15 @@ void TestMouse()
 					{
 						cursor_visible = !cursor_visible;
 						terminal_setf("input.mouse-cursor=%s", cursor_visible? "true": "false");
+					}
+				}
+				else if (x >= double_click_area.x && x <= (double_click_area.x+double_click_area.width) &&
+						 y >= double_click_area.y && y <= (double_click_area.y+double_click_area.height))
+				{
+					int clicks = terminal_state(TK_MOUSE_CLICKS);
+					if (clicks > 0 && clicks%2 == 0)
+					{
+						plate = !plate;
 					}
 				}
 				else

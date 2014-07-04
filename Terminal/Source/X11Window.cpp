@@ -676,13 +676,13 @@ namespace BearLibTerminal
 					(e.xbutton.button >= 1 && e.xbutton.button <= 3) ||
 					(e.xbutton.button >= 6 && e.xbutton.button <= 7);
 
-				if (is_button)
+				if (is_button && pressed)
 				{
 					uint64_t now = gettime();
 					uint64_t delta = now - m_last_mouse_click;
 					m_last_mouse_click = now;
 
-					if (pressed && delta < 500) // FIXME: harcode, make an input.mouse-click-speed option.
+					if (delta < 250000) // FIXME: harcode, make an input.mouse-click-speed option.
 					{
 						m_consecutive_mouse_clicks += 1;
 					}
@@ -709,7 +709,7 @@ namespace BearLibTerminal
 					int code = mapping[e.xbutton.button];
 					Event event(code | (pressed? 0: TK_KEY_RELEASED));
 					event[code] = pressed? 1: 0;
-					event[TK_MOUSE_CLICKS] = m_consecutive_mouse_clicks;
+					event[TK_MOUSE_CLICKS] = pressed? m_consecutive_mouse_clicks: 0;
 					Handle(event);
 				}
 				else if (e.xbutton.button == 4 && e.type == ButtonPress)

@@ -32,138 +32,145 @@ uses ctypes;
 
 const
   // Keyboard scancodes
-  TK_LBUTTON        = $01;
-  TK_RBUTTON        = $02;
-  TK_CLOSE          = $03; // Same code as VK_CANCEL from winuser.h
-  TK_BACK           = $08; // Backspace
-  TK_BACKSPACE      = $08; // Backspace (alias)
-  TK_TAB            = $09;
-  TK_RETURN         = $0D; // Enter
-  TK_SHIFT          = $10;
-  TK_CONTROL        = $11;
-  TK_PAUSE          = $13; // Pause/Break
-  TK_ESCAPE         = $1B;
-  TK_SPACE          = $20;
-  TK_PRIOR          = $21; // Page Up
-  TK_NEXT           = $22; // Page Down
-  TK_END            = $23;
-  TK_HOME           = $24;
-  TK_LEFT           = $25; // Left arrow
-  TK_UP             = $26; // Up arrow
-  TK_RIGHT          = $27; // Right arrow
-  TK_DOWN           = $28; // Down arrow
-  TK_INSERT         = $2D;
-  TK_DELETE         = $2E;
-  TK_0              = $30;
-  TK_1              = $31;
-  TK_2              = $32;
-  TK_3              = $33;
-  TK_4              = $34;
-  TK_5              = $35;
-  TK_6              = $36;
-  TK_7              = $37;
-  TK_8              = $38;
-  TK_9              = $39;
-  TK_A              = $41;
-  TK_B              = $42;
-  TK_C              = $43;
-  TK_D              = $44;
-  TK_E              = $45;
-  TK_F              = $46;
-  TK_G              = $47;
-  TK_H              = $48;
-  TK_I              = $49;
-  TK_J              = $4A;
-  TK_K              = $4B;
-  TK_L              = $4C;
-  TK_M              = $4D;
-  TK_N              = $4E;
-  TK_O              = $4F;
-  TK_P              = $50;
-  TK_Q              = $51;
-  TK_R              = $52;
-  TK_S              = $53;
-  TK_T              = $54;
-  TK_U              = $55;
-  TK_V              = $56;
-  TK_W              = $57;
-  TK_X              = $58;
-  TK_Y              = $59;
-  TK_Z              = $5A;
-  TK_GRAVE          = $C0; //  `
-  TK_MINUS          = $BD; //  -
-  TK_EQUALS         = $BB; //  =
-  TK_BACKSLASH      = $DC; //  \ .
-  TK_LBRACKET       = $DB; //  [
-  TK_RBRACKET       = $DD; //  ]
-  TK_SEMICOLON      = $BA; //  ;
-  TK_APOSTROPHE     = $DE; //  '
-  TK_COMMA          = $BC; //  ,
-  TK_PERIOD         = $BE; //  .
-  TK_SLASH          = $BF; //  /
-  TK_NUMPAD0        = $60;
-  TK_NUMPAD1        = $61;
-  TK_NUMPAD2        = $62;
-  TK_NUMPAD3        = $63;
-  TK_NUMPAD4        = $64;
-  TK_NUMPAD5        = $65;
-  TK_NUMPAD6        = $66;
-  TK_NUMPAD7        = $67;
-  TK_NUMPAD8        = $68;
-  TK_NUMPAD9        = $69;
-  TK_MULTIPLY       = $6A; // '*' on numpad
-  TK_ADD            = $6B; // '+' on numpad
-  TK_SUBTRACT       = $6D; // '-' on numpad
-  TK_DECIMAL        = $6E; // '.' on numpad
-  TK_DIVIDE         = $6F; // '/' on numpad
-  TK_F1             = $70;
-  TK_F2             = $71;
-  TK_F3             = $72;
-  TK_F4             = $73;
-  TK_F5             = $74;
-  TK_F6             = $75;
-  TK_F7             = $76;
-  TK_F8             = $77;
-  TK_F9             = $78;
-  TK_F10            = $79;
-  TK_F11            = $7A;
-  TK_F12            = $7B;
-  
-  // If key was released instead of pressed, it's code will be OR'ed with VK_FLAG_RELEASED constant
-  TK_FLAG_RELEASED  = $100; // This flag is set if key was released instead of pressed
-  
-  // Specific input events
-  TK_MOUSE_MOVE     = $D3; // Mouse movement event
-  TK_MOUSE_SCROLL   = $D4; // Mouse wheel scroll event
-  TK_WINDOW_RESIZE  = $DF; // Window resize event
+  TK_A               = $04
+  TK_B               = $05
+  TK_C               = $06
+  TK_D               = $07
+  TK_E               = $08
+  TK_F               = $09
+  TK_G               = $0A
+  TK_H               = $0B
+  TK_I               = $0C
+  TK_J               = $0D
+  TK_K               = $0E
+  TK_L               = $0F
+  TK_M               = $10
+  TK_N               = $11
+  TK_O               = $12
+  TK_P               = $13
+  TK_Q               = $14
+  TK_R               = $15
+  TK_S               = $16
+  TK_T               = $17
+  TK_U               = $18
+  TK_V               = $19
+  TK_W               = $1A
+  TK_X               = $1B
+  TK_Y               = $1C
+  TK_Z               = $1D
+  TK_1               = $1E
+  TK_2               = $1F
+  TK_3               = $20
+  TK_4               = $21
+  TK_5               = $22
+  TK_6               = $23
+  TK_7               = $24
+  TK_8               = $25
+  TK_9               = $26
+  TK_0               = $27
+  TK_RETURN          = $28
+  TK_ESCAPE          = $29
+  TK_BACKSPACE       = $2A
+  TK_TAB             = $2B
+  TK_SPACE           = $2C
+  TK_MINUS           = $2D
+  TK_EQUALS          = $2E
+  TK_LBRACKET        = $2F
+  TK_RBRACKET        = $30
+  TK_BACKSLASH       = $31
+  TK_SEMICOLON       = $33
+  TK_APOSTROPHE      = $34
+  TK_GRAVE           = $35
+  TK_COMMA           = $36
+  TK_PERIOD          = $37
+  TK_SLASH           = $38
+  TK_F1              = $3A
+  TK_F2              = $3B
+  TK_F3              = $3C
+  TK_F4              = $3D
+  TK_F5              = $3E
+  TK_F6              = $3F
+  TK_F7              = $40
+  TK_F8              = $41
+  TK_F9              = $42
+  TK_F10             = $43
+  TK_F11             = $44
+  TK_F12             = $45
+  TK_PAUSE           = $48
+  TK_INSERT          = $49
+  TK_HOME            = $4A
+  TK_PAGEUP          = $4B
+  TK_DELETE          = $4C
+  TK_END             = $4D
+  TK_PAGEDOWN        = $4E
+  TK_RIGHT           = $4F
+  TK_LEFT            = $50
+  TK_DOWN            = $51
+  TK_UP              = $52
+  TK_KP_DIVIDE       = $54
+  TK_KP_MULTIPLY     = $55
+  TK_KP_MINUS        = $56
+  TK_KP_PLUS         = $57
+  TK_KP_ENTER        = $58
+  TK_KP_1            = $59
+  TK_KP_2            = $5A
+  TK_KP_3            = $5B
+  TK_KP_4            = $5C
+  TK_KP_5            = $5D
+  TK_KP_6            = $5E
+  TK_KP_7            = $5F
+  TK_KP_8            = $60
+  TK_KP_9            = $61
+  TK_KP_0            = $62
+  TK_KP_PERIOD       = $63
+  TK_SHIFT           = $70
+  TK_CONTROL         = $71
 
-  // Virtual codes for various virtual states:
-  TK_MOUSE_X        = $D0; // Mouse cursor position in cells
-  TK_MOUSE_Y        = $D1;
-  TK_MOUSE_PIXEL_X  = $D5; // Mouse cursor position in pixels
-  TK_MOUSE_PIXEL_Y  = $D6;
-  TK_MOUSE_WHEEL    = $D2; // Mouse wheel counter (absolute value)
-  TK_CELL_WIDTH     = $D7; // Character cell size in pixels
-  TK_CELL_HEIGHT    = $D8;
-  TK_WIDTH          = $D9; // Terminal window size in cells
-  TK_HEIGHT         = $DA;
-  TK_COMPOSITION    = $C1; // Current composition state
-  TK_COLOR			= $C2; // Current foregroung color
-  TK_BKCOLOR		= $C3; // Current background color
-  TK_LAYER			= $C4; // Current layer
+  // Mouse events/states
+  TK_MOUSE_LEFT       = $80 // Buttons
+  TK_MOUSE_RIGHT      = $81
+  TK_MOUSE_MIDDLE     = $82
+  TK_MOUSE_X1         = $83
+  TK_MOUSE_X2         = $84
+  TK_MOUSE_MOVE       = $85 // Movement event
+  TK_MOUSE_SCROLL     = $86 // Mouse scroll event
+  TK_MOUSE_X          = $87 // Cusor position in cells
+  TK_MOUSE_Y          = $88
+  TK_MOUSE_PIXEL_X    = $89 // Cursor position in pixels
+  TK_MOUSE_PIXEL_Y    = $8A
+  TK_MOUSE_WHEEL      = $8B // Scroll direction and amount
+  TK_MOUSE_CLICKS     = $8C // Number of consecutive clicks
 
-  // Composition option. If turned on it allows for placing several tiles in one cell.
-  TK_COMPOSITION_OFF = 0;
-  TK_COMPOSITION_ON  = 1;
-  
-  // Input result codes for terminal_read, terminal_read_char and terminal_read_str.
-  TK_INPUT_NONE       =  0;
-  TK_INPUT_CANCELLED  = -1;
-  
-  // Extended reading flags
-  TK_READ_CHAR        = 1; // Read an Unicode character, not a virtual key code
-  TK_READ_NOREMOVE    = 2; // Do not remove the event from input queue
-  TK_READ_NOBLOCK     = 4; // Do not block execution if input is not ready
+  // If key was released instead of pressed, it's code will be OR'ed with VK_KEY_RELEASED
+  TK_KEY_RELEASED     = $100
+
+  // Virtual key-codes for internal terminal states/variables.
+  // These can be accessed via terminal_state function.
+  TK_WIDTH            = $C0 // Terminal window size in cells
+  TK_HEIGHT           = $C1
+  TK_CELL_WIDTH       = $C2 // Character cell size in pixels
+  TK_CELL_HEIGHT      = $C3
+  TK_COLOR            = $C4 // Current foregroung color
+  TK_BKCOLOR          = $C5 // Current background color
+  TK_LAYER            = $C6 // Current layer
+  TK_COMPOSITION      = $C7 // Current composition state
+  TK_CHAR             = $C8 // Translated ANSI code of last produced character
+  TK_WCHAR            = $C9 // Unicode codepoint of last produced character
+  TK_EVENT            = $CA // Last dequeued event
+  TK_FULLSCREEN       = $CB // Fullscreen state
+
+  //Other events
+  TK_CLOSE            = $E0
+  TK_RESIZED          = $E1
+
+  // Generic mode enum.
+  // Right now it is used for composition option only.
+  TK_OFF              = 0
+  TK_ON               = 1
+
+  // Input result codes for terminal_read function.
+  TK_INPUT_NONE       = 0
+  TK_INPUT_CANCELLED  = -1
 
 type
   Color = CUInt32;
@@ -236,6 +243,10 @@ procedure terminal_put_ext(X, Y, dX, dY: Integer; Code: Integer; Corners: PColor
 
 procedure terminal_put_ext(X, Y, dX, dY: Integer; Code: UnicodeChar; Corners: PColor);
 
+procedure terminal_put_ext(X, Y, dX, dY: Integer; Code: Integer);
+
+procedure terminal_put_ext(X, T, dX, dY: Integer; Code: UnicodeChar);
+
 // Print
 function terminal_print(X, Y: Integer; const s: PChar): Cardinal;
   cdecl; external 'BearLibTerminal' name 'terminal_print8';
@@ -260,10 +271,6 @@ function terminal_check(Code: Integer): Boolean;
 // Read
 function terminal_read(): Integer;
   cdecl; external 'BearLibTerminal' name 'terminal_read';
-
-// ReadExt
-function terminal_read_ext(Flags: Integer): Integer;
-  cdecl; external 'BearLibTerminal' name 'terminal_read_ext';
 
 // ColorFromName
 function color_from_name(const Name: PChar): Color;
@@ -319,6 +326,16 @@ end;
 procedure terminal_put_ext(X, Y, dX, dY: Integer; Code: UnicodeChar; Corners: PColor);
 begin
 	terminal_put_ext(X, Y, dX, dY, ord(Code), Corners);
+end;
+
+procedure terminal_put_ext(X, Y, dX, dY: Integer; Code: Integer);
+begin
+	terminal_put_ext(X, Y, dX, dY, Code, PColor(0));
+end;
+
+procedure terminal_put_ext(X, T, dX, dY: Integer; Code: UnicodeChar);
+begin
+	terminal_put_ext(X, Y, dX, dY, ord(Code), PColor(0));
 end;
 
 function terminal_print(X, Y: Integer; const S: string): Cardinal;
