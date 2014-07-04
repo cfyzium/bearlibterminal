@@ -148,7 +148,7 @@
 #define TK_MOUSE_CLICKS     0x8C /* Number of consecutive clicks */
 
 /*
- * If key was released instead of pressed, it's code will be OR'ed with VK_KEY_RELEASED:
+ * If key was released instead of pressed, it's code will be OR'ed with TK_KEY_RELEASED:
  * a) pressed 'A': 0x04
  * b) released 'A': 0x04|VK_KEY_RELEASED = 0x104
  */
@@ -162,9 +162,9 @@
 #define TK_HEIGHT           0xC1
 #define TK_CELL_WIDTH       0xC2 /* Character cell size in pixels */
 #define TK_CELL_HEIGHT      0xC3
-#define TK_COLOR			0xC4 /* Current foregroung color */
-#define TK_BKCOLOR			0xC5 /* Current background color */
-#define TK_LAYER			0xC6 /* Current layer */
+#define TK_COLOR            0xC4 /* Current foregroung color */
+#define TK_BKCOLOR          0xC5 /* Current background color */
+#define TK_LAYER            0xC6 /* Current layer */
 #define TK_COMPOSITION      0xC7 /* Current composition state */
 #define TK_CHAR             0xC8 /* Translated ANSI code of last produced character */
 #define TK_WCHAR            0xC9 /* Unicode codepoint of last produced character */

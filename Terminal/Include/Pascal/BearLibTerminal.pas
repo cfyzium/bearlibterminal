@@ -19,7 +19,7 @@
 * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *
-* Release date: 2013-12-27
+* Release date: 2014-07-04
 *}
 
 {$H+}
@@ -32,145 +32,145 @@ uses ctypes;
 
 const
   // Keyboard scancodes
-  TK_A               = $04
-  TK_B               = $05
-  TK_C               = $06
-  TK_D               = $07
-  TK_E               = $08
-  TK_F               = $09
-  TK_G               = $0A
-  TK_H               = $0B
-  TK_I               = $0C
-  TK_J               = $0D
-  TK_K               = $0E
-  TK_L               = $0F
-  TK_M               = $10
-  TK_N               = $11
-  TK_O               = $12
-  TK_P               = $13
-  TK_Q               = $14
-  TK_R               = $15
-  TK_S               = $16
-  TK_T               = $17
-  TK_U               = $18
-  TK_V               = $19
-  TK_W               = $1A
-  TK_X               = $1B
-  TK_Y               = $1C
-  TK_Z               = $1D
-  TK_1               = $1E
-  TK_2               = $1F
-  TK_3               = $20
-  TK_4               = $21
-  TK_5               = $22
-  TK_6               = $23
-  TK_7               = $24
-  TK_8               = $25
-  TK_9               = $26
-  TK_0               = $27
-  TK_RETURN          = $28
-  TK_ESCAPE          = $29
-  TK_BACKSPACE       = $2A
-  TK_TAB             = $2B
-  TK_SPACE           = $2C
-  TK_MINUS           = $2D
-  TK_EQUALS          = $2E
-  TK_LBRACKET        = $2F
-  TK_RBRACKET        = $30
-  TK_BACKSLASH       = $31
-  TK_SEMICOLON       = $33
-  TK_APOSTROPHE      = $34
-  TK_GRAVE           = $35
-  TK_COMMA           = $36
-  TK_PERIOD          = $37
-  TK_SLASH           = $38
-  TK_F1              = $3A
-  TK_F2              = $3B
-  TK_F3              = $3C
-  TK_F4              = $3D
-  TK_F5              = $3E
-  TK_F6              = $3F
-  TK_F7              = $40
-  TK_F8              = $41
-  TK_F9              = $42
-  TK_F10             = $43
-  TK_F11             = $44
-  TK_F12             = $45
-  TK_PAUSE           = $48
-  TK_INSERT          = $49
-  TK_HOME            = $4A
-  TK_PAGEUP          = $4B
-  TK_DELETE          = $4C
-  TK_END             = $4D
-  TK_PAGEDOWN        = $4E
-  TK_RIGHT           = $4F
-  TK_LEFT            = $50
-  TK_DOWN            = $51
-  TK_UP              = $52
-  TK_KP_DIVIDE       = $54
-  TK_KP_MULTIPLY     = $55
-  TK_KP_MINUS        = $56
-  TK_KP_PLUS         = $57
-  TK_KP_ENTER        = $58
-  TK_KP_1            = $59
-  TK_KP_2            = $5A
-  TK_KP_3            = $5B
-  TK_KP_4            = $5C
-  TK_KP_5            = $5D
-  TK_KP_6            = $5E
-  TK_KP_7            = $5F
-  TK_KP_8            = $60
-  TK_KP_9            = $61
-  TK_KP_0            = $62
-  TK_KP_PERIOD       = $63
-  TK_SHIFT           = $70
-  TK_CONTROL         = $71
+  TK_A               = $04;
+  TK_B               = $05;
+  TK_C               = $06;
+  TK_D               = $07;
+  TK_E               = $08;
+  TK_F               = $09;
+  TK_G               = $0A;
+  TK_H               = $0B;
+  TK_I               = $0C;
+  TK_J               = $0D;
+  TK_K               = $0E;
+  TK_L               = $0F;
+  TK_M               = $10;
+  TK_N               = $11;
+  TK_O               = $12;
+  TK_P               = $13;
+  TK_Q               = $14;
+  TK_R               = $15;
+  TK_S               = $16;
+  TK_T               = $17;
+  TK_U               = $18;
+  TK_V               = $19;
+  TK_W               = $1A;
+  TK_X               = $1B;
+  TK_Y               = $1C;
+  TK_Z               = $1D;
+  TK_1               = $1E;
+  TK_2               = $1F;
+  TK_3               = $20;
+  TK_4               = $21;
+  TK_5               = $22;
+  TK_6               = $23;
+  TK_7               = $24;
+  TK_8               = $25;
+  TK_9               = $26;
+  TK_0               = $27;
+  TK_RETURN          = $28;
+  TK_ESCAPE          = $29;
+  TK_BACKSPACE       = $2A;
+  TK_TAB             = $2B;
+  TK_SPACE           = $2C;
+  TK_MINUS           = $2D;
+  TK_EQUALS          = $2E;
+  TK_LBRACKET        = $2F;
+  TK_RBRACKET        = $30;
+  TK_BACKSLASH       = $31;
+  TK_SEMICOLON       = $33;
+  TK_APOSTROPHE      = $34;
+  TK_GRAVE           = $35;
+  TK_COMMA           = $36;
+  TK_PERIOD          = $37;
+  TK_SLASH           = $38;
+  TK_F1              = $3A;
+  TK_F2              = $3B;
+  TK_F3              = $3C;
+  TK_F4              = $3D;
+  TK_F5              = $3E;
+  TK_F6              = $3F;
+  TK_F7              = $40;
+  TK_F8              = $41;
+  TK_F9              = $42;
+  TK_F10             = $43;
+  TK_F11             = $44;
+  TK_F12             = $45;
+  TK_PAUSE           = $48;
+  TK_INSERT          = $49;
+  TK_HOME            = $4A;
+  TK_PAGEUP          = $4B;
+  TK_DELETE          = $4C;
+  TK_END             = $4D;
+  TK_PAGEDOWN        = $4E;
+  TK_RIGHT           = $4F;
+  TK_LEFT            = $50;
+  TK_DOWN            = $51;
+  TK_UP              = $52;
+  TK_KP_DIVIDE       = $54;
+  TK_KP_MULTIPLY     = $55;
+  TK_KP_MINUS        = $56;
+  TK_KP_PLUS         = $57;
+  TK_KP_ENTER        = $58;
+  TK_KP_1            = $59;
+  TK_KP_2            = $5A;
+  TK_KP_3            = $5B;
+  TK_KP_4            = $5C;
+  TK_KP_5            = $5D;
+  TK_KP_6            = $5E;
+  TK_KP_7            = $5F;
+  TK_KP_8            = $60;
+  TK_KP_9            = $61;
+  TK_KP_0            = $62;
+  TK_KP_PERIOD       = $63;
+  TK_SHIFT           = $70;
+  TK_CONTROL         = $71;
 
   // Mouse events/states
-  TK_MOUSE_LEFT       = $80 // Buttons
-  TK_MOUSE_RIGHT      = $81
-  TK_MOUSE_MIDDLE     = $82
-  TK_MOUSE_X1         = $83
-  TK_MOUSE_X2         = $84
-  TK_MOUSE_MOVE       = $85 // Movement event
-  TK_MOUSE_SCROLL     = $86 // Mouse scroll event
-  TK_MOUSE_X          = $87 // Cusor position in cells
-  TK_MOUSE_Y          = $88
-  TK_MOUSE_PIXEL_X    = $89 // Cursor position in pixels
-  TK_MOUSE_PIXEL_Y    = $8A
-  TK_MOUSE_WHEEL      = $8B // Scroll direction and amount
-  TK_MOUSE_CLICKS     = $8C // Number of consecutive clicks
+  TK_MOUSE_LEFT       = $80; // Buttons
+  TK_MOUSE_RIGHT      = $81;
+  TK_MOUSE_MIDDLE     = $82;
+  TK_MOUSE_X1         = $83;
+  TK_MOUSE_X2         = $84;
+  TK_MOUSE_MOVE       = $85; // Movement event
+  TK_MOUSE_SCROLL     = $86; // Mouse scroll event
+  TK_MOUSE_X          = $87; // Cusor position in cells
+  TK_MOUSE_Y          = $88;
+  TK_MOUSE_PIXEL_X    = $89; // Cursor position in pixels
+  TK_MOUSE_PIXEL_Y    = $8A;
+  TK_MOUSE_WHEEL      = $8B; // Scroll direction and amount
+  TK_MOUSE_CLICKS     = $8C; // Number of consecutive clicks
 
-  // If key was released instead of pressed, it's code will be OR'ed with VK_KEY_RELEASED
-  TK_KEY_RELEASED     = $100
+  // If key was released instead of pressed, it's code will be OR'ed with TK_KEY_RELEASED
+  TK_KEY_RELEASED     = $100;
 
   // Virtual key-codes for internal terminal states/variables.
   // These can be accessed via terminal_state function.
-  TK_WIDTH            = $C0 // Terminal window size in cells
-  TK_HEIGHT           = $C1
-  TK_CELL_WIDTH       = $C2 // Character cell size in pixels
-  TK_CELL_HEIGHT      = $C3
-  TK_COLOR            = $C4 // Current foregroung color
-  TK_BKCOLOR          = $C5 // Current background color
-  TK_LAYER            = $C6 // Current layer
-  TK_COMPOSITION      = $C7 // Current composition state
-  TK_CHAR             = $C8 // Translated ANSI code of last produced character
-  TK_WCHAR            = $C9 // Unicode codepoint of last produced character
-  TK_EVENT            = $CA // Last dequeued event
-  TK_FULLSCREEN       = $CB // Fullscreen state
+  TK_WIDTH            = $C0; // Terminal window size in cells
+  TK_HEIGHT           = $C1;
+  TK_CELL_WIDTH       = $C2; // Character cell size in pixels
+  TK_CELL_HEIGHT      = $C3;
+  TK_COLOR            = $C4; // Current foregroung color
+  TK_BKCOLOR          = $C5; // Current background color
+  TK_LAYER            = $C6; // Current layer
+  TK_COMPOSITION      = $C7; // Current composition state
+  TK_CHAR             = $C8; // Translated ANSI code of last produced character
+  TK_WCHAR            = $C9; // Unicode codepoint of last produced character
+  TK_EVENT            = $CA; // Last dequeued event
+  TK_FULLSCREEN       = $CB; // Fullscreen state
 
   //Other events
-  TK_CLOSE            = $E0
-  TK_RESIZED          = $E1
+  TK_CLOSE            = $E0;
+  TK_RESIZED          = $E1;
 
   // Generic mode enum.
   // Right now it is used for composition option only.
-  TK_OFF              = 0
-  TK_ON               = 1
+  TK_OFF              =   0;
+  TK_ON               =   1;
 
   // Input result codes for terminal_read function.
-  TK_INPUT_NONE       = 0
-  TK_INPUT_CANCELLED  = -1
+  TK_INPUT_NONE       =   0;
+  TK_INPUT_CANCELLED  =  -1;
 
 type
   Color = CUInt32;
@@ -350,7 +350,7 @@ end;
 
 function terminal_check(Code: Integer): Boolean;
 begin
-	terminal_check := terminal_state(Code) = 1;
+	terminal_check := terminal_state(Code) > 0;
 end;
 
 function color_from_name(const Name: string): Color;

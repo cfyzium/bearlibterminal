@@ -400,7 +400,7 @@ int luaterminal_state(lua_State* L)
 
 int luaterminal_check(lua_State* L)
 {
-	lua_pushboolean(L, terminal_state(lua_tonumber(L, 1)) == 1);
+	lua_pushboolean(L, terminal_state(lua_tonumber(L, 1)) > 0);
 	return 1;
 }
 
