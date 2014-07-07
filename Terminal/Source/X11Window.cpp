@@ -362,9 +362,16 @@ namespace BearLibTerminal
 		if (m_private->window == 0) return;
 		Post([=]
 		{
-			Demaximize();
-			UpdateSizeHints(size);
-			XResizeWindow(m_private->display, m_private->window, size.width, size.height);
+			if (m_fullscreen)
+			{
+				m_client_size = size;
+			}
+			else
+			{
+				Demaximize();
+				UpdateSizeHints(size);
+				XResizeWindow(m_private->display, m_private->window, size.width, size.height);
+			}
 		});
 	}
 
