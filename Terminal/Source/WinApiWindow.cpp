@@ -1044,22 +1044,25 @@ namespace BearLibTerminal
 				code += (HIWORD(wParam)-1);
 			}
 
-			uint64_t now = gettime();
-			uint64_t delta = now - m_last_mouse_click;
-			m_last_mouse_click = now;
+			if (pressed) // TODO: Maybe, an option to match X11?
+			{
+				uint64_t now = gettime();
+				uint64_t delta = now - m_last_mouse_click;
+				m_last_mouse_click = now;
 
-			if (pressed && delta < GetDoubleClickTime()) // TODO: Maybe, an option to match X11?
-			{
-				m_consecutive_mouse_clicks += 1;
-			}
-			else
-			{
-				m_consecutive_mouse_clicks = 1;
+				if (delta < GetDoubleClickTime()*1000)
+				{
+					m_consecutive_mouse_clicks += 1;
+				}
+				else
+				{
+					m_consecutive_mouse_clicks = 1;
+				}
 			}
 
 			Event event(code | (pressed? 0: TK_KEY_RELEASED));
 			event[code] = pressed? 1: 0;
-			event[TK_MOUSE_CLICKS] = m_consecutive_mouse_clicks;
+			event[TK_MOUSE_CLICKS] = pressed? m_consecutive_mouse_clicks: 0;
 			Handle(event);
 		}
 		else if (uMsg == WM_ACTIVATE)
