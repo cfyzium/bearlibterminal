@@ -72,7 +72,8 @@
 #define TK_8                0x25
 #define TK_9                0x26
 #define TK_0                0x27
-#define TK_RETURN           0x28 /* Enter */
+#define TK_RETURN           0x28
+#define TK_ENTER            0x28
 #define TK_ESCAPE           0x29
 #define TK_BACKSPACE        0x2A
 #define TK_TAB              0x2B

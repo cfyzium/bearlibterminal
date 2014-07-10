@@ -163,6 +163,7 @@ module Terminal
         TK_9                = 0x26
         TK_0                = 0x27
         TK_RETURN           = 0x28
+        TK_ENTER            = 0x28
         TK_ESCAPE           = 0x29
         TK_BACKSPACE        = 0x2A
         TK_TAB              = 0x2B

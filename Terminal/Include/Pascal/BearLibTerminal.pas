@@ -69,6 +69,7 @@ const
   TK_9               = $26;
   TK_0               = $27;
   TK_RETURN          = $28;
+  TK_ENTER           = $28;
   TK_ESCAPE          = $29;
   TK_BACKSPACE       = $2A;
   TK_TAB             = $2B;
@@ -245,7 +246,7 @@ procedure terminal_put_ext(X, Y, dX, dY: Integer; Code: UnicodeChar; Corners: PC
 
 procedure terminal_put_ext(X, Y, dX, dY: Integer; Code: Integer);
 
-procedure terminal_put_ext(X, T, dX, dY: Integer; Code: UnicodeChar);
+procedure terminal_put_ext(X, Y, dX, dY: Integer; Code: UnicodeChar);
 
 // Print
 function terminal_print(X, Y: Integer; const s: PChar): Cardinal;
@@ -333,7 +334,7 @@ begin
 	terminal_put_ext(X, Y, dX, dY, Code, PColor(0));
 end;
 
-procedure terminal_put_ext(X, T, dX, dY: Integer; Code: UnicodeChar);
+procedure terminal_put_ext(X, Y, dX, dY: Integer; Code: UnicodeChar);
 begin
 	terminal_put_ext(X, Y, dX, dY, ord(Code), PColor(0));
 end;

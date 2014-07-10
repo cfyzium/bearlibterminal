@@ -69,10 +69,11 @@ namespace BearLib
         TK_5                = 0x22,
         TK_6                = 0x23,
         TK_7                = 0x24,
-        TK_8                = 0x25
+        TK_8                = 0x25,
         TK_9                = 0x26,
         TK_0                = 0x27,
         TK_RETURN           = 0x28,
+        TK_ENTER            = 0x28,
         TK_ESCAPE           = 0x29,
         TK_BACKSPACE        = 0x2A,
         TK_TAB              = 0x2B,
