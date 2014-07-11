@@ -34,42 +34,25 @@
 namespace BearLibTerminal
 {
 	Window::Window():
-		m_synchronous_redraw(false),
+		m_event_handler_is_set(false),
 		m_proceed(false),
-		m_minimum_size(1, 1)
+		m_minimum_size(1, 1),
+		m_fullscreen(false),
+		m_resizeable(false)
 	{ }
 
 	Window::~Window()
 	{ }
 
-	void Window::SetOnRedraw(DrawEventHandler callback)
+	void Window::SetEventHandler(EventHandler handler)
 	{
-		std::lock_guard<std::mutex> guard(m_lock);
-		m_on_redraw = callback;
+		m_event_handler = handler;
+		m_event_handler_is_set = true;
 	}
 
-	void Window::SetOnInput(InputEventHandler callback)
+	int Window::Handle(Event event)
 	{
-		std::lock_guard<std::mutex> guard(m_lock);
-		m_on_input = callback;
-	}
-
-	void Window::SetOnDeactivate(EventHandler callback)
-	{
-		std::lock_guard<std::mutex> guard(m_lock);
-		m_on_deactivate = callback;
-	}
-
-	void Window::SetOnActivate(EventHandler callback)
-	{
-		std::lock_guard<std::mutex> guard(m_lock);
-		m_on_activate = callback;
-	}
-
-	void Window::SetOnDestroy(EventHandler callback)
-	{
-		std::lock_guard<std::mutex> guard(m_lock);
-		m_on_destroy = callback;
+		return m_event_handler_is_set? m_event_handler(std::move(event)): 0;
 	}
 
 	void Window::SetSizeHints(Size increment, Size minimum_size)
@@ -86,7 +69,20 @@ namespace BearLibTerminal
 		return m_client_size;
 	}
 
-	void Window::RunAsynchronous()
+	void Window::ToggleFullscreen()
+	{ }
+
+	bool Window::IsFullscreen() const
+	{
+		return m_fullscreen;
+	}
+
+	void Window::Invoke(std::function<void()> func)
+	{
+		Post(std::move(func)).get();
+	}
+
+	void Window::Run()
 	{
 		auto thread_function = [&](std::shared_ptr<std::promise<bool>> promise)
 		{
@@ -104,7 +100,7 @@ namespace BearLibTerminal
 				}
 
 				ThreadFunction();
-				if (m_on_destroy) m_on_destroy();
+				Handle(TK_DESTROY);
 			}
 			catch (std::exception& e)
 			{
@@ -152,7 +148,7 @@ namespace BearLibTerminal
 		result.reset(new WinApiWindow());
 #endif
 
-		result->RunAsynchronous();
+		result->Run();
 		return std::move(result);
 	}
 }

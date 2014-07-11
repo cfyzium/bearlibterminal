@@ -41,16 +41,18 @@ namespace BearLibTerminal
 		void SetTitle(const std::wstring& title);
 		void SetIcon(const std::wstring& filename);
 		void SetClientSize(const Size& size);
-		void Redraw();
 		void Show();
 		void Hide();
-		void Invoke(std::function<void()> func);
+		std::future<void> Post(std::function<void()> func);
 		bool AcquireRC();
 		bool ReleaseRC();
 		void SwapBuffers();
 		void SetVSync(bool enabled);
 		bool PumpEvents();
 		void SetResizeable(bool resizeable);
+		Size GetActualSize();
+		void ToggleFullscreen();
+		void SetCursorVisibility(bool visible);
 	protected:
 		void ThreadFunction();
 		bool Construct();
@@ -58,16 +60,16 @@ namespace BearLibTerminal
 		void DestroyUnlocked();
 		bool CreateWindowObject();
 		void DestroyWindowObject();
-		void ReportInput(const Keystroke& keystroke);
 		void HandleRepaint();
-		void UpdateSizeHints();
+		void UpdateSizeHints(Size size=Size());
+		void Demaximize();
 	protected:
 		struct Private;
 		std::unique_ptr<Private> m_private;
-		Semaphore m_redraw_barrier;
-		Point m_mouse_position;
-		int m_mouse_wheel;
+		uint64_t m_last_mouse_click;
+		int m_consecutive_mouse_clicks;
 		bool m_resizeable;
+		bool m_client_resize;
 	};
 }
 

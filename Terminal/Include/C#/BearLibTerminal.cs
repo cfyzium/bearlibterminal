@@ -19,7 +19,7 @@
 * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *
-* Release date: 2013-12-27
+* Release date: 2014-07-04
 */
 
 using System;
@@ -32,150 +32,150 @@ using System.Runtime.InteropServices;
 namespace BearLib
 {
     public static class Terminal
-    {
-        public struct Keys
-        {
-            public const int LeftButton     = 0x01;
-            public const int RightButton    = 0x02;
-            public const int Close          = 0x03; // Same code as VK_CANCEL from winuser.h
-            public const int Back           = 0x08; // Backspace
-            public const int Backspace      = 0x08; // Backspace (alias)
-            public const int Tab            = 0x09; 
-            public const int Return         = 0x0D; // Enter
-            public const int Shift          = 0x10;
-            public const int Control        = 0x11;
-            public const int Pause          = 0x13; // Pause/Break
-            public const int Escape         = 0x1B;
-            public const int Space          = 0x20;
-            public const int Prior          = 0x21; // Page Up
-            public const int Next           = 0x22; // Page Down
-            public const int End            = 0x23;
-            public const int Home           = 0x24;
-            public const int Left           = 0x25; // Left arrow
-            public const int Up             = 0x26; // Up arrow
-            public const int Right          = 0x27; // Right arrow
-            public const int Down           = 0x28; // Down arrow
-            public const int Insert         = 0x2D;
-            public const int Delete         = 0x2E;
-            public const int D0             = 0x30;
-            public const int D1             = 0x31;
-            public const int D2             = 0x32;
-            public const int D3             = 0x33;
-            public const int D4             = 0x34;
-            public const int D5             = 0x35;
-            public const int D6             = 0x36;
-            public const int D7             = 0x37;
-            public const int D8             = 0x38;
-            public const int D9             = 0x39;
-            public const int A              = 0x41;
-            public const int B              = 0x42;
-            public const int C              = 0x43;
-            public const int D              = 0x44;
-            public const int E              = 0x45;
-            public const int F              = 0x46;
-            public const int G              = 0x47;
-            public const int H              = 0x48;
-            public const int I              = 0x49;
-            public const int J              = 0x4A;
-            public const int K              = 0x4B;
-            public const int L              = 0x4C;
-            public const int M              = 0x4D;
-            public const int N              = 0x4E;
-            public const int O              = 0x4F;
-            public const int P              = 0x50;
-            public const int Q              = 0x51;
-            public const int R              = 0x52;
-            public const int S              = 0x53;
-            public const int T              = 0x54;
-            public const int U              = 0x55;
-            public const int V              = 0x56;
-            public const int W              = 0x57;
-            public const int X              = 0x58;
-            public const int Y              = 0x59;
-            public const int Z              = 0x5A;
-            public const int Grave          = 0xC0; //  ` 
-            public const int Minus          = 0xBD; //  -
-            public new const int Equals     = 0xBB; //  =
-            public const int Backslash      = 0xDC; //  \ .
-            public const int LeftBracket    = 0xDB; //  [
-            public const int RightBracket   = 0xDD; //  ]
-            public const int Semicolon      = 0xBA; //  ;
-            public const int Apostrophe     = 0xDE; //  '
-            public const int Comma          = 0xBC; //  ,
-            public const int Period         = 0xBE; //  .
-            public const int Slash          = 0xBF; //  /
-            public const int Numpad0        = 0x60;
-            public const int Numpad1        = 0x61;
-            public const int Numpad2        = 0x62;
-            public const int Numpad3        = 0x63;
-            public const int Numpad4        = 0x64;
-            public const int Numpad5        = 0x65;
-            public const int Numpad6        = 0x66;
-            public const int Numpad7        = 0x67;
-            public const int Numpad8        = 0x68;
-            public const int Numpad9        = 0x69;
-            public const int Multiply       = 0x6A; // '*' on numpad
-            public const int Add            = 0x6B; // '+' on numpad
-            public const int Subtract       = 0x6D; // '-' on numpad
-            public const int Decimal        = 0x6E; // '.' on numpad
-            public const int Divide         = 0x6F; // '/' on numpad
-            public const int F1             = 0x70;
-            public const int F2             = 0x71;
-            public const int F3             = 0x72;
-            public const int F4             = 0x73;
-            public const int F5             = 0x74;
-            public const int F6             = 0x75;
-            public const int F7             = 0x76;
-            public const int F8             = 0x77;
-            public const int F9             = 0x78;
-            public const int F10            = 0x79;
-            public const int F11            = 0x7A;
-            public const int F12            = 0x7B;
-            public const int FlagReleased   = 0x100; // This flag is set if key was released instead of pressed
-        }
+    {        
+        public const int
         
-        public struct Events
-        {
-            public const int MouseMove      = 0xD3; // Mouse movement event
-            public const int MouseScroll    = 0xD4; // Mouse wheel scroll event
-            public const int WindowResize   = 0xDF; // Window resize
-        }
-
-        public struct States
-        {
-            public const int MouseX	        = 0xD0; // Mouse cursor position in characters
-            public const int MouseY         = 0xD1;
-            public const int MousePixelX    = 0xD5; // Mouse cursor position in pixels
-            public const int MousePixelY    = 0xD6;
-            public const int MouseWheel     = 0xD2;
-            public const int CellWidth      = 0xD7; // Character cell size in pixels
-            public const int CellHeight     = 0xD8;
-            public const int Width			= 0xD9; // Screen size in cells
-            public const int Height			= 0xDA;
-            public const int Composition	= 0xC1; // Current composition state
-			public const int Color			= 0xC2; // Current foregroung color
-			public const int BkColor		= 0xC3; // Current background color
-			public const int Layer			= 0xC4; // Current layer
-        }
-        
-        public struct ReadFlags
-        {
-        	public const int Character      = 1;
-        	public const int NoRemove       = 2;
-        	public const int NoBlock        = 4;
-        }
-
-        public struct CompositionMode
-        {
-            public const int Off            = 0;
-            public const int On             = 1;
-        }
-        
-        public struct InputResult
-        {
-        	public const int None           =  0;
-        	public const int Cancelled      = -1;
-        }
+        // Keyboard scancodes 
+        TK_A                = 0x04,
+        TK_B                = 0x05,
+        TK_C                = 0x06,
+        TK_D                = 0x07,
+        TK_E                = 0x08,
+        TK_F                = 0x09,
+        TK_G                = 0x0A,
+        TK_H                = 0x0B,
+        TK_I                = 0x0C,
+        TK_J                = 0x0D,
+        TK_K                = 0x0E,
+        TK_L                = 0x0F,
+        TK_M                = 0x10,
+        TK_N                = 0x11,
+        TK_O                = 0x12,
+        TK_P                = 0x13,
+        TK_Q                = 0x14,
+        TK_R                = 0x15,
+        TK_S                = 0x16,
+        TK_T                = 0x17,
+        TK_U                = 0x18,
+        TK_V                = 0x19,
+        TK_W                = 0x1A,
+        TK_X                = 0x1B,
+        TK_Y                = 0x1C,
+        TK_Z                = 0x1D,
+        TK_1                = 0x1E,
+        TK_2                = 0x1F,
+        TK_3                = 0x20,
+        TK_4                = 0x21,
+        TK_5                = 0x22,
+        TK_6                = 0x23,
+        TK_7                = 0x24,
+        TK_8                = 0x25,
+        TK_9                = 0x26,
+        TK_0                = 0x27,
+        TK_RETURN           = 0x28,
+        TK_ENTER            = 0x28,
+        TK_ESCAPE           = 0x29,
+        TK_BACKSPACE        = 0x2A,
+        TK_TAB              = 0x2B,
+        TK_SPACE            = 0x2C,
+        TK_MINUS            = 0x2D,
+        TK_EQUALS           = 0x2E,
+        TK_LBRACKET         = 0x2F,
+        TK_RBRACKET         = 0x30,
+        TK_BACKSLASH        = 0x31,
+        TK_SEMICOLON        = 0x33,
+        TK_APOSTROPHE       = 0x34,
+        TK_GRAVE            = 0x35,
+        TK_COMMA            = 0x36,
+        TK_PERIOD           = 0x37,
+        TK_SLASH            = 0x38,
+        TK_F1               = 0x3A,
+        TK_F2               = 0x3B,
+        TK_F3               = 0x3C,
+        TK_F4               = 0x3D,
+        TK_F5               = 0x3E,
+        TK_F6               = 0x3F,
+        TK_F7               = 0x40,
+        TK_F8               = 0x41,
+        TK_F9               = 0x42,
+        TK_F10              = 0x43,
+        TK_F11              = 0x44,
+        TK_F12              = 0x45,
+        TK_PAUSE            = 0x48,
+        TK_INSERT           = 0x49,
+        TK_HOME             = 0x4A,
+        TK_PAGEUP           = 0x4B,
+        TK_DELETE           = 0x4C,
+        TK_END              = 0x4D,
+        TK_PAGEDOWN         = 0x4E,
+        TK_RIGHT            = 0x4F,
+        TK_LEFT             = 0x50,
+        TK_DOWN             = 0x51,
+        TK_UP               = 0x52,
+        TK_KP_DIVIDE        = 0x54,
+        TK_KP_MULTIPLY      = 0x55,
+        TK_KP_MINUS         = 0x56,
+        TK_KP_PLUS          = 0x57,
+        TK_KP_ENTER         = 0x58,
+        TK_KP_1             = 0x59,
+        TK_KP_2             = 0x5A,
+        TK_KP_3             = 0x5B,
+        TK_KP_4             = 0x5C,
+        TK_KP_5             = 0x5D,
+        TK_KP_6             = 0x5E,
+        TK_KP_7             = 0x5F,
+        TK_KP_8             = 0x60,
+        TK_KP_9             = 0x61,
+        TK_KP_0             = 0x62,
+        TK_KP_PERIOD        = 0x63,
+        TK_SHIFT            = 0x70,
+        TK_CONTROL          = 0x71,
+    
+        // Mouse events/states
+        TK_MOUSE_LEFT       = 0x80, // Buttons
+        TK_MOUSE_RIGHT      = 0x81,
+        TK_MOUSE_MIDDLE     = 0x82,
+        TK_MOUSE_X1         = 0x83,
+        TK_MOUSE_X2         = 0x84,
+        TK_MOUSE_MOVE       = 0x85, // Movement event
+        TK_MOUSE_SCROLL     = 0x86, // Mouse scroll event
+        TK_MOUSE_X          = 0x87, // Cusor position in cells
+        TK_MOUSE_Y          = 0x88,
+        TK_MOUSE_PIXEL_X    = 0x89, // Cursor position in pixels
+        TK_MOUSE_PIXEL_Y    = 0x8A,
+        TK_MOUSE_WHEEL      = 0x8B, // Scroll direction and amount
+        TK_MOUSE_CLICKS     = 0x8C, // Number of consecutive clicks
+    
+        //If key was released instead of pressed, it's code will be OR'ed withTK_KEY_RELEASED
+        TK_KEY_RELEASED     = 0x100,
+    
+        // Virtual key-codes for internal terminal states/variables.
+        // These can be accessed via terminal_state function.
+        TK_WIDTH            = 0xC0, // Terminal width in cells
+        TK_HEIGHT           = 0xC1, // Terminal height in cells
+        TK_CELL_WIDTH       = 0xC2, // Cell width in pixels
+        TK_CELL_HEIGHT      = 0xC3, // Cell height in pixels
+        TK_COLOR            = 0xC4, // Current foregroung color
+        TK_BKCOLOR          = 0xC5, // Current background color
+        TK_LAYER            = 0xC6, // Current layer
+        TK_COMPOSITION      = 0xC7, // Current composition state
+        TK_CHAR             = 0xC8, // Translated ANSI code of last produced character
+        TK_WCHAR            = 0xC9, // Unicode codepoint of last produced character
+        TK_EVENT            = 0xCA, // Last dequeued event
+        TK_FULLSCREEN       = 0xCB, // Fullscreen state
+    
+        // Other events
+        TK_CLOSE            = 0xE0,
+        TK_RESIZED          = 0xE1,
+    
+        // Generic mode enum.
+        // Right now it is used for composition option only.
+        TK_OFF              =    0,
+        TK_ON               =    1,
+    
+        // Input result codes for terminal_read function.
+        TK_INPUT_NONE       =    0,
+        TK_INPUT_CANCELLED  =   -1;
 
         [DllImport("BearLibTerminal.dll", EntryPoint = "terminal_open", CallingConvention=CallingConvention.Cdecl)]
         public static extern bool Open();
@@ -302,14 +302,11 @@ namespace BearLib
         
         public static bool Check(int code)
         {
-            return State(code) == 1;
+            return State(code) > 0;
         }
 
         [DllImport("BearLibTerminal.dll", EntryPoint = "terminal_read", CallingConvention = CallingConvention.Cdecl)]
         public static extern int Read();
-        
-        [DllImport("BearLibTerminal.dll", EntryPoint = "terminal_read_ext", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int ReadExt(int flags);
 
         [DllImport("BearLibTerminal.dll", CharSet = CharSet.Unicode, EntryPoint = "terminal_read_str16", CallingConvention = CallingConvention.Cdecl)]
         public static extern int ReadStr(int x, int y, StringBuilder text, int max);

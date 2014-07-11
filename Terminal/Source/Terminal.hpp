@@ -55,9 +55,9 @@ namespace BearLibTerminal
 		int Print(int x, int y, const std::wstring& str);
 		int HasInput();
 		int GetState(int code);
-		int ReadExtended(int flags);
+		int Read();
 		int ReadString(int x, int y, wchar_t* buffer, int max);
-		const Encoding<char>& GetEncoding() const;
+		const Encoding8& GetEncoding() const;
 	private:
 		void SetOptionsInternal(const std::wstring& params);
 		void ApplyTilesets(std::map<uint16_t, std::unique_ptr<Tileset>>& tilesets);
@@ -70,35 +70,34 @@ namespace BearLibTerminal
 		void ConfigureViewport();
 		void PutInternal(int x, int y, int dx, int dy, wchar_t code, Color* colors);
 		void PrepareFreshCharacters();
-		void ConsumeStroke(const Keystroke& stroke);
-		bool HasInputInternalUnlocked(std::uint32_t mask);
-		Keystroke ReadKeystroke(int flags, int timeout);
-		Keystroke DequeueKeystroke(std::uint32_t mask, int flags);
-		void PutBack(const Keystroke& stroke);
-		int ReadVirtualCode(int flags);
-		int ReadCharacter(int flags);
+		void ConsumeEvent(Event& event);
+		void ConsumeIrrelevantEvents();
+		bool HasInputInternalUnlocked();
+		Event ReadEvent(int timeout);
 		int ReadStringInternalBlocking(int x, int y, wchar_t* buffer, int max);
 		int ReadStringInternalNonblocking(wchar_t* buffer, int max);
-		void OnWindowClose();
-		int OnWindowRedraw();
-		void OnWindowInput(Keystroke keystroke);
-		void OnWindowActivate();
+		void HandleDestroy();
+		int Redraw(bool async);
+		int OnWindowEvent(Event event);
 	private:
 		enum state_t {kHidden, kVisible, kClosed} m_state;
 		mutable std::mutex m_lock;
 		mutable std::mutex m_input_lock;
 		std::unique_ptr<Window> m_window;
-		std::deque<Keystroke> m_input_queue;
+		std::deque<Event> m_input_queue;
 		std::condition_variable m_input_condvar;
 		std::array<std::int32_t, 0x100> m_vars;
-		std::unique_ptr<Encoding<char>> m_encoding;
+		std::unique_ptr<Encoding8> m_encoding;
 		World m_world;
 		Options m_options;
 		std::list<uint16_t> m_fresh_codes;
-		std::map<std::wstring, std::unique_ptr<Encoding<char>>> m_codepage_cache;
+		std::map<std::wstring, std::unique_ptr<Encoding8>> m_codepage_cache;
 		bool m_show_grid;
 		bool m_viewport_modified;
 		Rectangle m_viewport_scissors;
+		int m_scale_step;
+		Rectangle m_stage_area;
+		SizeF m_stage_area_factor;
 	};
 }
 

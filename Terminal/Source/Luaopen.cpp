@@ -1,105 +1,33 @@
 /*
- * Luaopen.cpp
- *
- *  Created on: Jan 26, 2014
- *      Author: Cfyz
- */
-
-#if defined(_WIN32)
-#define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
-#define PSAPI_VERSION 1
-#include <psapi.h>
-#elif defined(__linux)
-#include <dlfcn.h>
-#endif
+* BearLibTerminal
+* Copyright (C) 2014 Cfyz
+*
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+* of the Software, and to permit persons to whom the Software is furnished to do
+* so, subject to the following conditions:
+*
+* The above copyright notice and this permission notice shall be included in all
+* copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+* FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+* COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+* IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+* CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/
 
 #define BEARLIBTERMINAL_BUILDING_LIBRARY
 #include "BearLibTerminal.h"
-
+#include "Platform.hpp"
 #include "Log.hpp"
 #include <vector>
 #include <type_traits>
 #include <stddef.h>
 #include <string.h>
-
-#if defined(_WIN32)
-typedef HMODULE ModuleHandle;
-typedef FARPROC FunctionHandle;
-
-ModuleHandle GetLuaModule()
-{
-	std::shared_ptr<std::remove_pointer<HMODULE>::type> psapi(LoadLibraryA("Psapi.dll"), FreeLibrary);
-	if (!psapi)
-	{
-		LOG(Error, "Can't load psapi library");
-		return nullptr;
-	}
-
-	auto enumProcessModules = (BOOL WINAPI (*)(HANDLE, HMODULE*, DWORD, LPDWORD))GetProcAddress(psapi.get(), "EnumProcessModules");
-	if (enumProcessModules == nullptr)
-	{
-		LOG(Error, "Failed to get address of EnumProcessModulesA function in Psapi.dll");
-		return nullptr;
-	}
-
-	auto getModuleFileNameExW = (DWORD WINAPI (*)(HANDLE, HMODULE, LPWSTR, DWORD))GetProcAddress(psapi.get(), "GetModuleFileNameExW");
-	if (getModuleFileNameExW == nullptr)
-	{
-		LOG(Error, "Failed to get address of GetModuleFileNameExW in Psapi.dll");
-		return nullptr;
-	}
-
-	HANDLE process = GetCurrentProcess();
-	DWORD bytes_needed = 0;
-	enumProcessModules(process, nullptr, 0, &bytes_needed);
-	size_t n_modules = bytes_needed / sizeof(HMODULE);
-	std::vector<HMODULE> modules{n_modules};
-
-	enumProcessModules(process, modules.data(), modules.size()*sizeof(HMODULE), &bytes_needed);
-	for (auto module: modules)
-	{
-		if (GetProcAddress(module, "lua_gettop") != nullptr)
-		{
-			wchar_t name[MAX_PATH];
-			getModuleFileNameExW(process, module, name, sizeof(name)/sizeof(wchar_t));
-			LOG(Info, "Using lua provider module \"" << name << "\"");
-
-			return module;
-		}
-	}
-
-	return nullptr;
-}
-
-FunctionHandle GetLuaFunction(ModuleHandle module, const char* name, bool may_fail=false)
-{
-	FunctionHandle result = GetProcAddress(module, name);
-	if (result == nullptr && !may_fail)
-	{
-		LOG(Error, "Can't get address of function \"" << name << "\"");
-	}
-	return result;
-}
-#elif defined(__linux)
-typedef void* ModuleHandle;
-typedef void* FunctionHandle;
-
-ModuleHandle GetLuaModule()
-{
-	return dlopen(0, RTLD_NOW|RTLD_GLOBAL);
-}
-
-FunctionHandle GetLuaFunction(ModuleHandle module, const char* name, bool may_fail=false)
-{
-	FunctionHandle result = dlsym(module, name);
-	if (result == nullptr && !may_fail)
-	{
-		LOG(Error, "Can't get address of function \"" << name << "\"");
-	}
-	return result;
-}
-#endif
 
 typedef struct lua_State lua_State;
 typedef double lua_Number;
@@ -472,33 +400,15 @@ int luaterminal_state(lua_State* L)
 
 int luaterminal_check(lua_State* L)
 {
-	lua_pushboolean(L, terminal_state(lua_tonumber(L, 1)) == 1);
+	lua_pushboolean(L, terminal_state(lua_tonumber(L, 1)) > 0);
 	return 1;
 }
 
 int luaterminal_read(lua_State* L)
 {
 	int code = terminal_read();
-	int released = (code & TK_FLAG_RELEASED) > 0;
+	int released = (code & TK_KEY_RELEASED) > 0;
 	code = code & 0xFF;
-
-	lua_pushnumber(L, code);
-	lua_pushboolean(L, released);
-
-	return 2;
-}
-
-int luaterminal_read_ext(lua_State* L)
-{
-	int flags = lua_tonumber(L, 1);
-	int code = terminal_read_ext(flags);
-	int released = 0;
-
-	if (!(flags & TK_READ_CHAR))
-	{
-		released = (code & TK_FLAG_RELEASED) > 0;
-		code = code & 0xFF;
-	}
 
 	lua_pushnumber(L, code);
 	lua_pushboolean(L, released);
@@ -563,12 +473,13 @@ static const luaL_Reg luaterminal_lib[] =
 	{"state", luaterminal_state},
 	{"check", luaterminal_check},
 	{"read", luaterminal_read},
-	{"read_ext", luaterminal_read_ext},
 	{"read_str", luaterminal_read_str},
 	{"color_from_name", luaterminal_color_from_name},
 	{"color_from_argb", luaterminal_color_from_argb},
 	{NULL, NULL}
 };
+
+#define CONST(x) {#x, x}
 
 struct
 {
@@ -577,181 +488,186 @@ struct
 }
 luaterminal_constants[] =
 {
-	{"LBUTTON",          TK_LBUTTON},
-	{"RBUTTON",          TK_RBUTTON},
-	{"MBUTTON",          TK_MBUTTON},
-	{"CLOSE",            TK_CLOSE},
-	{"BACK",             TK_BACK},
-	{"BACKSPACE",        TK_BACKSPACE},
-	{"TAB",              TK_TAB},
-	{"RETURN",           TK_RETURN},
-	{"SHIFT",            TK_SHIFT},
-	{"CONTROL",          TK_CONTROL},
-	{"PAUSE",            TK_PAUSE},
-	{"ESCAPE",           TK_ESCAPE},
-	{"SPACE",            TK_SPACE},
-	{"PRIOR",            TK_PRIOR},
-	{"NEXT",             TK_NEXT},
-	{"END",              TK_END},
-	{"HOME",             TK_HOME},
-	{"LEFT",             TK_LEFT},
-	{"UP",               TK_UP},
-	{"RIGHT",            TK_RIGHT},
-	{"DOWN",             TK_DOWN},
-	{"INSERT",           TK_INSERT},
-	{"DELETE",           TK_DELETE},
-	{"D0",               TK_0},
-	{"D1",               TK_1},
-	{"D2",               TK_2},
-	{"D3",               TK_3},
-	{"D4",               TK_4},
-	{"D5",               TK_5},
-	{"D6",               TK_6},
-	{"D7",               TK_7},
-	{"D8",               TK_8},
-	{"D9",               TK_9},
-	{"A",                TK_A},
-	{"B",                TK_B},
-	{"C",                TK_C},
-	{"D",                TK_D},
-	{"E",                TK_E},
-	{"F",                TK_F},
-	{"G",                TK_G},
-	{"H",                TK_H},
-	{"I",                TK_I},
-	{"J",                TK_J},
-	{"K",                TK_K},
-	{"L",                TK_L},
-	{"M",                TK_M},
-	{"N",                TK_N},
-	{"O",                TK_O},
-	{"P",                TK_P},
-	{"Q",                TK_Q},
-	{"R",                TK_R},
-	{"S",                TK_S},
-	{"T",                TK_T},
-	{"U",                TK_U},
-	{"V",                TK_V},
-	{"W",                TK_W},
-	{"X",                TK_X},
-	{"Y",                TK_Y},
-	{"Z",                TK_Z},
-	{"GRAVE",            TK_GRAVE},
-	{"MINUS",            TK_MINUS},
-	{"EQUALS",           TK_EQUALS},
-	{"BACKSLASH",        TK_BACKSLASH},
-	{"LBRACKET",         TK_LBRACKET},
-	{"RBRACKET",         TK_RBRACKET},
-	{"SEMICOLON",        TK_SEMICOLON},
-	{"APOSTROPHE",       TK_APOSTROPHE},
-	{"COMMA",            TK_COMMA},
-	{"PERIOD",           TK_PERIOD},
-	{"SLASH",            TK_SLASH},
-	{"NUMPAD0",          TK_NUMPAD0},
-	{"NUMPAD1",          TK_NUMPAD1},
-	{"NUMPAD2",          TK_NUMPAD2},
-	{"NUMPAD3",          TK_NUMPAD3},
-	{"NUMPAD4",          TK_NUMPAD4},
-	{"NUMPAD5",          TK_NUMPAD5},
-	{"NUMPAD6",          TK_NUMPAD6},
-	{"NUMPAD7",          TK_NUMPAD7},
-	{"NUMPAD8",          TK_NUMPAD8},
-	{"NUMPAD9",          TK_NUMPAD9},
-	{"MULTIPLY",         TK_MULTIPLY},
-	{"ADD",              TK_ADD},
-	{"SUBSTRACT",        TK_SUBTRACT},
-	{"DECIMAL",          TK_DECIMAL},
-	{"DIVIDE",           TK_DIVIDE},
-	{"F1",               TK_F1},
-	{"F2",               TK_F2},
-	{"F3",               TK_F3},
-	{"F4",               TK_F4},
-	{"F5",               TK_F5},
-	{"F6",               TK_F6},
-	{"F7",               TK_F7},
-	{"F8",               TK_F8},
-	{"F9",               TK_F9},
-	{"F10",              TK_F10},
-	{"F11",              TK_F11},
-	{"F12",              TK_F12},
-	{"MOUSE_MOVE",       TK_MOUSE_MOVE},
-	{"MOUSE_SCROLL",     TK_MOUSE_SCROLL},
-	{"WINDOW_RESIZE",    TK_WINDOW_RESIZE},
-	{"MOUSE_X",          TK_MOUSE_X},
-	{"MOUSE_Y",          TK_MOUSE_Y},
-	{"MOUSE_PIXEL_X",    TK_MOUSE_PIXEL_X},
-	{"MOUSE_PIXEL_Y",    TK_MOUSE_PIXEL_Y},
-	{"MOUSE_WHEEL",      TK_MOUSE_WHEEL},
-	{"CELL_WIDTH",       TK_CELL_WIDTH},
-	{"CELL_HEIGHT",      TK_CELL_HEIGHT},
-	{"WIDTH",            TK_WIDTH},
-	{"HEIGHT",           TK_HEIGHT},
-	{"COMPOSITION",      TK_COMPOSITION},
-	{"COLOR",            TK_COLOR},
-	{"BKCOLOR",          TK_BKCOLOR},
-	{"LAYER",            TK_LAYER},
-	{"COMPOSITION_OFF",  TK_COMPOSITION_OFF},
-	{"COMPOSITION_ON",   TK_COMPOSITION_ON},
-	{"INPUT_NONE",       TK_INPUT_NONE},
-	{"INPUT_CANCELLED",  TK_INPUT_CANCELLED},
-	{"READ_CHAR",        TK_READ_CHAR},
-	{"READ_NOREMOVE",    TK_READ_NOREMOVE},
-	{"READ_NOBLOCK",     TK_READ_NOBLOCK}
+	CONST(TK_A),
+	CONST(TK_B),
+	CONST(TK_C),
+	CONST(TK_D),
+	CONST(TK_E),
+	CONST(TK_F),
+	CONST(TK_G),
+	CONST(TK_H),
+	CONST(TK_I),
+	CONST(TK_J),
+	CONST(TK_K),
+	CONST(TK_L),
+	CONST(TK_M),
+	CONST(TK_N),
+	CONST(TK_O),
+	CONST(TK_P),
+	CONST(TK_Q),
+	CONST(TK_R),
+	CONST(TK_S),
+	CONST(TK_T),
+	CONST(TK_U),
+	CONST(TK_V),
+	CONST(TK_W),
+	CONST(TK_X),
+	CONST(TK_Y),
+	CONST(TK_Z),
+	CONST(TK_0),
+	CONST(TK_1),
+	CONST(TK_2),
+	CONST(TK_3),
+	CONST(TK_4),
+	CONST(TK_5),
+	CONST(TK_6),
+	CONST(TK_7),
+	CONST(TK_8),
+	CONST(TK_9),
+	CONST(TK_RETURN),
+	CONST(TK_ENTER),
+	CONST(TK_ESCAPE),
+	CONST(TK_BACKSPACE),
+	CONST(TK_TAB),
+	CONST(TK_SPACE),
+	CONST(TK_MINUS),
+	CONST(TK_EQUALS),
+	CONST(TK_LBRACKET),
+	CONST(TK_RBRACKET),
+	CONST(TK_BACKSLASH),
+	CONST(TK_SEMICOLON),
+	CONST(TK_APOSTROPHE),
+	CONST(TK_GRAVE),
+	CONST(TK_COMMA),
+	CONST(TK_PERIOD),
+	CONST(TK_SLASH),
+	CONST(TK_F1),
+	CONST(TK_F2),
+	CONST(TK_F3),
+	CONST(TK_F4),
+	CONST(TK_F5),
+	CONST(TK_F6),
+	CONST(TK_F7),
+	CONST(TK_F8),
+	CONST(TK_F9),
+	CONST(TK_F10),
+	CONST(TK_F11),
+	CONST(TK_F12),
+	CONST(TK_PAUSE),
+	CONST(TK_INSERT),
+	CONST(TK_HOME),
+	CONST(TK_PAGEUP),
+	CONST(TK_DELETE),
+	CONST(TK_END),
+	CONST(TK_PAGEDOWN),
+	CONST(TK_RIGHT),
+	CONST(TK_LEFT),
+	CONST(TK_DOWN),
+	CONST(TK_UP),
+	CONST(TK_KP_DIVIDE),
+	CONST(TK_KP_MULTIPLY),
+	CONST(TK_KP_MINUS),
+	CONST(TK_KP_PLUS),
+	CONST(TK_KP_ENTER),
+	CONST(TK_KP_0),
+	CONST(TK_KP_1),
+	CONST(TK_KP_2),
+	CONST(TK_KP_3),
+	CONST(TK_KP_4),
+	CONST(TK_KP_5),
+	CONST(TK_KP_6),
+	CONST(TK_KP_7),
+	CONST(TK_KP_8),
+	CONST(TK_KP_9),
+	CONST(TK_KP_PERIOD),
+	CONST(TK_SHIFT),
+	CONST(TK_CONTROL),
+	CONST(TK_MOUSE_LEFT),
+	CONST(TK_MOUSE_RIGHT),
+	CONST(TK_MOUSE_MIDDLE),
+	CONST(TK_MOUSE_X1),
+	CONST(TK_MOUSE_X2),
+	CONST(TK_MOUSE_MOVE),
+	CONST(TK_MOUSE_WHEEL),
+	CONST(TK_MOUSE_X),
+	CONST(TK_MOUSE_Y),
+	CONST(TK_MOUSE_PIXEL_X),
+	CONST(TK_MOUSE_PIXEL_Y),
+	CONST(TK_MOUSE_WHEEL),
+	CONST(TK_MOUSE_CLICKS),
+	CONST(TK_WIDTH),
+	CONST(TK_HEIGHT),
+	CONST(TK_CELL_WIDTH),
+	CONST(TK_CELL_HEIGHT),
+	CONST(TK_COLOR),
+	CONST(TK_BKCOLOR),
+	CONST(TK_LAYER),
+	CONST(TK_COMPOSITION),
+	CONST(TK_CHAR),
+	CONST(TK_WCHAR),
+	CONST(TK_EVENT),
+	CONST(TK_FULLSCREEN),
+	CONST(TK_CLOSE),
+	CONST(TK_RESIZED),
+	CONST(TK_OFF),
+	CONST(TK_ON),
+	CONST(TK_INPUT_NONE),
+	CONST(TK_INPUT_CANCELLED)
 };
 
 int luaopen_BearLibTerminal(lua_State* L)
 {
-	auto module = GetLuaModule();
-	if (module == nullptr)
+	BearLibTerminal::Module liblua = BearLibTerminal::Module::GetProviding("lua_gettop");
+	if (!liblua)
 	{
 		LOG(Error, "Lua provider module was not found");
 		return 1; // This will cause lua runtime to fail on table dereferencing, thus notifying user that something went wrong
 	}
 
-	bool version_52 = GetLuaFunction(module, "lua_tonumberx", true) != nullptr;
+	bool version_52 = liblua.Probe("lua_tonumberx") != nullptr;
 
-	lua_gettop = (PFNLUAGETTOP)GetLuaFunction(module, "lua_gettop");
-	lua_createtable = (PFNLUACREATETABLE)GetLuaFunction(module, "lua_createtable");
-	luaL_checkstack = (PFNLUALCHECKSTACK)GetLuaFunction(module, "luaL_checkstack");
-	lua_pushvalue = (PFNLUAPUSHVALUE)GetLuaFunction(module, "lua_pushvalue");
-	lua_pushcclosure = (PFNLUAPUSHCCLOSURE)GetLuaFunction(module, "lua_pushcclosure");
-	lua_setfield = (PFNLUASETFIELD)GetLuaFunction(module, "lua_setfield");
-	lua_settop = (PFNLUASETTOP)GetLuaFunction(module, "lua_settop");
-	lua_pushnumber = (PFNLUAPUSHNUMBER)GetLuaFunction(module, "lua_pushnumber");
-	lua_pushinteger = (PFNLUAPUSHINTEGER)GetLuaFunction(module, "lua_pushinteger");
-	lua_tolstring = (PFNLUATOSTRING)GetLuaFunction(module, "lua_tolstring");
-	lua_rawgeti = (PFNLUARAWGETI)GetLuaFunction(module, "lua_rawgeti");
-	lua_type = (PFNLUATYPE)GetLuaFunction(module, "lua_type");
-	lua_pushboolean = (PFNLUAPUSHBOOLEAN)GetLuaFunction(module, "lua_pushboolean");
-	lua_gettable = (PFNLUAGETTABLE)GetLuaFunction(module, "lua_gettable");
-	lua_pushstring = (PFNLUAPUSHSTRING)GetLuaFunction(module, "lua_pushstring");
-	lua_getfield = (PFNLUAGETFIELD)GetLuaFunction(module, "lua_getfield");
-	lua_insert = (PFNLUAINSERT)GetLuaFunction(module, "lua_insert");
-	lua_replace = (PFNLUAREPLACE)GetLuaFunction(module, "lua_replace");
-	lua_error = (PFNLUAERROR)GetLuaFunction(module, "lua_error");
+	lua_gettop = (PFNLUAGETTOP)liblua["lua_gettop"];
+	lua_createtable = (PFNLUACREATETABLE)liblua["lua_createtable"];
+	luaL_checkstack = (PFNLUALCHECKSTACK)liblua["luaL_checkstack"];
+	lua_pushvalue = (PFNLUAPUSHVALUE)liblua["lua_pushvalue"];
+	lua_pushcclosure = (PFNLUAPUSHCCLOSURE)liblua["lua_pushcclosure"];
+	lua_setfield = (PFNLUASETFIELD)liblua["lua_setfield"];
+	lua_settop = (PFNLUASETTOP)liblua["lua_settop"];
+	lua_pushnumber = (PFNLUAPUSHNUMBER)liblua["lua_pushnumber"];
+	lua_pushinteger = (PFNLUAPUSHINTEGER)liblua["lua_pushinteger"];
+	lua_tolstring = (PFNLUATOSTRING)liblua["lua_tolstring"];
+	lua_rawgeti = (PFNLUARAWGETI)liblua["lua_rawgeti"];
+	lua_type = (PFNLUATYPE)liblua["lua_type"];
+	lua_pushboolean = (PFNLUAPUSHBOOLEAN)liblua["lua_pushboolean"];
+	lua_gettable = (PFNLUAGETTABLE)liblua["lua_gettable"];
+	lua_pushstring = (PFNLUAPUSHSTRING)liblua["lua_pushstring"];
+	lua_getfield = (PFNLUAGETFIELD)liblua["lua_getfield"];
+	lua_insert = (PFNLUAINSERT)liblua["lua_insert"];
+	lua_replace = (PFNLUAREPLACE)liblua["lua_replace"];
+	lua_error = (PFNLUAERROR)liblua["lua_error"];
 
 	if (version_52)
 	{
 		// Lua 5.2 has lua_tonumber and lua_tointeger as preprocessor macro
 
-		lua_tonumberx = (PFNLUATONUMBERX)GetLuaFunction(module, "lua_tonumberx");
+		lua_tonumberx = (PFNLUATONUMBERX)liblua["lua_tonumberx"];
 		lua_tonumber = &lua_tonumber_52;
 
-		lua_tointegerx = (PFNLUATOINTEGERX)GetLuaFunction(module, "lua_tointegerx");
+		lua_tointegerx = (PFNLUATOINTEGERX)liblua["lua_tointegerx"];
 		lua_tointeger = &lua_tointeger_52;
 
-		lua_pcallk = (PFNLUAPCALLK)GetLuaFunction(module, "lua_pcallk");
+		lua_pcallk = (PFNLUAPCALLK)liblua["lua_pcallk"];
 		lua_pcall = &lua_pcall_52;
 
-		lua_rawlen = (PFNLUARAWLEN)GetLuaFunction(module, "lua_rawlen");
+		lua_rawlen = (PFNLUARAWLEN)liblua["lua_rawlen"];
 		lua_objlen = &lua_objlen_52;
 	}
 	else
 	{
-		lua_tonumber = (PFNLUATONUMBER)GetLuaFunction(module, "lua_tonumber", true);
-		lua_tointeger = (PFNLUATOINTEGER)GetLuaFunction(module, "lua_tointeger", true);
-		lua_pcall = (PFNLUAPCALL)GetLuaFunction(module, "lua_pcall");
-		lua_objlen = (PFNLUAOBJLEN)GetLuaFunction(module, "lua_objlen");
+		lua_tonumber = (PFNLUATONUMBER)liblua["lua_tonumber"];
+		lua_tointeger = (PFNLUATOINTEGER)liblua["lua_tointeger"];
+		lua_pcall = (PFNLUAPCALL)liblua["lua_pcall"];
+		lua_objlen = (PFNLUAOBJLEN)liblua["lua_objlen"];
 	}
 
 	// Make module table

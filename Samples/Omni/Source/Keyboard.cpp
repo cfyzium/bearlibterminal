@@ -48,7 +48,7 @@ void TestKeyboard()
 {
 	terminal_set("window.title='Omni: basic keyboard input'");
 	terminal_set("input.events=keypress+keyrelease");
-	terminal_composition(TK_COMPOSITION_ON);
+	terminal_composition(TK_ON);
 
 	//
 	//	"┌───┐┌──┬──┬──┬──┐┌──┬──┬──┬──┐┌──┬───┬───┬───┐┌─────┬─────┬───────┐",
@@ -167,30 +167,30 @@ void TestKeyboard()
 		// Navigation
 		{ TK_INSERT, 36, 4, 4, 1, "INS" },
 		{ TK_HOME, 41, 4, 4, 1, "HOME" },
-		{ TK_PRIOR, 46, 4, 4, 1, "PGUP" },
+		{ TK_PAGEUP, 46, 4, 4, 1, "PGUP" },
 		{ TK_DELETE, 36, 6, 4, 1, "DEL" },
 		{ TK_END, 41, 6, 4, 1, "END" },
-		{ TK_NEXT, 46, 6, 4, 1, "PGDN" },
+		{ TK_PAGEDOWN, 46, 6, 4, 1, "PGDN" },
 		{ TK_UP, 41, 10, 4, 1, " UP " },
 		{ TK_LEFT, 36, 12, 4, 1, "LEFT" },
 		{ TK_DOWN, 41, 12, 4, 1, "DOWN" },
 		{ TK_RIGHT, 46, 12, 4, 1, "RGHT" },
 		// Numpad
-		{ TK_DIVIDE, 56, 4, 3, 1, " / " },
-		{ TK_MULTIPLY, 60, 4, 3, 1, " * " },
-		{ TK_SUBTRACT, 64, 4, 3, 1, " - " },
-		{ TK_NUMPAD7, 52, 6, 3, 1, " 7 " },
-		{ TK_NUMPAD8, 56, 6, 3, 1, " 8 " },
-		{ TK_NUMPAD9, 60, 6, 3, 1, " 9 " },
-		{ TK_ADD, 64, 6, 3, 3, " + " },
-		{ TK_NUMPAD4, 52, 8, 3, 1, " 4 " },
-		{ TK_NUMPAD5, 56, 8, 3, 1, " 5 " },
-		{ TK_NUMPAD6, 60, 8, 3, 1, " 6 " },
-		{ TK_NUMPAD1, 52, 10, 3, 1, " 1 " },
-		{ TK_NUMPAD2, 56, 10, 3, 1, " 2 " },
-		{ TK_NUMPAD3, 60, 10, 3, 1, " 3 " },
-		{ TK_NUMPAD0, 52, 12, 7, 1, " 0 " },
-		{ TK_DECIMAL, 60, 12, 3, 1, " . " },
+		{ TK_KP_DIVIDE, 56, 4, 3, 1, " / " },
+		{ TK_KP_MULTIPLY, 60, 4, 3, 1, " * " },
+		{ TK_KP_MINUS, 64, 4, 3, 1, " - " },
+		{ TK_KP_7, 52, 6, 3, 1, " 7 " },
+		{ TK_KP_8, 56, 6, 3, 1, " 8 " },
+		{ TK_KP_9, 60, 6, 3, 1, " 9 " },
+		{ TK_KP_PLUS, 64, 6, 3, 3, " + " },
+		{ TK_KP_4, 52, 8, 3, 1, " 4 " },
+		{ TK_KP_5, 56, 8, 3, 1, " 5 " },
+		{ TK_KP_6, 60, 8, 3, 1, " 6 " },
+		{ TK_KP_1, 52, 10, 3, 1, " 1 " },
+		{ TK_KP_2, 56, 10, 3, 1, " 2 " },
+		{ TK_KP_3, 60, 10, 3, 1, " 3 " },
+		{ TK_KP_0, 52, 12, 7, 1, " 0 " },
+		{ TK_KP_PERIOD, 60, 12, 3, 1, " . " },
 	};
 
 	const size_t N_keys = sizeof(keys)/sizeof(keys[0]);
@@ -242,18 +242,29 @@ void TestKeyboard()
 		if (terminal_state(TK_RETURN))
 		{
 			// Main keyboard
-			FillRectangle(6+30, 1+6, 4, 1, pressed_key);
-			FillRectangle(6+31, 1+8, 3, 1, pressed_key);
+			const wchar_t* region =
+				L"▗▄▄▄▄▖\n"
+				L"▐████▌\n"
+				L"▝▜███▌\n"
+				L" ▐███▌\n"
+				L" ▝▀▀▀▘\n";
+			terminal_wprintf(6+29, 6, L"[color=%d]%ls", pressed_key, region);
+		}
+
+		if (terminal_check(TK_KP_ENTER))
+		{
 			// Numpad
 			FillRectangle(6+64, 1+10, 3, 3, pressed_key);
 		}
 
-		terminal_color(terminal_state(TK_RETURN)? pressed_key_text: available_key_text);
 		// Main keyboard
+		terminal_color(terminal_state(TK_RETURN)? pressed_key_text: available_key_text);
 		terminal_put(6+32, 1+6+0, 'E');
 		terminal_put(6+32, 1+6+1, 'N');
 		terminal_put(6+32, 1+6+2, 'T');
+
 		// Numpad
+		terminal_color(terminal_state(TK_KP_ENTER)? pressed_key_text: available_key_text);
 		terminal_put(6+65, 1+10+0, 'E');
 		terminal_put(6+65, 1+10+1, 'N');
 		terminal_put(6+65, 1+10+2, 'T');
@@ -289,6 +300,6 @@ void TestKeyboard()
 		while (terminal_has_input());
 	}
 
-	terminal_composition(TK_COMPOSITION_OFF);
+	terminal_composition(TK_OFF);
 	terminal_set("input.events=keypress");
 }

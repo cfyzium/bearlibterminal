@@ -16,7 +16,7 @@ void TestExtendedBasics()
 	// Setup
 	terminal_set("window.title='Omni: extended output / basics'");
 	terminal_set("0xE000: ../Media/Tiles.png, size=32x32, align=top-left");
-	terminal_composition(TK_COMPOSITION_ON);
+	terminal_composition(TK_ON);
 
 	int cx = 10, cy = 5;
 	int n_symbols = 10;
@@ -83,6 +83,6 @@ void TestExtendedBasics()
 	}
 
 	// Clean up
-	terminal_composition(TK_COMPOSITION_OFF);
+	terminal_composition(TK_OFF);
 	terminal_set("0xE000: none");
 }

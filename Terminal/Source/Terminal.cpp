@@ -14,6 +14,9 @@
 #include "BearLibTerminal.h"
 #include <cmath>
 #include <future>
+#include <vector>
+
+#include <iostream>
 
 // Internal usage
 #define TK_CLIENT_WIDTH  0xF0
@@ -31,21 +34,26 @@ namespace BearLibTerminal
 
 namespace BearLibTerminal
 {
+	static std::vector<float> kScaleSteps =
+	{
+		0.75f, 1.0f, 1.25f, 1.5f, 2.0f, 3.0f
+	};
+
+	static int kScaleDefault = 1;
+
 	Terminal::Terminal():
 		m_state{kHidden},
 		m_vars{},
 		m_show_grid{false},
-		m_viewport_modified{false}
+		m_viewport_modified{false},
+		m_scale_step(kScaleDefault)
 	{
 		// Reset logger (this is terrible)
 		g_logger = std::unique_ptr<Log>(new Log());
 
 		// Try to create window
 		m_window = Window::Create();
-		m_window->SetOnDestroy(std::bind(&Terminal::OnWindowClose, this));
-		m_window->SetOnInput(std::bind(&Terminal::OnWindowInput, this, std::placeholders::_1));
-		m_window->SetOnRedraw(std::bind(&Terminal::OnWindowRedraw, this));
-		m_window->SetOnActivate(std::bind(&Terminal::OnWindowActivate, this));
+		m_window->SetEventHandler(std::bind(&Terminal::OnWindowEvent, this, std::placeholders::_1));
 
 		// Default parameters
 		SetOptionsInternal(L"window: size=80x25, icon=default; font: default; terminal.encoding=utf8");
@@ -53,7 +61,8 @@ namespace BearLibTerminal
 
 	Terminal::~Terminal()
 	{
-		m_window.reset();
+		m_window->Stop();
+		m_window.reset(); // TODO: is it needed?
 	}
 
 	int Terminal::SetOptions(const std::wstring& value)
@@ -193,13 +202,13 @@ namespace BearLibTerminal
 
 		if (updated.output_vsync != m_options.output_vsync)
 		{
-			m_window->Invoke([&]{m_window->SetVSync(updated.output_vsync);});
+			m_window->SetVSync(updated.output_vsync);
 		}
 
 		// All options and parameters must be validated, may try to apply them
 		if (!new_tilesets.empty())
 		{
-			m_window->Invoke([&](){ApplyTilesets(new_tilesets);});
+			ApplyTilesets(new_tilesets);
 		}
 
 		// Primary sanity check: if there is no base font, lots of things are gonna fail
@@ -218,6 +227,11 @@ namespace BearLibTerminal
 			m_encoding = GetUnibyteEncoding(updated.terminal_encoding);
 		}
 
+		if (updated.input_mouse_cursor != m_options.input_mouse_cursor)
+		{
+			m_window->SetCursorVisibility(updated.input_mouse_cursor);
+		}
+
 		// Apply on per-option basis
 		bool viewport_size_changed = false;
 
@@ -234,6 +248,13 @@ namespace BearLibTerminal
 		if (updated.window_resizeable != m_options.window_resizeable)
 		{
 			m_window->SetResizeable(updated.window_resizeable);
+		}
+
+		if (updated.window_resizeable && m_scale_step != kScaleDefault)
+		{
+			// No scaling in resizeable mode, at least not yet.
+			m_scale_step = kScaleDefault;
+			viewport_size_changed = true;
 		}
 
 		// If the size of cell has changed -OR- new basic tileset has been specified
@@ -263,7 +284,7 @@ namespace BearLibTerminal
 
 			// Must readd dynamic tileset.
 			// NOTE: SHOULD NOT fail.
-			m_window->Invoke([=](){UpdateDynamicTileset(m_world.state.cellsize);});
+			UpdateDynamicTileset(m_world.state.cellsize);
 
 			viewport_size_changed = true;
 			LOG(Debug, L"SetOptions: new cell size is " << m_world.state.cellsize);
@@ -287,16 +308,26 @@ namespace BearLibTerminal
 		if (viewport_size_changed)
 		{
 			// Resize window object
-			Size viewport_size = m_world.stage.size * m_world.state.cellsize;
+			float scale_factor = kScaleSteps[m_scale_step];
+			Size viewport_size = m_world.stage.size * m_world.state.cellsize * scale_factor;
 			m_vars[TK_CLIENT_WIDTH] = viewport_size.width;
 			m_vars[TK_CLIENT_HEIGHT] = viewport_size.height;
-			m_window->SetSizeHints(m_world.state.cellsize, updated.window_minimum_size);
+			m_window->SetSizeHints(m_world.state.cellsize*scale_factor, updated.window_minimum_size);
 			m_window->SetClientSize(viewport_size);
 			m_viewport_modified = true;
 		}
 
+		if (updated.window_toggle_fullscreen)
+		{
+			m_window->ToggleFullscreen();
+			updated.window_toggle_fullscreen = false;
+		}
+
+		// Do not touch input lock. Input handlers should just take main lock if necessary.
+		/*
 		// Briefly grab input lock so that input routines do not contend for m_options
 		std::lock_guard<std::mutex> input_guard(m_input_lock);
+		//*/
 
 		m_options = updated;
 	}
@@ -378,13 +409,28 @@ namespace BearLibTerminal
 		{
 			throw std::runtime_error("window.minimum-size value is out of range");
 		}
+
+		if (group.attributes.count(L"fullscreen"))
+		{
+			bool desired_state = false;
+
+			if (!try_parse(group.attributes[L"fullscreen"], desired_state))
+			{
+				throw std::runtime_error("window.fullscreen value cannot be parsed");
+			}
+
+			if (desired_state != m_window->IsFullscreen())
+			{
+				options.window_toggle_fullscreen = true;
+			}
+		}
 	}
 
 	void Terminal::ValidateInputOptions(OptionGroup& group, Options& options)
 	{
 		// Possible options: nonblocking, events, precise_mouse, sticky_close, cursor_symbol, cursor_blink_rate
 
-		if (group.attributes.count(L"precise-mousemove") && !try_parse(group.attributes[L"precise-mousemove"], options.input_precise_mouse))
+		if (group.attributes.count(L"precise-mouse") && !try_parse(group.attributes[L"precise-mouse"], options.input_precise_mouse))
 		{
 			throw std::runtime_error("input.precise-mouse cannot be parsed");
 		}
@@ -394,38 +440,14 @@ namespace BearLibTerminal
 			throw std::runtime_error("input.sticky-close cannot be parsed");
 		}
 
-		if (group.attributes.count(L"events"))
+		if (group.attributes.count(L"keyboard") && !try_parse(group.attributes[L"keyboard"], options.input_keyboard))
 		{
-			const std::wstring& s = group.attributes[L"events"];
-			std::map<std::wstring, uint32_t> flags
-			{
-				{L"all", Keystroke::All},
-				{L"keypress", Keystroke::KeyPress},
-				{L"keyrelease", Keystroke::KeyRelease},
-				{L"keys", Keystroke::Keys},
-				{L"mousemove", Keystroke::MouseMove},
-				{L"mousescroll", Keystroke::MouseScroll},
-				{L"mouse", Keystroke::Mouse},
-				{L"none", Keystroke::None}
-			};
+			throw std::runtime_error("input.keyboard cannot be parsed");
+		}
 
-			uint32_t result = 0;
-			for (auto i: flags)
-			{
-				size_t n = s.find(i.first);
-				if (n != std::wstring::npos)
-				{
-					uint32_t value = i.second;
-					if (n > 0 && s[n-1] == L'-') result &= ~value; else result |= value;
-				}
-			}
-
-			if (s != L"none")
-			{
-				result |= Keystroke::KeyPress;
-			}
-
-			options.input_events = result;
+		if (group.attributes.count(L"mouse") && !try_parse(group.attributes[L"mouse"], options.input_mouse))
+		{
+			throw std::runtime_error("input.mouse cannot be parsed");
 		}
 
 		if (group.attributes.count(L"cursor-symbol") && !try_parse(group.attributes[L"cursor-symbol"], options.input_cursor_symbol))
@@ -439,6 +461,11 @@ namespace BearLibTerminal
 		}
 
 		if (options.input_cursor_blink_rate <= 0) options.input_cursor_blink_rate = 1;
+
+		if (group.attributes.count(L"mouse-cursor") && !try_parse(group.attributes[L"mouse-cursor"], options.input_mouse_cursor))
+		{
+			throw std::runtime_error("input.mouse-cursor cannot be parsed");
+		}
 	}
 
 	void Terminal::ValidateOutputOptions(OptionGroup& group, Options& options)
@@ -560,7 +587,7 @@ namespace BearLibTerminal
 
 		m_window->Invoke([&]()
 		{
-			OnWindowRedraw();
+			Redraw(false);
 			m_window->SwapBuffers();
 		});
 	}
@@ -662,7 +689,7 @@ namespace BearLibTerminal
 
 		if (code != 0)
 		{
-			if (m_world.state.composition == TK_COMPOSITION_OFF)
+			if (m_world.state.composition == TK_OFF)
 			{
 				cell.leafs.clear();
 			}
@@ -733,17 +760,27 @@ namespace BearLibTerminal
 		const auto put_and_increment = [&](int code)
 		{
 			// Convert from unicode to tileset codepage
-			if (codepage) code = codepage->Convert((wchar_t)code);
+			if (codepage)
+			{
+				code = codepage->Convert((wchar_t)code);
+			}
 
 			// Offset tile index
-			code += base;
+			if (code >= 0)
+			{
+				code += base;
+			}
+			else
+			{
+				code = kUnicodeReplacementCharacter;
+			}
 
 			if (combine)
 			{
 				if (x >= x0+spacing.width)
 				{
 					int composition = m_world.state.composition;
-					m_world.state.composition = TK_COMPOSITION_ON;
+					m_world.state.composition = TK_ON;
 					x -= spacing.width;
 					PutInternal(x, y, offset.x, offset.y, code, nullptr);
 					m_world.state.composition = composition;
@@ -935,22 +972,16 @@ namespace BearLibTerminal
 		return printed;
 	}
 
-	bool Terminal::HasInputInternalUnlocked(std::uint32_t mask)
+	bool Terminal::HasInputInternalUnlocked()
 	{
-		for (auto& i: m_input_queue)
-		{
-			if (i.type & mask) return true;
-		}
-
-		return false;
+		return !m_input_queue.empty();
 	}
 
 	int Terminal::HasInput()
 	{
 		std::lock_guard<std::mutex> guard(m_input_lock);
-		if (m_state == kClosed) return 1;
-		if (m_vars[TK_CLOSE] && m_options.input_sticky_close) return 1; // sticky VK_CLOSE, once set, can't be undone
-		return HasInputInternalUnlocked(m_options.input_events);
+		if (m_state == kClosed || m_vars[TK_CLOSE]) return 1;
+		return HasInputInternalUnlocked();
 	}
 
 	int Terminal::GetState(int code)
@@ -959,31 +990,13 @@ namespace BearLibTerminal
 		return (code >= 0 && code < (int)m_vars.size())? m_vars[code]: 0;
 	}
 
-	Keystroke Terminal::ReadKeystroke(int flags, int timeout)
+	Event Terminal::ReadEvent(int timeout)
 	{
 		std::unique_lock<std::mutex> lock(m_input_lock);
 
-		// Sticky close cannot be undone once set
-		if (m_state == kClosed || (m_vars[TK_CLOSE] && m_options.input_sticky_close))
+		if (m_state == kClosed || m_vars[TK_CLOSE])
 		{
-			return Keystroke(Keystroke::KeyPress, TK_CLOSE);
-		}
-
-		// Keep terminal from blocking accidentally if input.events is None
-		if (m_options.input_events == Keystroke::None)
-		{
-			return Keystroke(Keystroke::None, TK_INPUT_NONE);
-		}
-
-		std::uint32_t mask = m_options.input_events;
-		if (flags & TK_READ_CHAR)
-		{
-			mask = Keystroke::KeyPress|Keystroke::Unicode;
-		}
-
-		if (flags & TK_READ_NOBLOCK)
-		{
-			timeout = 0;
+			return Event(TK_CLOSE);
 		}
 
 		bool timed_out = false;
@@ -994,71 +1007,33 @@ namespace BearLibTerminal
 			(
 				lock,
 				std::chrono::milliseconds(timeout),
-				[&](){return HasInputInternalUnlocked(mask);}
+				[&](){return HasInputInternalUnlocked();}
 			);
 		}
 
-		if ((timeout > 0 && !timed_out) || (timeout == 0 && HasInputInternalUnlocked(mask)))
+		if ((timeout > 0 && !timed_out) || (timeout == 0 && HasInputInternalUnlocked()))
 		{
-			return DequeueKeystroke(mask, flags);
+			Event event = m_input_queue.front();
+			ConsumeEvent(event);
+			m_input_queue.pop_front();
+			ConsumeIrrelevantEvents();
+			return event;
 		}
-		else if (m_state == kClosed) // State may change while waiting for a condvar
+		else if (m_state == kClosed)
 		{
-			return Keystroke(Keystroke::KeyPress, TK_CLOSE);
+			// State may change while waiting for a condvar
+			return Event(TK_CLOSE);
 		}
 		else
 		{
 			// Instance is not closed and input either timed out or was not present from the start
-			return Keystroke(Keystroke::None, TK_INPUT_NONE);
+			return Event(TK_INPUT_NONE);
 		}
 	}
 
-	Keystroke Terminal::DequeueKeystroke(std::uint32_t mask, int flags)
+	int Terminal::Read()
 	{
-		while (!m_input_queue.empty())
-		{
-			Keystroke stroke = m_input_queue.front();
-			ConsumeStroke(stroke);
-
-			bool matching = stroke.type & mask;
-			bool noremove = flags & TK_READ_NOREMOVE;
-			bool readchar = flags & TK_READ_CHAR;
-			bool unicode = stroke.type & Keystroke::Unicode;
-			bool keep_stroke = matching && (noremove || (readchar && !unicode));
-
-			if (!keep_stroke)
-			{
-				m_input_queue.pop_front();
-
-				// Also consume everything until the next matching the mask event
-				while (!m_input_queue.empty() && !(m_input_queue.front().type & mask))
-				{
-					ConsumeStroke(m_input_queue.front());
-					m_input_queue.pop_front();
-				}
-			}
-
-			if (matching) return stroke;
-		}
-
-		// SHOULD NOT happen
-		return Keystroke(Keystroke::None, TK_INPUT_NONE);
-	}
-
-	int Terminal::ReadExtended(int flags)
-	{
-		auto stroke = ReadKeystroke(flags, std::numeric_limits<int32_t>::max());
-
-		if (flags & TK_READ_CHAR)
-		{
-			return stroke.character;
-		}
-		else
-		{
-			int result = stroke.scancode;
-			if (stroke.type & Keystroke::KeyRelease) result |= TK_FLAG_RELEASED;
-			return result;
-		}
+		return ReadEvent(std::numeric_limits<int>::max()).code;
 	}
 
 	/**
@@ -1068,7 +1043,7 @@ namespace BearLibTerminal
 	{
 		std::vector<Cell> original;
 		int composition_mode = m_world.state.composition;
-		m_world.state.composition = TK_COMPOSITION_ON;
+		m_world.state.composition = TK_ON;
 
 
 		if (buffer == nullptr || max <= 0)
@@ -1120,40 +1095,39 @@ namespace BearLibTerminal
 			put_buffer(show_cursor);
 			Refresh();
 
-			auto key = ReadKeystroke(TK_READ_CHAR, m_options.input_cursor_blink_rate);
-			if (key.character)
+			auto event = ReadEvent(m_options.input_cursor_blink_rate);
+
+			if (event.code == TK_INPUT_NONE)
 			{
-				if (cursor < max)
+				// Timed out
+				show_cursor = !show_cursor;
+			}
+			else if (event.code == TK_RETURN)
+			{
+				rc = wcslen(buffer);
+				break;
+			}
+			else if (event.code == TK_ESCAPE || event.code == TK_CLOSE)
+			{
+				rc = TK_INPUT_CANCELLED;
+				break;
+			}
+			else if (event.code == TK_BACKSPACE)
+			{
+				if (cursor > 0)
 				{
-					buffer[cursor++] = key.character;
+					buffer[--cursor] = 0;
 					show_cursor = true;
 				}
 			}
-			else
+			//else if (m_vars[TK_WCHAR])
+			else if (wchar_t ch = GetState(TK_WCHAR))
 			{
-				key = ReadKeystroke(TK_READ_NOBLOCK, 0);
-				if (key.scancode == 0)
+				if (cursor < max)
 				{
-					// Timed out
-					show_cursor = !show_cursor;
-				}
-				else if (key.scancode == TK_RETURN)
-				{
-					rc = wcslen(buffer);
-					break;
-				}
-				else if (key.scancode == TK_ESCAPE || key.scancode == TK_CLOSE)
-				{
-					rc = TK_INPUT_CANCELLED;
-					break;
-				}
-				else if (key.scancode == TK_BACK)
-				{
-					if (cursor > 0)
-					{
-						buffer[--cursor] = 0;
-						show_cursor = true;
-					}
+					//buffer[cursor++] = (wchar_t)m_vars[TK_WCHAR];
+					buffer[cursor++] = ch;
+					show_cursor = true;
 				}
 			}
 		}
@@ -1172,30 +1146,78 @@ namespace BearLibTerminal
 
 	void Terminal::ConfigureViewport()
 	{
-		Size viewport_size = Size(m_vars[TK_CLIENT_WIDTH], m_vars[TK_CLIENT_HEIGHT]);
+		Size viewport_size = m_window->GetActualSize();
 		Size stage_size = m_world.stage.size * m_world.state.cellsize;
-		int hp = (viewport_size.width-stage_size.width)/2;
-		int vp = (viewport_size.height-stage_size.height)/2;
+		m_stage_area = Rectangle(stage_size);
+		m_stage_area_factor = SizeF(1, 1);
+
+		if (viewport_size != stage_size)
+		{
+			if (m_vars[TK_FULLSCREEN])
+			{
+				// Stretch
+				float viewport_ratio = viewport_size.width / (float)viewport_size.height;
+				float stage_ratio = stage_size.width / (float)stage_size.height;
+
+				if (viewport_ratio >= stage_ratio)
+				{
+					// Viewport is wider
+					float factor = viewport_size.height / (float)stage_size.height;
+					m_stage_area.height = viewport_size.height;
+					m_stage_area.width = stage_size.width * factor;
+					m_stage_area.left = (viewport_size.width - m_stage_area.width)/2;
+				}
+				else
+				{
+					// Stage is wider
+					float factor = viewport_size.width / (float)stage_size.width;
+					m_stage_area.width = viewport_size.width;
+					m_stage_area.height = stage_size.height * factor;
+					m_stage_area.top = (viewport_size.height - m_stage_area.height)/2;
+				}
+			}
+			else
+			{
+				// Center
+				float scale_factor = kScaleSteps[m_scale_step];
+				m_stage_area.width *= scale_factor;
+				m_stage_area.height *= scale_factor;
+				m_stage_area.left += (viewport_size.width-m_stage_area.width)/2;
+				m_stage_area.top += (viewport_size.height-m_stage_area.height)/2;
+			}
+
+			m_stage_area_factor = stage_size/m_stage_area.Size().As<float>();
+		}
 
 		glDisable(GL_DEPTH_TEST);
-
 		glClearColor(0, 0, 0, 1);
 		glViewport(0, 0, viewport_size.width, viewport_size.height);
-
 		glMatrixMode(GL_PROJECTION);
 		glLoadIdentity();
-		//glOrtho(-hp-1, viewport_size.width-hp-1, viewport_size.height-vp-1, -vp-1, -1, +1);
-		glOrtho(-hp, viewport_size.width-hp, viewport_size.height-vp, -vp, -1, +1);
+		glOrtho
+		(
+			-m_stage_area.left * m_stage_area_factor.width,
+			(viewport_size.width - m_stage_area.left) * m_stage_area_factor.width,
+			(viewport_size.height - m_stage_area.top) * m_stage_area_factor.height,
+			-m_stage_area.top * m_stage_area_factor.height,
+			-1,
+			+1
+		);
 
 		glMatrixMode(GL_MODELVIEW);
 		glLoadIdentity();
-
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 		if (viewport_size != stage_size)
 		{
-			m_viewport_scissors = Rectangle(hp, viewport_size.height-stage_size.height-vp, stage_size.width, stage_size.height);
+			m_viewport_scissors = Rectangle
+			(
+				m_stage_area.left,
+				viewport_size.height - m_stage_area.height - m_stage_area.top,
+				m_stage_area.width,
+				m_stage_area.height
+			);
 		}
 		else
 		{
@@ -1244,46 +1266,23 @@ namespace BearLibTerminal
 			if (!provided && m_world.tilesets[kUnicodeReplacementCharacter]->Provides(code))
 			{
 				m_world.tilesets[kUnicodeReplacementCharacter]->Prepare(code);
-				provided = true;
-			}
-
-			if (!provided)
-			{
-				// Use Unicode replacement character code (MUST be already provided by dynamic tileset)
-				m_world.tiles.slots[code] = m_world.tiles.slots[kUnicodeReplacementCharacter];
 			}
 		}
 
 		m_fresh_codes.clear();
 	}
 
-	/**
-	 * NOTE: if window initialization has succeeded, this callback will be called for sure
-	 */
-	void Terminal::OnWindowClose()
-	{
-		LOG(Debug, "OnWindowClose callback is called");
-
-		std::lock_guard<std::mutex> guard(m_lock);
-		m_state = kClosed;
-
-		// Dispose of graphics
-		m_world.tiles.slots.clear();
-		m_world.tilesets.clear();
-		m_world.tiles.atlas.Dispose();
-
-		// Unblock possibly blocked client thread
-		m_input_condvar.notify_all();
-	}
-
-	int Terminal::OnWindowRedraw()
+	int Terminal::Redraw(bool async)
 	{
 		//*
 		// Rendering callback will try to acquire the lock. Failing to  do so
 		// will mean that Terminal is currently busy. Calling window implementation
 		// SHOULD be prepared to reschedule painting to a later time.
 		std::unique_lock<std::mutex> guard(m_lock, std::try_to_lock);
-		if (!guard.owns_lock()) return -1; // TODO: enum TODO: timed try
+		if (!guard.owns_lock())
+		{
+			return -1; // TODO: enum TODO: timed try
+		}
 		/*/
 		std::unique_lock<std::mutex> guard(m_lock);
 		//*/
@@ -1366,23 +1365,23 @@ namespace BearLibTerminal
 					for (auto& leaf: layer.cells[i].leafs)
 					{
 						auto j = m_world.tiles.slots.find(leaf.code);
-						if (j != m_world.tiles.slots.end())
-						{
-							auto& slot = *(j->second);
-							if (slot.texture_id != current_texture_id)
-							{
-								glEnd();
-								slot.BindTexture();
-								current_texture_id = slot.texture_id;
-								glBegin(GL_QUADS);
-							}
 
-							slot.Draw(leaf, left, top, w2, h2);
-						}
-						else
+						if (j == m_world.tiles.slots.end())
 						{
-							LOG(Debug, "Didn't find slot for code " << leaf.code);
+							// Replacement character MUST be provided by the ever-present dynamic tileset.
+							j = m_world.tiles.slots.find(kUnicodeReplacementCharacter);
 						}
+
+						auto& slot = *(j->second);
+						if (slot.texture_id != current_texture_id)
+						{
+							glEnd();
+							slot.BindTexture();
+							current_texture_id = slot.texture_id;
+							glBegin(GL_QUADS);
+						}
+
+						slot.Draw(leaf, left, top, w2, h2);
 					}
 
 					i += 1;
@@ -1425,148 +1424,288 @@ namespace BearLibTerminal
 		return 1;
 	}
 
-	void Terminal::OnWindowInput(Keystroke keystroke)
+	/**
+	 * NOTE: if window initialization has succeeded, this callback will be called for sure
+	 */
+	void Terminal::HandleDestroy()
 	{
-		std::lock_guard<std::mutex> guard(m_input_lock);
+		std::lock_guard<std::mutex> guard(m_lock);
+		m_state = kClosed;
 
-		if ((keystroke.type & Keystroke::KeyPress) && keystroke.scancode == TK_F12 && m_vars[TK_SHIFT] && m_vars[TK_CONTROL])
+		// Dispose of graphics
+		m_world.tiles.slots.clear();
+		m_world.tilesets.clear();
+		m_world.tiles.atlas.Dispose();
+
+		// Unblock possibly blocked client thread
+		m_input_condvar.notify_all();
+	}
+
+	int Terminal::OnWindowEvent(Event event)
+	{
+		bool alt = get_locked(m_vars[TK_ALT], m_input_lock);
+
+		if (event.code == TK_DESTROY)
 		{
-			LOG(Info, "Ctrl+Shift+F12 was caught, dumping texture atlas on disk");
+			HandleDestroy();
+			return 0;
+		}
+		else if (event.code == TK_REDRAW)
+		{
+			return Redraw(true);
+		}
+		else if (event.code == TK_INVALIDATE)
+		{
+			std::lock_guard<std::mutex> guard(m_lock);
+			m_viewport_modified = true;
+			return 0;
+		}
+		else if (event.code == TK_ACTIVATED)
+		{
+			std::lock_guard<std::mutex> guard(m_input_lock);
+
+			// Cancel all pressed keys
+			for (int i = 0; i <= TK_ALT; i++)
+			{
+				if (i == TK_CLOSE) continue;
+				if (m_vars[i])
+				{
+					m_input_queue.push_back(Event(i|TK_KEY_RELEASED, {{i, 0}}));
+				}
+			}
+
+			ConsumeIrrelevantEvents();
+			return 0;
+		}
+		else if (event.code == TK_STATE_UPDATE)
+		{
+			ConsumeEvent(event);
+			return 0;
+		}
+		else if (event.code == TK_RESIZED)
+		{
+			std::lock_guard<std::mutex> guard(m_lock);
+
+			float scale_factor = kScaleSteps[m_scale_step];
+			Size& cellsize = m_world.state.cellsize;
+			Size size
+			(
+				std::floor(event[TK_WIDTH]/scale_factor/cellsize.width),
+				std::floor(event[TK_HEIGHT]/scale_factor/cellsize.height)
+			);
+
+			if (size == m_world.stage.size)
+			{
+				// This event do not changes stage size, ignore.
+				return 0;
+			}
+			else
+			{
+				// Translate pixels to cells.
+				event[TK_WIDTH] = size.width;
+				event[TK_HEIGHT] = size.height;
+			}
+		}
+		else if (event.code == TK_MOUSE_MOVE)
+		{
+			std::lock_guard<std::mutex> guard(m_lock);
+
+			int& pixel_x = event[TK_MOUSE_PIXEL_X];
+			int& pixel_y = event[TK_MOUSE_PIXEL_Y];
+
+			// Shift coordinates relative to stage area
+			pixel_x -= m_stage_area.left;
+			pixel_y -= m_stage_area.top;
+
+			// Scale coordinates back to virtual pixels.
+			pixel_x *= m_stage_area_factor.width;
+			pixel_y *= m_stage_area_factor.height;
+
+			// Cell location of mouse pointer
+			Size& cellsize = m_world.state.cellsize;
+			Point location
+			(
+				std::floor(pixel_x/(float)cellsize.width),
+				std::floor(pixel_y/(float)cellsize.height)
+			);
+
+			if (location.x < 0)
+			{
+				location.x = 0;
+				pixel_x = 0;
+			}
+			else if (location.x >= m_world.stage.size.width)
+			{
+				location.x = m_world.stage.size.width-1;
+				pixel_x = m_world.stage.size.width*cellsize.width-1;
+			}
+
+			if (location.y < 0)
+			{
+				location.y = 0;
+				pixel_y = 0;
+			}
+			else if (location.y >= m_world.stage.size.height)
+			{
+				location.y = m_world.stage.size.height-1;
+				pixel_y = m_world.stage.size.height*cellsize.height-1;
+			}
+
+			if (!m_options.input_precise_mouse && m_vars[TK_MOUSE_X] == location.x && m_vars[TK_MOUSE_Y] == location.y)
+			{
+				// This event do not change mouse cell position, ignore.
+				return 0;
+			}
+			else
+			{
+				// Make event update both pixel and cell positions.
+				event[TK_MOUSE_X] = location.x;
+				event[TK_MOUSE_Y] = location.y;
+			}
+		}
+		else if (event.code == TK_A && alt)
+		{
+			// Alt+A: dump atlas textures to disk.
 			std::lock_guard<std::mutex> guard(m_lock);
 			m_world.tiles.atlas.Dump();
-			return;
+			return 0;
 		}
-		else if ((keystroke.type & Keystroke::KeyPress) && keystroke.scancode == TK_F11 && m_vars[TK_SHIFT] && m_vars[TK_CONTROL])
+		else if (event.code == TK_G && alt)
 		{
-			LOG(Info, "Ctrl+Shift+F11 was caught, toggling grid");
+			// Alt+G: toggle grid
 			m_show_grid = !m_show_grid;
-
-			// Redraw must be called from separate thread since calling it from user thread is impossible
-			// and calling from window thread will simply deadblock.
-			std::thread([=]{m_window->Redraw();}).detach();
-			return;
+			Redraw(true);
+			return 0;
 		}
-
-		// Consume queue immediately if user is not interested
-		if (m_options.input_events == Keystroke::None)
+		else if (event.code == TK_RETURN && alt)
 		{
-			ConsumeStroke(keystroke);
-			return;
+			// Alt+ENTER: toggle fullscreen.
+			m_viewport_modified = true;
+			m_window->ToggleFullscreen();
+			return 0;
 		}
-
-		// Same with irrelevant input
-		if (m_input_queue.empty() && !(keystroke.type & m_options.input_events))
+		else if ((event.code == TK_MINUS || event.code == TK_EQUALS || event.code == TK_KP_MINUS || event.code == TK_KP_PLUS) && alt)
 		{
-			ConsumeStroke(keystroke);
-			return;
-		}
-
-		// Ignore fine mouse movements if user is not interested
-		if (keystroke.scancode == TK_MOUSE_MOVE && !m_options.input_precise_mouse)
-		{
-			// Check if mouse cursor changed cell location
-			float cell_width = m_vars[TK_CELL_WIDTH];
-			float cell_height = m_vars[TK_CELL_HEIGHT];
-			int mx = (int)std::floor(keystroke.x/cell_width);
-			int my = (int)std::floor(keystroke.y/cell_height);
-			if (mx == m_vars[TK_MOUSE_X] && my == m_vars[TK_MOUSE_Y])
+			if (get_locked(m_options.window_resizeable, m_lock))
 			{
-				// Mouse is still within the same cell
-				ConsumeStroke(keystroke);
-				return;
+				// No scaling in resizeable mode, at least not yet.
+				return 0;
 			}
-		}
-		else if (keystroke.scancode == TK_WINDOW_RESIZE)
-		{
-			if (keystroke.x == m_vars[TK_CLIENT_WIDTH] && keystroke.y == m_vars[TK_CLIENT_HEIGHT])
+
+			// Alt+(plus/minus): adjust user window scaling.
+			if ((event.code == TK_MINUS || event.code == TK_KP_MINUS) && m_scale_step > 0)
 			{
-				// No changes to the client area, ignore
-				return;
+				m_scale_step -= 1;
 			}
+			else if ((event.code == TK_EQUALS || event.code == TK_KP_PLUS) && m_scale_step < kScaleSteps.size()-1)
+			{
+				m_scale_step += 1;
+			}
+
+			m_window->SetSizeHints(m_world.state.cellsize * kScaleSteps[m_scale_step], m_options.window_minimum_size);
+			m_window->SetClientSize(m_world.state.cellsize * m_world.stage.size * kScaleSteps[m_scale_step]);
+
+			return 0;
+		}
+		else if ((event.code & 0xFF) == TK_ALT)
+		{
+			std::lock_guard<std::mutex> guard(m_input_lock);
+			ConsumeEvent(event);
+			return 0;
 		}
 
-		// Compact irrelevant input between relevant events
-		if (!m_input_queue.empty())
-		{
-			Keystroke& last = m_input_queue.back();
-			if (keystroke.type == last.type && !(m_options.input_events & keystroke.type) && !(keystroke.type & m_options.input_events))
-			{
-				m_input_queue.pop_back();
-			}
-		}
+		std::lock_guard<std::mutex> guard(m_input_lock);
+		m_input_queue.push_back(std::move(event));
 
-		m_input_queue.push_back(keystroke);
+		ConsumeIrrelevantEvents();
 
 		if (!m_input_queue.empty())
 		{
 			m_input_condvar.notify_all();
 		}
+
+		return 0;
 	}
 
-	void Terminal::ConsumeStroke(const Keystroke& stroke)
+	void Terminal::ConsumeEvent(Event& event)
 	{
-		if (stroke.scancode == TK_MOUSE_MOVE)
+		if (event.code == TK_RESIZED)
 		{
-			// Mouse movement event, update mouse position
-			float cell_width = m_vars[TK_CELL_WIDTH];
-			float cell_height = m_vars[TK_CELL_HEIGHT];
-			m_vars[TK_MOUSE_X] = (int)std::floor(stroke.x/cell_width);
-			m_vars[TK_MOUSE_Y] = (int)std::floor(stroke.y/cell_height);
-			m_vars[TK_MOUSE_PIXEL_X] = stroke.x;
-			m_vars[TK_MOUSE_PIXEL_Y] = stroke.y;
-		}
-		else if (stroke.scancode == TK_MOUSE_SCROLL)
-		{
-			// Mouse scroll event, update wheel position
-			m_vars[TK_MOUSE_WHEEL] = stroke.z;
-		}
-		else if (stroke.scancode == TK_WINDOW_RESIZE)
-		{
-			// Window being resized
-			if (stroke.x != m_vars[TK_CLIENT_WIDTH] || stroke.y != m_vars[TK_CLIENT_HEIGHT])
+			std::lock_guard<std::mutex> guard(m_lock);
+
+			if (m_options.window_resizeable)
 			{
+				// Stage size changed, must reallocate and reconstruct scene
+				m_options.window_size = Size(event[TK_WIDTH], event[TK_HEIGHT]);
+				m_world.stage.Resize(m_options.window_size);
+
 				// Client size changed, must redraw
-				std::lock_guard<std::mutex> guard(m_lock);
-
-				m_vars[TK_CLIENT_WIDTH] = stroke.x;
-				m_vars[TK_CLIENT_HEIGHT] = stroke.y;
 				m_viewport_modified = true;
-
-				if (m_options.window_resizeable)
-				{
-					int w = std::floor(stroke.x / (float)m_world.state.cellsize.width);
-					int h = std::floor(stroke.y / (float)m_world.state.cellsize.height);
-					if (w != m_world.stage.size.width || h != m_world.stage.size.height)
-					{
-						// Stage size changed, must reallocate and reconstruct scene
-						m_options.window_size = Size(w, h);
-						m_world.stage.Resize(m_options.window_size);
-						m_vars[TK_WIDTH] = w;
-						m_vars[TK_HEIGHT] = h;
-					}
-				}
+			}
+			else
+			{
+				return;
 			}
 		}
-		else if (stroke.scancode == TK_CLOSE)
+		else if (event.code == TK_CLOSE)
 		{
-			if (m_options.input_sticky_close || !(m_options.input_events & Keystroke::KeyPress))
+			std::lock_guard<std::mutex> guard(m_lock);
+
+			if (m_options.input_sticky_close)
 			{
 				m_vars[TK_CLOSE] = 1;
 			}
 		}
+
+		if (!event.properties.count(TK_WCHAR))
+		{
+			// Clear CHAR/WCHAR states if event does not produce any characters
+			m_vars[TK_CHAR] = m_vars[TK_WCHAR] = 0;
+		}
 		else
 		{
-			m_vars[stroke.scancode] = stroke.type & Keystroke::KeyPress;
+			int code = m_encoding->Convert((wchar_t)event.properties[TK_WCHAR]);
+
+			if (code < 0 || (m_encoding->GetName() == L"utf-8" && code > 127))
+			{
+				// Use ASCII replacement character for codes not mapped to ANSI
+				code = 0x1A;
+			}
+
+			event.properties[TK_CHAR] = code;
 		}
+
+		for (auto& slot: event.properties)
+		{
+			if (slot.first >= 0 && slot.first < m_vars.size())
+			{
+				m_vars[slot.first] = slot.second;
+			}
+		}
+
+		m_vars[TK_EVENT] = event.code;
 	}
 
-	void Terminal::OnWindowActivate()
+	void Terminal::ConsumeIrrelevantEvents()
 	{
-		// Cancel all pressed keys
-		for (int i = 0; i <= TK_F12; i++) // NOTE: TK_F12 is the last physical key index
+		while (!m_input_queue.empty())
 		{
-			if (i == TK_CLOSE) continue;
-			if (m_vars[i]) OnWindowInput(Keystroke(Keystroke::KeyRelease, i));
+			Event& event = m_input_queue.front();
+
+			bool must_be_consumed =
+				(event.domain == Event::Domain::Internal) ||
+				(event.domain == Event::Domain::Keyboard && !m_options.input_keyboard) ||
+				(event.domain == Event::Domain::Mouse && !m_options.input_mouse);
+
+			if (must_be_consumed)
+			{
+				ConsumeEvent(event);
+				m_input_queue.pop_front();
+			}
+			else
+			{
+				break;
+			}
 		}
 	}
 }

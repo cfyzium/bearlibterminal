@@ -48,9 +48,28 @@ namespace BearLibTerminal
 		Update(bitmap);
 	}
 
+	Texture::Texture(Texture&& texture):
+		m_handle(texture.m_handle),
+		m_size(texture.m_size)
+	{
+		texture.m_size = Size();
+		texture.m_handle = handle_t();
+	}
+
 	Texture::~Texture()
 	{
 		Dispose();
+	}
+
+	Texture& Texture::operator=(Texture&& texture)
+	{
+		Dispose();
+
+		m_handle = texture.m_handle;
+		m_size = texture.m_size;
+
+		texture.m_size = Size();
+		texture.m_handle = handle_t();
 	}
 
 	void Texture::Dispose()

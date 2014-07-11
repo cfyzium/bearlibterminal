@@ -29,7 +29,7 @@ namespace BearLibTerminal
 	 * This encoding class is used for both ANSI/OEM unibyte encodings
 	 * and custom tileset encodings.
 	 */
-	struct CustomCodepage: Encoding<char>
+	struct CustomCodepage: Encoding8
 	{
 		CustomCodepage(const std::wstring& name, std::istream& stream);
 		wchar_t Convert(int value) const;
@@ -136,7 +136,7 @@ namespace BearLibTerminal
 	int CustomCodepage::Convert(wchar_t value) const
 	{
 		auto i = m_backward.find(value);
-		return (i == m_backward.end())? 0x1A: i->second; // 0x1A is an ASCII substitute character
+		return (i == m_backward.end())? -1: i->second; // Can't use ASCII substitute as it may not be ASCII
 	}
 
 	std::wstring CustomCodepage::Convert(const std::string& value) const
@@ -209,7 +209,7 @@ namespace BearLibTerminal
 
 	static const wchar_t kReplacementChar = 0x1A; // ASCII 'replacement' character
 
-	struct UTF8Encoding: Encoding<char>
+	struct UTF8Encoding: Encoding8
 	{
 		wchar_t Convert(int value) const;
 		int Convert(wchar_t value) const;
@@ -245,14 +245,10 @@ namespace BearLibTerminal
 			// TODO: Do UTF-8 check
 
 			uint32_t ch = 0;
-			switch (extraBytesToRead)
+			for (int i=extraBytesToRead; i>=0; i--)
 			{
-				case 5: ch += (uint8_t)value[index++]; ch <<= 6; // illegal UTF-8
-				case 4: ch += (uint8_t)value[index++]; ch <<= 6; // illegal UTF-8
-				case 3: ch += (uint8_t)value[index++]; ch <<= 6;
-				case 2: ch += (uint8_t)value[index++]; ch <<= 6;
-				case 1: ch += (uint8_t)value[index++]; ch <<= 6;
-				case 0: ch += (uint8_t)value[index++];
+				ch += (uint8_t)value[index++];
+				if (i > 0) ch <<= 6;
 			}
 			ch -= kOffsetsFromUTF8[extraBytesToRead];
 
@@ -308,11 +304,11 @@ namespace BearLibTerminal
 		return L"utf-8";
 	}
 
-	std::unique_ptr<Encoding<char>> UTF8(new UTF8Encoding());
+	std::unique_ptr<Encoding8> UTF8(new UTF8Encoding());
 
 	// ------------------------------------------------------------------------
 
-	struct UCS2Encoding: Encoding<char16_t>
+	struct UCS2Encoding: Encoding16
 	{
 		wchar_t Convert(int value) const;
 		int Convert(wchar_t value) const;
@@ -358,11 +354,11 @@ namespace BearLibTerminal
 		return L"ucs-2";
 	}
 
-	std::unique_ptr<Encoding<char16_t>> UTF16(new UCS2Encoding());
+	std::unique_ptr<Encoding16> UTF16(new UCS2Encoding());
 
 	// ------------------------------------------------------------------------
 
-	struct UCS4Encoding: Encoding<char32_t>
+	struct UCS4Encoding: Encoding32
 	{
 		wchar_t Convert(int value) const;
 		int Convert(wchar_t value) const;
@@ -408,15 +404,15 @@ namespace BearLibTerminal
 		return L"ucs-4";
 	}
 
-	std::unique_ptr<Encoding<char32_t>> UTF32(new UCS4Encoding());
+	std::unique_ptr<Encoding32> UTF32(new UCS4Encoding());
 
 	// ------------------------------------------------------------------------
 
-	std::unique_ptr<Encoding<char>> GetUnibyteEncoding(const std::wstring& name)
+	std::unique_ptr<Encoding8> GetUnibyteEncoding(const std::wstring& name)
 	{
 		if (name == L"utf8" || name == L"utf-8")
 		{
-			return std::unique_ptr<Encoding<char>>(new UTF8Encoding());
+			return std::unique_ptr<Encoding8>(new UTF8Encoding());
 		}
 		else
 		{
@@ -425,7 +421,7 @@ namespace BearLibTerminal
 			{
 				throw std::runtime_error("failed to locate codepage resource for \"" + UTF8->Convert(name) + "\"");
 			}
-			return std::unique_ptr<Encoding<char>>(new CustomCodepage(name, *stream));
+			return std::unique_ptr<Encoding8>(new CustomCodepage(name, *stream));
 		}
 	}
 }

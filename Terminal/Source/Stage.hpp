@@ -59,7 +59,7 @@ namespace BearLibTerminal
 
 	struct State
 	{
-		Size cellsize; // Current cellsize; different from Options.window_cellsize in that this one is always properly set.
+		Size cellsize;      // Current cellsize; different from Options.window_cellsize in that this one is always properly set.
 		Size half_cellsize; // Cached value used in leaf drawing.
 		Color color;
 		Color bkcolor;

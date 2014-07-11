@@ -23,6 +23,9 @@
 #ifndef BEARLIBTERMINAL_SIZE_HPP
 #define BEARLIBTERMINAL_SIZE_HPP
 
+#include <type_traits>
+#include <cmath>
+
 namespace BearLibTerminal
 {
 	template<typename T> struct BasicSize
@@ -41,7 +44,7 @@ namespace BearLibTerminal
 			height(height)
 		{ }
 
-		BasicSize(const BasicSize<T>& from):
+		template<typename U> BasicSize(BasicSize<U> from):
 			width(from.width),
 			height(from.height)
 		{ }
@@ -66,35 +69,62 @@ namespace BearLibTerminal
 			return BasicSize<T>(width-other.width, height-other.height);
 		}
 
-		BasicSize<T> operator*(T factor) const
+		template<typename U, typename R = typename std::common_type<T, U>::type> BasicSize<R> operator*(BasicSize<U> factor) const
 		{
-			return BasicSize<T>(width*factor, height*factor);
+			return BasicSize<R>(width*factor.width, height*factor.height);
 		}
 
-		BasicSize<T> operator*(BasicSize<T> factor) const
+		template<typename U> BasicSize<T> operator*(U factor) const
 		{
-			return BasicSize<T>(width*factor.width, height*factor.height);
+			return BasicSize<T>(T(width*factor), T(height*factor));
 		}
 
-		BasicSize<T> operator/(T factor) const
+		template<typename U> BasicSize<T>& operator*=(U factor)
 		{
-			return BasicSize<T>(width/factor, height/factor);
+			width *= factor;
+			height *= factor;
+			return *this;
 		}
 
-		BasicSize<T> operator/(BasicSize<T> factors) const
+		template<typename U, typename R = typename std::common_type<T, U>::type> BasicSize<R> operator/(BasicSize<U> factor) const
 		{
-			return BasicSize<T>(width/factors.width, height/factors.height);
+			return BasicSize<R>(width/factor.width, height/factor.height);
+		}
+
+		template<typename U> BasicSize<T> operator/(U factor) const
+		{
+			return BasicSize<T>(T(width/factor), T(height/factor));
+		}
+
+		template<typename U> BasicSize<T>& operator/=(U factor)
+		{
+			width /= factor;
+			height /= factor;
+			return *this;
 		}
 
 		T Area() const
 		{
 			return width*height;
 		}
+
+		template<typename U> BasicSize<U> As() const
+		{
+			return BasicSize<U>(width, height);
+		}
 	};
 
 	typedef BasicSize<int> Size;
 
 	typedef BasicSize<float> SizeF;
+}
+
+namespace std
+{
+	template<typename T> BearLibTerminal::BasicSize<T> floor(BearLibTerminal::BasicSize<T> value)
+	{
+		return BearLibTerminal::BasicSize<T>(std::floor(value.width), std::floor(value.height));
+	}
 }
 
 #endif // BEARLIBTERMINAL_SIZE_HPP

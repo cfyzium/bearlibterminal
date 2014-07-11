@@ -120,7 +120,7 @@ void TestExtendedInterlayer()
 {
 	// Setup
 	terminal_set("window.title='Omni: extended output / interlayer animation'");
-	terminal_composition(TK_COMPOSITION_ON);
+	terminal_composition(TK_ON);
 
 	int map_left = terminal_state(TK_WIDTH)/2 - map_width/2;
 	int map_top = terminal_state(TK_HEIGHT)/2 - map_height/2;
@@ -191,7 +191,7 @@ void TestExtendedInterlayer()
 	}
 
 	// Clean up
-	terminal_composition(TK_COMPOSITION_OFF);
+	terminal_composition(TK_OFF);
 	terminal_clear();
 	terminal_layer(0);
 }

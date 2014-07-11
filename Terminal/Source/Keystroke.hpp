@@ -1,6 +1,6 @@
 /*
 * BearLibTerminal
-* Copyright (C) 2013 Cfyz
+* Copyright (C) 2013-2014 Cfyz
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -24,32 +24,30 @@
 #define BEARLIBTERMINAL_KEYSTROKE_HPP
 
 #include <cstdint>
+#include <vector>
+#include <unordered_map>
 
 namespace BearLibTerminal
 {
-	struct Keystroke
+	struct Event
 	{
-		static constexpr std::uint32_t
-			None        = 0,
-			KeyPress    = (1<<0),
-			KeyRelease  = (1<<1),
-			Keys        = KeyPress|KeyRelease,
-			MouseMove   = (1<<2),
-			MouseScroll = (1<<3),
-			Mouse       = MouseMove|MouseScroll,
-			Unicode     = (1<<4),
-			All = Keys|Mouse|Unicode;
+		enum class Domain
+		{
+			Internal,
+			System,    // TK_CLOSE, TK_RESIZE, etc.
+			Keyboard,  // TK_A, TK_0, etc.
+			Mouse      // TK_LBUTTON, TK_MOUSE_MOVE, etc.
+		};
 
-		typedef std::uint32_t Type;
+		Domain domain;
+		int code;
+		std::unordered_map<int, int> properties; // Slot -> value map
 
-		Keystroke(Type type, std::uint8_t scancode); // keypress/keyrelease events
-		Keystroke(Type type, std::uint8_t scancode, char16_t character); // character-producing keypress event
-		Keystroke(Type type, std::uint8_t scancode, int x, int y, int z); // mouse events
+		Event(int code);
+		Event(int code, std::unordered_map<int, int> properties);
+		int& operator[](int index);
 
-		Type type;
-		std::uint8_t scancode;
-		char16_t character;
-		int x, y, z;
+		static Domain GetDomainByCode(int code);
 	};
 }
 

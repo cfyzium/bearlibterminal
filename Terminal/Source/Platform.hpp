@@ -20,50 +20,35 @@
 * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#define BEARLIBTERMINAL_BUILDING_LIBRARY
-#include "BearLibTerminal.h"
-#include "Keystroke.hpp"
-#include <stdexcept>
+#ifndef BEARLIBTERMINAL_PLATFORM_HPP
+#define BEARLIBTERMINAL_PLATFORM_HPP
+
+#include <string>
 
 namespace BearLibTerminal
 {
-	Event::Event(int code):
-		domain(GetDomainByCode(code)),
-		code(code)
-	{ }
-
-	Event::Event(int code, std::unordered_map<int, int> properties):
-		domain(GetDomainByCode(code)),
-		code(code),
-		properties(std::move(properties))
-	{ }
-
-	int& Event::operator[](int index)
+	class Module
 	{
-		return properties[index];
-	}
+	public:
+		typedef void* Handle;
+		Module();
+		Module(std::wstring name);
+		Module(Module&& from);
+		explicit Module(Handle handle);
+		~Module();
+		Handle GetHandle() const;
+		Module& operator=(Module&& from);
+		void* operator[](std::string name) const;
+		explicit operator bool() const;
+		void* Probe(std::string name) const;
+		static Module GetProviding(std::string name);
 
-	Event::Domain Event::GetDomainByCode(int code)
-	{
-		if ((code & 0xFF) >= TK_A && (code & 0xFF) <= TK_CONTROL+1) // FIXME: TK_ALT constant
-		{
-			return Domain::Keyboard;
-		}
-		else if ((code & 0xFF) >= TK_MOUSE_LEFT && (code & 0xFF) <= TK_MOUSE_PIXEL_Y)
-		{
-			return Domain::Mouse;
-		}
-		else if (code <= 0 || (code >= TK_CLOSE && code <= TK_RESIZED))
-		{
-			return Domain::System;
-		}
-		else if (code >= 0x1000)
-		{
-			return Domain::Internal;
-		}
-		else
-		{
-			throw std::runtime_error("Unknown event code");
-		}
-	}
+	private:
+		Module(const Module&);
+		Module& operator=(const Module&);
+		Handle m_handle;
+		bool m_owner;
+	};
 }
+
+#endif // BEARLIBTERMINAL_PLATFORM_HPP

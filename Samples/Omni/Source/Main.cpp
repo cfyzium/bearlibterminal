@@ -10,6 +10,7 @@
 #include <string>
 #include <vector>
 #include <set>
+#include <iostream>
 
 struct TestEntry
 {
@@ -40,10 +41,10 @@ int main()
 		{"Multiple fonts", TestMultipleFonts},
 		{"Layers", TestLayers},
 		{"Extended 1: basics", TestExtendedBasics},
-		{"Extended 2: inter-layer animation", TestExtendedInterlayer},
-		{"Extended 3: smooth scroll", TestExtendedSmoothScroll},
+		//{"Extended 2: inter-layer animation", TestExtendedInterlayer},
+		{"Extended 2: smooth scroll", TestExtendedSmoothScroll},
 		{"Dynamic sprites", TestDynamicSprites},
-		{"Speed", TestSpeed}, // NYI
+		{"Speed", TestSpeed},
 		{"Input 1: keyboard", TestKeyboard},
 		{"Input 2: mouse", TestMouse},
 		{"Input 3: text input", TestTextInput},
@@ -73,7 +74,7 @@ int main()
 			}
 			else if ((key >= TK_1 && key <= TK_9) || (key >= TK_A && key <= TK_Z))
 			{
-				int index = key >= TK_A? 9+(key-TK_A): (key-TK_1);
+				int index = key >= TK_1? (key-TK_1): 9+(key-TK_A);
 				if (index >= 0 && index < entries.size() && entries[index].func)
 				{
 					entries[index].func();

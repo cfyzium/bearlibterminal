@@ -11,7 +11,7 @@
 void TestTilesets()
 {
 	terminal_set("window.title='Omni: tilesets'");
-	terminal_composition(TK_COMPOSITION_ON);
+	terminal_composition(TK_ON);
 
 	// Load tilesets
 	terminal_set("U+E100: ../Media/Runic.png, size=8x16");
@@ -71,5 +71,5 @@ void TestTilesets()
 
 	// Clean up
 	terminal_set("U+E100: none; U+E200: none; U+E300: none; U+E400: none");
-	terminal_composition(TK_COMPOSITION_OFF);
+	terminal_composition(TK_OFF);
 }

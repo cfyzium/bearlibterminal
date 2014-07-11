@@ -12,9 +12,9 @@
 std::map<int, std::string> key_names =
 {
 	{0, ""},
-	{TK_LBUTTON, "LMB"},
-	{TK_RBUTTON, "RMB"},
-	{TK_MBUTTON, "MMB"},
+	{TK_MOUSE_LEFT, "LMB"},
+	{TK_MOUSE_RIGHT, "RMB"},
+	{TK_MOUSE_MIDDLE, "MMB"},
 	{TK_CLOSE, "Close"},
 	{TK_BACKSPACE, "Backspace"},
 	{TK_TAB, "Tab"},
@@ -23,8 +23,8 @@ std::map<int, std::string> key_names =
 	{TK_CONTROL, "Ctrl"},
 	{TK_PAUSE, "Pause"},
 	{TK_ESCAPE, "Escape"},
-	{TK_PRIOR, "Page Up"},
-	{TK_NEXT, "Page Down"},
+	{TK_PAGEUP, "Page Up"},
+	{TK_PAGEDOWN, "Page Down"},
 	{TK_END, "End"},
 	{TK_HOME, "Home"},
 	{TK_LEFT, "Left"},
@@ -72,7 +72,7 @@ void DrawFrame(int x, int y, int w, int h)
 void TestTextInput()
 {
 	terminal_set("window.title='Omni: text input'");
-	terminal_composition(TK_COMPOSITION_OFF);
+	terminal_composition(TK_OFF);
 
 	const int max_chars = 32;
 	wchar_t buffer[max_chars+1] = {0};
@@ -123,7 +123,8 @@ void TestTextInput()
 				terminal_printf(5+3+2+1, 10, "[color=gray]%s", (key_names.count(char_result)? key_names[char_result]: to_string(char_result)).c_str());
 				terminal_refresh();
 
-				int symbol = terminal_read_ext(TK_READ_CHAR|TK_READ_NOREMOVE);
+				/*
+				int symbol = terminal_read_ext(TK_READ_NOREMOVE);
 				char_result = terminal_read();
 				if (char_result == TK_ESCAPE || char_result == TK_CLOSE || char_result == TK_RETURN)
 				{
@@ -134,6 +135,22 @@ void TestTextInput()
 					character = symbol;
 					char_result = 0;
 				}
+				/*/
+				int key = terminal_read();
+				if (key == TK_ESCAPE || key == TK_CLOSE || key == TK_RETURN)
+				{
+					break;
+				}
+				else if (terminal_check(TK_WCHAR))
+				{
+					character = terminal_state(TK_WCHAR);
+					//char_result = 0;
+				}
+				else if (key < TK_KEY_RELEASED)
+				{
+					char_result = key;
+				}
+				//*/
 			}
 			while (true);
 		}

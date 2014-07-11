@@ -68,7 +68,7 @@ namespace BearLibTerminal
 	struct TileSlot: Slot, Tile, std::enable_shared_from_this<TileSlot>
 	{
 		AtlasTexture* texture;
-		Size space_size;
+		Rectangle space;
 		Rectangle texture_region;
 		TexCoords texture_coords;
 
@@ -76,6 +76,12 @@ namespace BearLibTerminal
 		void BindTexture();
 		void Draw(const Leaf& leaf, int x, int y, int w2, int h2);
 		void Update(const Bitmap& bitmap);
+	};
+
+	struct UpdateRequest
+	{
+		Rectangle area;
+		Bitmap data;
 	};
 
 	class AtlasTexture
@@ -106,6 +112,7 @@ namespace BearLibTerminal
 		bool m_is_dirty;
 		std::list<Rectangle> m_spaces;
 		std::list<std::shared_ptr<TileSlot>> m_slots;
+		std::list<UpdateRequest> m_update_requests;
 	};
 
 	class Atlas
@@ -119,6 +126,7 @@ namespace BearLibTerminal
 
 	private:
 		std::list<AtlasTexture> m_textures;
+		std::list<AtlasTexture> m_scheduled_for_removal;
 	};
 }
 

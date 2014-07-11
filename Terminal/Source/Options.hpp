@@ -27,6 +27,7 @@ namespace BearLibTerminal
 		std::wstring window_icon;
 		bool window_resizeable;
 		Size window_minimum_size;
+		bool window_toggle_fullscreen;
 
 		// Output
 		bool output_postformatting;
@@ -34,11 +35,13 @@ namespace BearLibTerminal
 		bool output_vsync;
 
 		// Input
-		uint32_t input_events;
+		bool input_keyboard;
+		bool input_mouse;
 		bool input_precise_mouse;
 		bool input_sticky_close;
 		uint16_t input_cursor_symbol;
 		int input_cursor_blink_rate;
+		bool input_mouse_cursor;
 
 		// Log
 		std::wstring log_filename;
