@@ -980,15 +980,18 @@ namespace BearLibTerminal
 
 	void X11Window::SetVSync(bool enabled)
 	{
-		int interval = enabled? 1: 0;
-		if (m_private->glXSwapIntervalEXT)
+		Post([=]
 		{
-			m_private->glXSwapIntervalEXT(m_private->display, m_private->window, interval);
-		}
-		else if (m_private->glXSwapIntervalMESA)
-		{
-			m_private->glXSwapIntervalMESA(interval);
-		}
+			int interval = enabled? 1: 0;
+			if (m_private->glXSwapIntervalEXT)
+			{
+				m_private->glXSwapIntervalEXT(m_private->display, m_private->window, interval);
+			}
+			else if (m_private->glXSwapIntervalMESA)
+			{
+				m_private->glXSwapIntervalMESA(interval);
+			}
+		});
 	}
 }
 
