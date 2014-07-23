@@ -470,16 +470,11 @@ namespace BearLibTerminal
 
 	void Terminal::ValidateOutputOptions(OptionGroup& group, Options& options)
 	{
-		// Possible options: postformatting, synchronous, vsync
+		// Possible options: postformatting, vsync
 
 		if (group.attributes.count(L"postformatting") && !try_parse(group.attributes[L"postformatting"], options.output_postformatting))
 		{
 			throw std::runtime_error("output.postformatting cannot be parsed");
-		}
-
-		if (group.attributes.count(L"asynchronous") && !try_parse(group.attributes[L"asynchronous"], options.output_asynchronous))
-		{
-			throw std::runtime_error("output.asynchronous cannot be parsed");
 		}
 
 		if (group.attributes.count(L"vsync") && !try_parse(group.attributes[L"vsync"], options.output_vsync))

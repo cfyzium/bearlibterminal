@@ -19,7 +19,6 @@ namespace BearLibTerminal
 		window_minimum_size(1, 1),
 		window_toggle_fullscreen(false),
 		output_postformatting(true),
-		output_asynchronous(true),
 		output_vsync(true),
 		input_keyboard(true),
 		input_mouse(true),
