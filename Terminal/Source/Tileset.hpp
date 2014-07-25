@@ -49,6 +49,7 @@ namespace BearLibTerminal
 		virtual bool Save() = 0;
 		virtual void Remove() = 0;
 		virtual Size GetBoundingBoxSize() = 0;
+		virtual Size GetSpacing() = 0;
 		virtual Type GetType() = 0;
 		virtual void Reload(Tileset&& tileset) = 0;
 		virtual bool Provides(uint16_t code) = 0;

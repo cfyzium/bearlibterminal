@@ -313,6 +313,11 @@ namespace BearLibTerminal
 		return m_tile_size;
 	}
 
+	Size TrueTypeTileset::GetSpacing()
+	{
+		return m_bbox_size;
+	}
+
 	Tileset::Type TrueTypeTileset::GetType()
 	{
 		return Type::TrueType;

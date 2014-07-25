@@ -272,6 +272,11 @@ namespace BearLibTerminal
 		return m_tile_size;
 	}
 
+	Size BitmapTileset::GetSpacing()
+	{
+		return m_bbox_size;
+	}
+
 	Tileset::Type BitmapTileset::GetType()
 	{
 		return Type::Bitmap;

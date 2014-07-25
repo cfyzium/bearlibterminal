@@ -737,8 +737,447 @@ namespace BearLibTerminal
 		PutInternal(x, y, dx, dy, code, corners);
 	}
 
+	struct Alignment
+	{
+		Alignment();
+
+		enum // FIXME: enum class
+		{
+			Left,
+			Center,
+			Right,
+			Top,
+			Bottom
+		}
+		horisontal, vertical;
+	};
+
+	Alignment::Alignment():
+		horisontal(Left),
+		vertical(Top)
+	{ }
+
+	bool try_parse(const std::wstring& s, Alignment& out)
+	{
+		size_t hyphen_pos = s.find(L'-');
+
+		// FIXME: rewrite this mess
+		std::wstring vert = hyphen_pos != std::wstring::npos? s.substr(0, hyphen_pos): std::wstring();
+		std::wstring hor = hyphen_pos != std::wstring::npos? (hyphen_pos < s.length()-1? (s.substr(hyphen_pos+1)): std::wstring()): s;
+
+		Alignment result;
+
+		if (vert == L"center")
+		{
+			result.vertical = Alignment::Center;
+		}
+		else if (vert == L"bottom")
+		{
+			result.vertical = Alignment::Bottom;
+		}
+
+		if (hor == L"center")
+		{
+			result.horisontal = Alignment::Center;
+		}
+		else if (hor == L"right")
+		{
+			result.horisontal = Alignment::Right;
+		}
+
+		out = result;
+		return true;
+	}
+
+	struct Line
+	{
+		struct Symbol
+		{
+			Symbol();
+			Symbol(int code);
+			Symbol(int code, Size spacing);
+			int code;
+			Size spacing;
+		};
+
+		void UpdateSize();
+		std::vector<Symbol> symbols;
+		Size size;
+	};
+
+	Line::Symbol::Symbol():
+		code(0)
+	{ }
+
+	Line::Symbol::Symbol(int code):
+		code(code)
+	{ }
+
+	Line::Symbol::Symbol(int code, Size spacing):
+		code(code),
+		spacing(spacing)
+	{ }
+
+	void Line::UpdateSize()
+	{
+		size = Size();
+		for (auto& symbol: symbols)
+		{
+			if (symbol.code <= 0)
+			{
+				continue;
+			}
+
+			size.width += symbol.spacing.width;
+			size.height = std::max(size.height, symbol.spacing.height);
+		}
+	}
+
+	int Terminal::Print(int x0, int y0, const std::wstring& str, bool measure_only)
+	{
+		uint16_t base = 0;
+		Encoding<char>* codepage = nullptr;
+		bool combine = false;
+		Point offset = Point(0, 0);
+		Size wrap = Size(0, 0);
+		Alignment alignment;
+		bool raw = false;
+		Color original_fore = m_world.state.color;
+		Color original_back = m_world.state.bkcolor;
+
+		int x, y, w;
+
+		std::vector<std::function<void()>> tags;
+		std::list<Line> lines;
+		lines.emplace_back();
+
+		auto GetTileSpacing = [&](wchar_t code) -> Size // TODO: GetResponsibleTileset?
+		{
+			for (auto i = m_world.tilesets.rbegin(); ; i++)
+			{
+				if (i->first <= code)
+				{
+					return i->second->GetSpacing();
+				}
+			}
+
+			return Size(1, 1);
+		};
+
+		auto GetTileRelativeIndex = [&](wchar_t code) -> int
+		{
+			for (auto i = m_world.tilesets.rbegin(); ; i++)
+			{
+				if (i->first <= code)
+				{
+					return code - i->first;
+				}
+			}
+
+			return 0;
+		};
+
+		auto AppendSymbol = [&](wchar_t code)
+		{
+			if (codepage)
+			{
+				code = codepage->Convert(code);
+			}
+
+			if (code >= 0)
+			{
+				code += base;
+			}
+			else
+			{
+				code = kUnicodeReplacementCharacter;
+			}
+
+			if (combine)
+			{
+				tags.push_back([&, code]
+				{
+					if (w == -1) return;
+					auto saved = m_world.state.composition;
+					m_world.state.composition = TK_ON;
+					PutInternal(w, y, offset.x, offset.y, code, nullptr);
+					m_world.state.composition = saved;
+				});
+				lines.back().symbols.emplace_back(-(int)(tags.size()-1));
+				combine = false;
+			}
+			else
+			{
+				lines.back().symbols.emplace_back((int)code, GetTileSpacing(code));
+			}
+		};
+
+		for (size_t i = 0; i < str.length(); i++)
+		{
+			wchar_t c = str[i];
+
+			if (c == L'[' && !raw && m_options.output_postformatting) // tag start
+			{
+				if (++i >= str.length()) // malformed
+				{
+					continue;
+				}
+				if (str[i] == L'[') // escaped left bracket
+				{
+					AppendSymbol(L'[');
+					continue;
+				}
+
+				size_t closing_bracket_pos = str.find(L']', i);
+				if (closing_bracket_pos == std::wstring::npos) // malformed
+				{
+					continue;
+				}
+
+				if (!measure_only)
+				{
+					size_t params_pos = str.find(L'=', i);
+					params_pos = std::min(closing_bracket_pos, (params_pos == std::wstring::npos)? str.length(): params_pos);
+
+					std::wstring name = str.substr(i, params_pos-i);
+					std::wstring params = (params_pos < closing_bracket_pos)? str.substr(params_pos+1, closing_bracket_pos-(params_pos+1)): std::wstring();
+
+					std::function<void()> tag;
+
+					if ((name == L"color" || name == L"c") && !params.empty())
+					{
+						color_t color = Palette::Instance[params];
+						tag = [&, color]{m_world.state.color = color;};
+					}
+					else if (name == L"/color" || name == L"/c")
+					{
+						tag = [&]{m_world.state.color = original_fore;};
+					}
+					if ((name == L"bkcolor" || name == L"b") && !params.empty())
+					{
+						color_t color = Palette::Instance[params];
+						tag = [&, color]{m_world.state.bkcolor = color;};
+					}
+					else if (name == L"/bkcolor" || name == L"/b")
+					{
+						tag = [&]{m_world.state.bkcolor = original_back;};
+					}
+					else if (name == L"offset")
+					{
+						Point value = parse<Point>(params);
+						tag = [&offset, value]{offset = value;};
+					}
+					else if (name == L"/offset")
+					{
+						tag = [&offset]{offset = Point(0, 0);};
+					}
+					else if (name == L"+")
+					{
+						combine = true;
+					}
+					else if (name == L"font" || name == L"base")
+					{
+						size_t colon_pos = params.find(L':');
+						if (colon_pos != std::wstring::npos && colon_pos > 0 && colon_pos < params.length()-1)
+						{
+							std::wstring codepage_name = params.substr(colon_pos+1);
+							params = params.substr(0, colon_pos);
+
+							auto cached = m_codepage_cache.find(codepage_name);
+							if (cached != m_codepage_cache.end())
+							{
+								codepage = cached->second.get();
+							}
+							else
+							{
+								if (auto p = GetUnibyteEncoding(codepage_name))
+								{
+									codepage = p.get();
+									m_codepage_cache[codepage_name] = std::move(p);
+								}
+							}
+						}
+
+						if (!try_parse(params, base))
+						{
+							base = 0;
+							codepage = nullptr;
+						}
+					}
+					else if (name == L"/font" || name == L"/base")
+					{
+						base = 0;
+						codepage = nullptr;
+					}
+					else if (name == L"wrap" || name == L"bbox")
+					{
+						wrap = parse<Size>(params);
+					}
+					else if (name == L"align" || name == L"a")
+					{
+						alignment = parse<Alignment>(params);
+					}
+					else if (name == L"raw")
+					{
+						raw = true;
+					}
+
+					if (tag)
+					{
+						tags.push_back(std::move(tag));
+						lines.back().symbols.emplace_back(-(int)(tags.size()-1));
+					}
+				}
+
+				i = closing_bracket_pos;
+			}
+			else if (c == L']' && !raw && m_options.output_postformatting)
+			{
+				if (++i >= str.length()) // malformed
+				{
+					continue;
+				}
+				else if (str[i] == L']') // escaped right bracket
+				{
+					AppendSymbol(L']');
+				}
+			}
+			else if (c == L'\n') // forced line-break
+			{
+				lines.emplace_back();
+			}
+			else
+			{
+				AppendSymbol(c);
+			}
+		}
+
+		if (wrap.width > 0) // Auto-wrap the lines
+		{
+			for (auto i = lines.begin(); i != lines.end(); i++) // maybe, vector?
+			{
+				auto& line = *i;
+
+				int length = 0, last_line_break = 0;
+				for (size_t j = 0; j < line.symbols.size(); j++)
+				{
+					Line::Symbol& s = line.symbols[j];
+
+					if (s.code <= 0) // tag reference
+					{
+						continue;
+					}
+
+					if (length + s.spacing.width > wrap.width) // cut off // FIXME: prove bounds correctness
+					{
+						if (last_line_break == 0)
+						{
+							last_line_break = j - 1;
+						}
+
+						int offset = last_line_break + 1;
+						int leave = offset;
+
+						if (GetTileRelativeIndex(line.symbols[last_line_break].code) == (int)L' ')
+						{
+							leave -= 1;
+						}
+
+						auto copy = i;
+						Line next;
+						next.symbols = std::vector<Line::Symbol>(line.symbols.begin()+offset, line.symbols.end());
+						lines.insert(++copy, next);
+						line.symbols.resize(leave);
+
+						break;
+					}
+					else
+					{
+						int relative_index = GetTileRelativeIndex(s.code);
+						if (relative_index == (int)L' ' || relative_index == (int)L'-')
+						{
+							last_line_break = j;
+						}
+					}
+
+					length += s.spacing.width;
+				}
+			}
+		}
+
+		int total_height = 0;
+		int total_width = 0;
+		for (auto& line: lines)
+		{
+			line.UpdateSize();
+			total_height += line.size.height;
+			total_width = std::max(total_width, line.size.width);
+		}
+
+		if (!measure_only)
+		{
+			switch (alignment.vertical)
+			{
+			case Alignment::Bottom:
+				y = y0 - (total_height - 1);
+				break;
+			case Alignment::Center:
+				y = y0 - (int)std::floor(total_height/2.0f);
+				break;
+			default:
+				y = y0;
+				break;
+			}
+
+			for (auto& line: lines)
+			{
+				switch (alignment.horisontal)
+				{
+				case Alignment::Right:
+					x = x0 - (line.size.width - 1);
+					break;
+				case Alignment::Center:
+					x = x0 - (int)std::floor(line.size.width/2.0f);
+					break;
+				case Alignment::Left:
+					x = x0;
+					break;
+				}
+
+				w = -1;
+
+				for (auto& s: line.symbols)
+				{
+					if (s.code > 0)
+					{
+						PutInternal(x, y, offset.x, offset.y, (wchar_t)s.code, nullptr);
+						w = x;
+						x += s.spacing.width;
+					}
+					else
+					{
+						tags[-s.code]();
+					}
+				}
+
+				y += line.size.height;
+			}
+
+			m_world.state.color = original_fore;
+			m_world.state.bkcolor = original_back;
+		}
+
+		return wrap.Area()? total_height: total_width;
+	}
+
+	/*
 	int Terminal::Print(int x0, int y0, const std::wstring& s)
 	{
+		if (!s.empty() && s[0] != '^')
+		{
+			return ProcessPrint(x0, y0, s, false);
+		}
+
 		int x = x0, y = y0;
 		int printed = 0;
 		uint16_t base = 0;
@@ -966,6 +1405,7 @@ namespace BearLibTerminal
 
 		return printed;
 	}
+	//*/
 
 	bool Terminal::HasInputInternalUnlocked()
 	{
