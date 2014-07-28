@@ -46,6 +46,7 @@ namespace BearLibTerminal
 		void Refresh();
 		void Clear();
 		void Clear(int x, int y, int w, int h);
+		void SetCrop(int x, int y, int w, int h);
 		void SetLayer(int layer_index);
 		void SetForeColor(Color color);
 		void SetBackColor(Color color);
@@ -95,6 +96,7 @@ namespace BearLibTerminal
 		bool m_show_grid;
 		bool m_viewport_modified;
 		Rectangle m_viewport_scissors;
+		bool m_viewport_scissors_enabled;
 		int m_scale_step;
 		Rectangle m_stage_area;
 		SizeF m_stage_area_factor;

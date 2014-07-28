@@ -94,6 +94,33 @@ namespace BearLibTerminal
 		T left, top, width, height;
 	};
 
+	template<typename T> BasicRectangle<T> operator*(const BasicRectangle<T>& rect, const BasicSize<T>& factor)
+	{
+		return BasicRectangle<T>
+		(
+			rect.left * factor.width,
+			rect.top * factor.height,
+			rect.width * factor.width,
+			rect.height * factor.height
+		);
+	}
+
+	template<typename T> BasicRectangle<T> operator*=(const BasicRectangle<T>& rect, const BasicSize<T>& factor)
+	{
+		return rect * factor;
+	}
+
+	template<typename T> BasicRectangle<T> operator+(const BasicRectangle<T>& rect, const BasicPoint<T>& offset)
+	{
+		return BasicRectangle<T>(rect.left + offset.x, rect.top + offset.y, rect.width, rect.height);
+	}
+
+	template<typename T> BasicRectangle<T>& operator+=(BasicRectangle<T>& rect, const BasicPoint<T>& offset)
+	{
+		rect = rect + offset;
+		return rect;
+	}
+
 	typedef BasicRectangle<int> Rectangle;
 
 	typedef BasicRectangle<float> RectangleF;

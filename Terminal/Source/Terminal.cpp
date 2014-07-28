@@ -604,6 +604,8 @@ namespace BearLibTerminal
 				{
 					cell.leafs.clear();
 				}
+
+				layer.crop = Rectangle();
 			}
 		}
 
@@ -634,6 +636,11 @@ namespace BearLibTerminal
 				}
 			}
 		}
+	}
+
+	void Terminal::SetCrop(int x, int y, int w, int h)
+	{
+		m_world.stage.backbuffer.layers[m_world.state.layer].crop = Rectangle(x, y, w, h); // FIXME: intersection with scene
 	}
 
 	void Terminal::SetLayer(int layer_index)
@@ -1124,7 +1131,7 @@ namespace BearLibTerminal
 			case Alignment::Center:
 				y = y0 - (int)std::floor(total_height/2.0f);
 				break;
-			default:
+			default: // Top
 				y = y0;
 				break;
 			}
@@ -1139,7 +1146,7 @@ namespace BearLibTerminal
 				case Alignment::Center:
 					x = x0 - (int)std::floor(line.size.width/2.0f);
 					break;
-				case Alignment::Left:
+				default: // Left
 					x = x0;
 					break;
 				}
@@ -1472,7 +1479,7 @@ namespace BearLibTerminal
 	}
 
 	/**
-	 * Reads whole string. Operates vastly differently in blocking and non-blocking modes
+	 * Reads whole string.
 	 */
 	int Terminal::ReadString(int x, int y, wchar_t* buffer, int max)
 	{
@@ -1644,20 +1651,15 @@ namespace BearLibTerminal
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-		if (viewport_size != stage_size)
-		{
-			m_viewport_scissors = Rectangle
-			(
-				m_stage_area.left,
-				viewport_size.height - m_stage_area.height - m_stage_area.top,
-				m_stage_area.width,
-				m_stage_area.height
-			);
-		}
-		else
-		{
-			m_viewport_scissors = Rectangle();
-		}
+		m_viewport_scissors = Rectangle
+		(
+			m_stage_area.left,
+			viewport_size.height - m_stage_area.height - m_stage_area.top,
+			m_stage_area.width,
+			m_stage_area.height
+		);
+
+		m_viewport_scissors_enabled = viewport_size != stage_size;
 	}
 
 	void Terminal::PrepareFreshCharacters()
@@ -1738,18 +1740,14 @@ namespace BearLibTerminal
 		glDisable(GL_SCISSOR_TEST);
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		if (m_viewport_scissors.Area() > 0)
+		if (m_viewport_scissors_enabled)
 		{
 			glEnable(GL_SCISSOR_TEST);
-			glScissor
-			(
-				m_viewport_scissors.left,
-				m_viewport_scissors.top,
-				m_viewport_scissors.width,
-				m_viewport_scissors.height
-			);
+			auto& scissors = m_viewport_scissors;
+			glScissor(scissors.left, scissors.top, scissors.width, scissors.height);
 		}
 
+		// Backgrounds
 		Texture::Disable();
 		glBegin(GL_QUADS);
 		{
@@ -1785,12 +1783,33 @@ namespace BearLibTerminal
 
 		int w2 = m_world.state.half_cellsize.width;
 		int h2 = m_world.state.half_cellsize.height;
+		bool layer_scissors_applied = false;
 
 		uint64_t current_texture_id = 0;
 		glBegin(GL_QUADS);
 		glColor4f(1, 1, 1, 1);
 		for (auto& layer: m_world.stage.frontbuffer.layers)
 		{
+			if (layer.crop.Area() > 0)
+			{
+				Rectangle scissors = layer.crop * m_world.state.cellsize;
+				//
+				scissors.left /= m_stage_area_factor.width; // TODO: rectangle /= size operator
+				scissors.top /= m_stage_area_factor.height;
+				scissors.width /= m_stage_area_factor.width;
+				scissors.height /= m_stage_area_factor.height;
+				//
+				scissors.top = m_viewport_scissors.height - (scissors.top+scissors.height);
+				scissors += m_viewport_scissors.Location();
+
+				glEnd();
+				glEnable(GL_SCISSOR_TEST);
+				glScissor(scissors.left, scissors.top, scissors.width, scissors.height);
+				glBegin(GL_QUADS);
+
+				layer_scissors_applied = true;
+			}
+
 			int i = 0, left = 0, top = 0;
 
 			for (int y=0; y<m_world.stage.size.height; y++)
@@ -1825,6 +1844,15 @@ namespace BearLibTerminal
 
 				left = 0;
 				top += m_world.state.cellsize.height;
+			}
+
+			if (layer_scissors_applied)
+			{
+				glEnd();
+				auto& scissors = m_viewport_scissors;
+				glScissor(scissors.left, scissors.top, scissors.width, scissors.height);
+				glBegin(GL_QUADS);
+				layer_scissors_applied = false;
 			}
 		}
 		glEnd();
