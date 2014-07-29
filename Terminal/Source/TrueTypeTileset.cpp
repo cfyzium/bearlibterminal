@@ -39,6 +39,11 @@ namespace BearLibTerminal
 			throw std::runtime_error("TrueTypeTileset: failed to parse 'bbox' attribute");
 		}
 
+		if (group.attributes.count(L"spacing") && !try_parse(group.attributes[L"spacing"], m_bbox_size))
+		{
+			throw std::runtime_error("TrueTypeTileset: failed to parse 'spacing' attribute");
+		}
+
 		if (m_bbox_size.width < 1 || m_bbox_size.height < 1)
 		{
 			m_bbox_size = Size(1, 1);

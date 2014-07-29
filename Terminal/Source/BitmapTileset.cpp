@@ -121,6 +121,11 @@ namespace BearLibTerminal
 			throw std::runtime_error("BitmapTileset: failed to parse 'bbox' attribute");
 		}
 
+		if (group.attributes.count(L"spacing") && !try_parse(group.attributes[L"spacing"], m_bbox_size))
+		{
+			throw std::runtime_error("BitmapTileset: failed to parse 'spacing' attribute");
+		}
+
 		if (group.attributes.count(L"align") && !try_parse(group.attributes[L"align"], m_alignment))
 		{
 			throw std::runtime_error("BitmapTileset: failed to parse 'alignment' attribute");
