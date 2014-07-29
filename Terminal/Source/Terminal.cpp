@@ -640,7 +640,8 @@ namespace BearLibTerminal
 
 	void Terminal::SetCrop(int x, int y, int w, int h)
 	{
-		m_world.stage.backbuffer.layers[m_world.state.layer].crop = Rectangle(x, y, w, h); // FIXME: intersection with scene
+		m_world.stage.backbuffer.layers[m_world.state.layer].crop =
+			Rectangle(m_world.stage.size).Intersection(Rectangle(x, y, w, h));
 	}
 
 	void Terminal::SetLayer(int layer_index)
@@ -1123,47 +1124,60 @@ namespace BearLibTerminal
 
 		if (!measure_only)
 		{
+			int cutoff_top, cutoff_bottom;
+
 			switch (alignment.vertical)
 			{
 			case Alignment::Bottom:
-				y = y0 - (total_height - 1);
+				y = y0 - (total_height-1);
+				cutoff_top = y0 - (wrap.height-1);
+				cutoff_bottom = y0;
 				break;
 			case Alignment::Center:
-				y = y0 - (int)std::floor(total_height/2.0f);
+				y = y0 - (int)std::floor((total_height-1)/2.0f);
+				cutoff_top = y0 - (int)std::floor((wrap.height-1)/2.0f);
+				cutoff_bottom = y0 + wrap.height;
 				break;
 			default: // Top
 				y = y0;
+				cutoff_top = y0;
+				cutoff_bottom = y0 + (wrap.height-1);
 				break;
 			}
 
 			for (auto& line: lines)
 			{
-				switch (alignment.horisontal)
-				{
-				case Alignment::Right:
-					x = x0 - (line.size.width - 1);
-					break;
-				case Alignment::Center:
-					x = x0 - (int)std::floor(line.size.width/2.0f);
-					break;
-				default: // Left
-					x = x0;
-					break;
-				}
+				int line_bottom = y + line.size.height;
 
-				w = -1;
-
-				for (auto& s: line.symbols)
+				if (wrap.height == 0 || (y >= cutoff_top && y <= cutoff_bottom) || (line_bottom >= cutoff_top && line_bottom <= cutoff_bottom))
 				{
-					if (s.code > 0)
+					switch (alignment.horisontal)
 					{
-						PutInternal(x, y, offset.x, offset.y, (wchar_t)s.code, nullptr);
-						w = x;
-						x += s.spacing.width;
+					case Alignment::Right:
+						x = x0 - (line.size.width - 1);
+						break;
+					case Alignment::Center:
+						x = x0 - (int)std::floor(line.size.width/2.0f);
+						break;
+					default: // Left
+						x = x0;
+						break;
 					}
-					else
+
+					w = -1;
+
+					for (auto& s: line.symbols)
 					{
-						tags[-s.code]();
+						if (s.code > 0)
+						{
+							PutInternal(x, y, offset.x, offset.y, (wchar_t)s.code, nullptr);
+							w = x;
+							x += s.spacing.width;
+						}
+						else
+						{
+							tags[-s.code]();
+						}
 					}
 				}
 
@@ -1487,7 +1501,6 @@ namespace BearLibTerminal
 		int composition_mode = m_world.state.composition;
 		m_world.state.composition = TK_ON;
 
-
 		if (buffer == nullptr || max <= 0)
 		{
 			LOG(Error, "Invalid buffer parameters were passed to string reading function");
@@ -1792,13 +1805,7 @@ namespace BearLibTerminal
 		{
 			if (layer.crop.Area() > 0)
 			{
-				Rectangle scissors = layer.crop * m_world.state.cellsize;
-				//
-				scissors.left /= m_stage_area_factor.width; // TODO: rectangle /= size operator
-				scissors.top /= m_stage_area_factor.height;
-				scissors.width /= m_stage_area_factor.width;
-				scissors.height /= m_stage_area_factor.height;
-				//
+				Rectangle scissors = layer.crop * m_world.state.cellsize / m_stage_area_factor;
 				scissors.top = m_viewport_scissors.height - (scissors.top+scissors.height);
 				scissors += m_viewport_scissors.Location();
 
