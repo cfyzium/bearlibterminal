@@ -234,6 +234,9 @@ TERMINAL_API void terminal_put_ext(int x, int y, int dx, int dy, int code, color
 TERMINAL_API int terminal_print8(int x, int y, const int8_t* s);
 TERMINAL_API int terminal_print16(int x, int y, const int16_t* s);
 TERMINAL_API int terminal_print32(int x, int y, const int32_t* s);
+TERMINAL_API int terminal_measure8(const int8_t* s);
+TERMINAL_API int terminal_measure16(const int16_t* s);
+TERMINAL_API int terminal_measure32(const int32_t* s);
 TERMINAL_API int terminal_has_input();
 TERMINAL_API int terminal_state(int code);
 TERMINAL_API int terminal_read();
@@ -305,6 +308,16 @@ TERMINAL_INLINE int terminal_wprint(int x, int y, const wchar_t* s)
 	return TERMINAL_CAT(terminal_print, TERMINAL_WCHAR_SUFFIX)(x, y, (const TERMINAL_WCHAR_TYPE*)s);
 }
 
+TERMINAL_INLINE int terminal_measure(const char* s)
+{
+	return terminal_measure8((const int8_t*)s);
+}
+
+TERMINAL_INLINE int terminal_wmeasure(const wchar_t* s)
+{
+	return TERMINAL_CAT(terminal_measure, TERMINAL_WCHAR_SUFFIX)((const TERMINAL_WCHAR_TYPE*)s);
+}
+
 TERMINAL_INLINE int terminal_read_str(int x, int y, char* buffer, int max)
 {
 	return terminal_read_str8(x, y, (int8_t*)buffer, max);
@@ -358,6 +371,8 @@ TERMINAL_FORMATTED_VA(char, set, (const char* s, va_list args), vsnprintf, (buff
 TERMINAL_FORMATTED_VA(wchar_t, wset, (const wchar_t* s, va_list args), TERMINAL_VSNWPRINTF, (buffer))
 TERMINAL_FORMATTED_VA(char, print, (int x, int y, const char* s, va_list args), vsnprintf, (x, y, buffer))
 TERMINAL_FORMATTED_VA(wchar_t, wprint, (int x, int y, const wchar_t* s, va_list args), TERMINAL_VSNWPRINTF, (x, y, buffer))
+TERMINAL_FORMATTED_VA(char, measure, (const char* s, va_list args), vsnprintf, (buffer))
+TERMINAL_FORMATTED_VA(wchar_t, wmeasure, (const wchar_t* s, va_list args), TERMINAL_VSNWPRINTF, (buffer))
 
 #define TERMINAL_FORMATTED(outer, inner)\
 	TERMINAL_INLINE int terminal_##outer\
@@ -374,6 +389,8 @@ TERMINAL_FORMATTED(setf(const char* s, ...), setf(s, args))
 TERMINAL_FORMATTED(wsetf(const wchar_t* s, ...), wsetf(s, args))
 TERMINAL_FORMATTED(printf(int x, int y, const char* s, ...), printf(x, y, s, args))
 TERMINAL_FORMATTED(wprintf(int x, int y, const wchar_t* s, ...), wprintf(x, y, s, args))
+TERMINAL_FORMATTED(measuref(const char* s, ...), measuref(s, args))
+TERMINAL_FORMATTED(wmeasuref(const wchar_t* s, ...), wmeasuref(s, args))
 
 #ifdef __cplusplus
 /*
@@ -418,6 +435,13 @@ TERMINAL_INLINE int terminal_print(int x, int y, const wchar_t* s)
 }
 
 TERMINAL_FORMATTED(printf(int x, int y, const wchar_t* s, ...), wprintf(x, y, s, args))
+
+TERMINAL_INLINE int terminal_measure(const wchar_t* s)
+{
+	return terminal_wmeasure(s);
+}
+
+TERMINAL_FORMATTED(measuref(const wchar_t* s, ...), wmeasuref(s, args))
 
 TERMINAL_INLINE int terminal_read_str(int x, int y, wchar_t* buffer, int max)
 {

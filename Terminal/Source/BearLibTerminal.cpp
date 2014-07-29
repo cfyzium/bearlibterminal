@@ -154,6 +154,25 @@ int terminal_print32(int x, int y, const int32_t* s)
 	return g_instance->Print(x, y, BearLibTerminal::UTF32->Convert((const char32_t*)s));
 }
 
+int terminal_measure8(const int8_t* s)
+{
+	if (!g_instance || !s) return -1;
+	auto& encoding = g_instance->GetEncoding();
+	return g_instance->Print(0, 0, encoding.Convert((const char*)s), true);
+}
+
+int terminal_measure16(const int16_t* s)
+{
+	if (!g_instance || !s) return -1;
+	return g_instance->Print(0, 0, BearLibTerminal::UTF16->Convert((const char16_t*)s), true);
+}
+
+int terminal_measure32(const int32_t* s)
+{
+	if (!g_instance || !s) return -1;
+	return g_instance->Print(0, 0, BearLibTerminal::UTF32->Convert((const char32_t*)s), true);
+}
+
 int terminal_has_input()
 {
 	if (!g_instance) return 1;

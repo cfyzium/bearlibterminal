@@ -252,6 +252,16 @@ int luaterminal_clear_area(lua_State* L)
 	return 0;
 }
 
+int luaterminal_crop(lua_State* L)
+{
+	int x = lua_tointeger(L, 1);
+	int y = lua_tointeger(L, 2);
+	int w = lua_tointeger(L, 3);
+	int h = lua_tointeger(L, 4);
+	terminal_crop(x, y, w, h);
+	return 0;
+}
+
 int luaterminal_layer(lua_State* L)
 {
 	terminal_layer(lua_tointeger(L, 1));
@@ -386,6 +396,40 @@ int luaterminal_printf(lua_State* L)
 	return 1;
 }
 
+int luaterminal_measure(lua_State* L)
+{
+	int rc = terminal_measure8((const int8_t*)lua_tostring(L, 1));
+	lua_pushnumber(L, rc);
+	return 1;
+}
+
+int luaterminal_measuref(lua_State* L)
+{
+	// Stack: [s, arg1, arg2, arg3, ...]
+	int nargs = lua_gettop(L);
+	if (nargs < 1) // Because Lua won't be as lenient with argument type errors here
+	{
+		lua_pushstring(L, "luaterminal_measuref: not enough arguments");
+		lua_error(L);
+		return 0;
+	}
+	else if (lua_type(L, 1) != LUA_TSTRING)
+	{
+		lua_pushstring(L, "luaterminal_measuref: first argument is not a string");
+		lua_error(L);
+		return 0;
+	}
+
+	lua_getfield(L, 1, "format"); // Gets the "format" field from the first (bottom) stack element which is string
+	lua_insert(L, 1); // Shift retrieved function to the bottom of the stack
+
+	lua_pcall(L, nargs, 1, 0);
+
+	int rc = terminal_measure8((const int8_t*)lua_tostring(L, 3));
+	lua_pushnumber(L, rc);
+	return 1;
+}
+
 int luaterminal_has_input(lua_State* L)
 {
 	lua_pushboolean(L, terminal_has_input());
@@ -461,6 +505,7 @@ static const luaL_Reg luaterminal_lib[] =
 	{"refresh", luaterminal_refresh},
 	{"clear", luaterminal_clear},
 	{"clear_area", luaterminal_clear_area},
+	{"crop", luaterminal_crop},
 	{"layer", luaterminal_layer},
 	{"color", luaterminal_color},
 	{"bkcolor", luaterminal_bkcolor},
@@ -469,6 +514,8 @@ static const luaL_Reg luaterminal_lib[] =
 	{"put_ext", luaterminal_put_ext},
 	{"print", luaterminal_print},
 	{"printf", luaterminal_printf},
+	{"measure", luaterminal_measure},
+	{"measuref", luaterminal_measuref},
 	{"has_input", luaterminal_has_input},
 	{"state", luaterminal_state},
 	{"check", luaterminal_check},

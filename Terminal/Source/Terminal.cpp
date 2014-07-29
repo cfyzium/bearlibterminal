@@ -947,126 +947,137 @@ namespace BearLibTerminal
 					continue;
 				}
 
-				if (!measure_only)
+				size_t params_pos = str.find(L'=', i);
+				params_pos = std::min(closing_bracket_pos, (params_pos == std::wstring::npos)? str.length(): params_pos);
+
+				std::wstring name = str.substr(i, params_pos-i);
+				std::wstring params = (params_pos < closing_bracket_pos)? str.substr(params_pos+1, closing_bracket_pos-(params_pos+1)): std::wstring();
+				uint16_t arbitrary_code = 0;
+
+				std::function<void()> tag;
+
+				if ((name == L"color" || name == L"c") && !params.empty())
 				{
-					size_t params_pos = str.find(L'=', i);
-					params_pos = std::min(closing_bracket_pos, (params_pos == std::wstring::npos)? str.length(): params_pos);
+					color_t color = Palette::Instance[params];
+					tag = [&, color]{m_world.state.color = color;};
+				}
+				else if (name == L"/color" || name == L"/c")
+				{
+					tag = [&]{m_world.state.color = original_fore;};
+				}
+				if ((name == L"bkcolor" || name == L"b") && !params.empty())
+				{
+					color_t color = Palette::Instance[params];
+					tag = [&, color]{m_world.state.bkcolor = color;};
+				}
+				else if (name == L"/bkcolor" || name == L"/b")
+				{
+					tag = [&]{m_world.state.bkcolor = original_back;};
+				}
+				else if (name == L"offset")
+				{
+					Point value = parse<Point>(params);
+					tag = [&offset, value]{offset = value;};
+				}
+				else if (name == L"/offset")
+				{
+					tag = [&offset]{offset = Point(0, 0);};
+				}
+				else if (name == L"+")
+				{
+					combine = true;
+				}
+				else if (name == L"font" || name == L"base")
+				{
+					size_t colon_pos = params.find(L':');
+					std::wstring codepage_name;
+					if (colon_pos != std::wstring::npos && colon_pos > 0 && colon_pos < params.length()-1)
+					{
+						codepage_name = params.substr(colon_pos+1);
+						params = params.substr(0, colon_pos);
+					}
 
-					std::wstring name = str.substr(i, params_pos-i);
-					std::wstring params = (params_pos < closing_bracket_pos)? str.substr(params_pos+1, closing_bracket_pos-(params_pos+1)): std::wstring();
-					uint16_t arbitrary_code = 0;
+					if (!try_parse(params, base))
+					{
+						base = 0;
+						codepage = nullptr;
+						continue;
+					}
 
-					std::function<void()> tag;
-
-					if ((name == L"color" || name == L"c") && !params.empty())
+					if (codepage_name.empty())
 					{
-						color_t color = Palette::Instance[params];
-						tag = [&, color]{m_world.state.color = color;};
-					}
-					else if (name == L"/color" || name == L"/c")
-					{
-						tag = [&]{m_world.state.color = original_fore;};
-					}
-					if ((name == L"bkcolor" || name == L"b") && !params.empty())
-					{
-						color_t color = Palette::Instance[params];
-						tag = [&, color]{m_world.state.bkcolor = color;};
-					}
-					else if (name == L"/bkcolor" || name == L"/b")
-					{
-						tag = [&]{m_world.state.bkcolor = original_back;};
-					}
-					else if (name == L"offset")
-					{
-						Point value = parse<Point>(params);
-						tag = [&offset, value]{offset = value;};
-					}
-					else if (name == L"/offset")
-					{
-						tag = [&offset]{offset = Point(0, 0);};
-					}
-					else if (name == L"+")
-					{
-						combine = true;
-					}
-					else if (name == L"font" || name == L"base")
-					{
-						size_t colon_pos = params.find(L':');
-						std::wstring codepage_name;
-						if (colon_pos != std::wstring::npos && colon_pos > 0 && colon_pos < params.length()-1)
+						// Use tileset codepage
+						auto i = m_world.tilesets.find(base);
+						if (i != m_world.tilesets.end())
 						{
-							codepage_name = params.substr(colon_pos+1);
-							params = params.substr(0, colon_pos);
+							codepage = i->second->GetCodepage();
 						}
-
-						if (!try_parse(params, base))
+						else
 						{
-							base = 0;
 							codepage = nullptr;
-							continue;
 						}
-
-						if (codepage_name.empty())
+					}
+					else
+					{
+						auto cached = m_codepage_cache.find(codepage_name);
+						if (cached != m_codepage_cache.end())
 						{
-							// Use tileset codepage
-							auto i = m_world.tilesets.find(base);
-							if (i != m_world.tilesets.end())
+							codepage = cached->second.get();
+						}
+						else
+						{
+							if (auto p = GetUnibyteEncoding(codepage_name))
 							{
-								codepage = i->second->GetCodepage();
+								codepage = p.get();
+								m_codepage_cache[codepage_name] = std::move(p);
 							}
 							else
 							{
 								codepage = nullptr;
 							}
 						}
-						else
+					}
+				}
+				else if (name == L"/font" || name == L"/base")
+				{
+					base = 0;
+					codepage = nullptr;
+				}
+				else if (name == L"wrap" || name == L"bbox")
+				{
+					if (params.find(L'x') != std::wstring::npos)
+					{
+						if (!try_parse<Size>(params, wrap) || wrap.width < 0 || wrap.height < 0)
 						{
-							auto cached = m_codepage_cache.find(codepage_name);
-							if (cached != m_codepage_cache.end())
-							{
-								codepage = cached->second.get();
-							}
-							else
-							{
-								if (auto p = GetUnibyteEncoding(codepage_name))
-								{
-									codepage = p.get();
-									m_codepage_cache[codepage_name] = std::move(p);
-								}
-								else
-								{
-									codepage = nullptr;
-								}
-							}
+							wrap = Size();
 						}
 					}
-					else if (name == L"/font" || name == L"/base")
+					else
 					{
-						base = 0;
-						codepage = nullptr;
+						wrap.height = 0;
+						if (!try_parse<int>(params, wrap.width) || wrap.width < 0)
+						{
+							wrap.width = 0;
+						}
 					}
-					else if (name == L"wrap" || name == L"bbox")
-					{
-						wrap = parse<Size>(params);
-					}
-					else if (name == L"align" || name == L"a")
-					{
-						alignment = parse<Alignment>(params);
-					}
-					else if (name == L"raw")
-					{
-						raw = true;
-					}
-					else if (try_parse(name, arbitrary_code))
-					{
-						AppendSymbol(arbitrary_code);
-					}
+				}
+				else if (name == L"align" || name == L"a")
+				{
+					alignment = parse<Alignment>(params);
+				}
+				else if (name == L"raw")
+				{
+					raw = true;
+				}
+				else if (try_parse(name, arbitrary_code))
+				{
+					AppendSymbol(arbitrary_code);
+				}
 
-					if (tag)
-					{
-						tags.push_back(std::move(tag));
-						lines.back().symbols.emplace_back(-(int)(tags.size()-1));
-					}
+				if (tag)
+				{
+					tags.push_back(std::move(tag));
+					lines.back().symbols.emplace_back(-(int)(tags.size()-1));
 				}
 
 				i = closing_bracket_pos;
@@ -1220,245 +1231,8 @@ namespace BearLibTerminal
 			m_world.state.bkcolor = original_back;
 		}
 
-		return wrap.Area()? total_height: total_width;
+		return wrap.width > 0? total_height: total_width;
 	}
-
-	/*
-	int Terminal::Print(int x0, int y0, const std::wstring& s)
-	{
-		if (!s.empty() && s[0] != '^')
-		{
-			return ProcessPrint(x0, y0, s, false);
-		}
-
-		int x = x0, y = y0;
-		int printed = 0;
-		uint16_t base = 0;
-		Encoding<char>* codepage = nullptr;
-		bool combine = false;
-		Size spacing{1, 1};
-		Point offset{0, 0};
-
-		Color original_color = m_world.state.color;
-		Color original_bkcolor = m_world.state.bkcolor;
-
-		Size size = m_world.stage.size;
-
-		const auto put_and_increment = [&](int code)
-		{
-			// Convert from unicode to tileset codepage
-			if (codepage)
-			{
-				code = codepage->Convert((wchar_t)code);
-			}
-
-			// Offset tile index
-			if (code >= 0)
-			{
-				code += base;
-			}
-			else
-			{
-				code = kUnicodeReplacementCharacter;
-			}
-
-			if (combine)
-			{
-				if (x >= x0+spacing.width)
-				{
-					int composition = m_world.state.composition;
-					m_world.state.composition = TK_ON;
-					x -= spacing.width;
-					PutInternal(x, y, offset.x, offset.y, code, nullptr);
-					m_world.state.composition = composition;
-				}
-				combine = false;
-			}
-			else
-			{
-				PutInternal(x, y, offset.x, offset.y, code, nullptr);
-			}
-
-			x += spacing.width;
-			printed += 1;
-		};
-
-		const auto apply_tag = [&](const std::wstring& s, size_t begin, size_t end)
-		{
-			if (s[begin+1] == L'/')
-			{
-				// Cancel tag: [/name]
-
-				std::wstring name = s.substr(begin+2, end-(begin+2));
-
-				if (name == L"color")
-				{
-					m_world.state.color = original_color;
-				}
-				else if (name == L"bkcolor")
-				{
-					m_world.state.bkcolor = original_bkcolor;
-				}
-				else if (name == L"base")
-				{
-					base = 0;
-					codepage = nullptr;
-				}
-				else if (name == L"spacing")
-				{
-					spacing = Size{1, 1};
-				}
-				else if (name == L"offset")
-				{
-					offset = Point{0, 0};
-				}
-			}
-			else
-			{
-				// Set tag: [name] or [name=value]
-				std::wstring name, value;
-
-				size_t n_equals = s.find(L'=', begin);
-				if (n_equals == std::wstring::npos || n_equals > end-1)
-				{
-					name = s.substr(begin+1, end-(begin+1));
-				}
-				else
-				{
-					name = s.substr(begin+1, n_equals-(begin+1));
-					value = s.substr(n_equals+1, end-(n_equals+1));
-				}
-
-				if (name.length() == 0) return;
-
-				if (name == L"color")
-				{
-					m_world.state.color = Palette::Instance[value];
-				}
-				else if (name == L"bkcolor")
-				{
-					m_world.state.bkcolor = Palette::Instance[value];
-				}
-				else if (name == L"base")
-				{
-					// Optional codepage: "U+E100:1251"
-					size_t n_colon = value.find(L":");
-					if (n_colon != std::wstring::npos && n_colon > 0 && n_colon < value.length()-1)
-					{
-						std::wstring codepage_name = value.substr(n_colon+1);
-						value = value.substr(0, n_colon);
-
-						auto cached = m_codepage_cache.find(codepage_name);
-						if (cached != m_codepage_cache.end())
-						{
-							codepage = cached->second.get();
-						}
-						else
-						{
-							if (auto p = GetUnibyteEncoding(codepage_name))
-							{
-								codepage = p.get();
-								m_codepage_cache[codepage_name] = std::move(p);
-							}
-						}
-					}
-
-					if (!try_parse(value, base))
-					{
-						base = 0;
-						codepage = nullptr;
-					}
-				}
-				else if (name == L"spacing")
-				{
-					if (value.find(L"x") != std::wstring::npos)
-					{
-						if (!try_parse(value, spacing)) spacing = Size{1, 1};
-					}
-					else
-					{
-						if (!try_parse(value, spacing.width)) spacing = Size{1, 1};
-					}
-
-					if (spacing.width <= 0 || spacing.height <= 0)
-					{
-						spacing = Size{1, 1};
-					}
-				}
-				else if (name == L"offset")
-				{
-					if (!try_parse(value, offset)) offset = Point{0, 0};
-				}
-				else if (name[0] == L'+')
-				{
-					combine = true;
-				}
-				else if (name[0] == L'u' || name[0] == L'U')
-				{
-					if (name.length() > 2)
-					{
-						std::wstringstream stream;
-						stream << std::hex;
-						stream << name.substr(2);
-						uint16_t value = 0;
-						stream >> value;
-						put_and_increment(value);
-					}
-				}
-			}
-		};
-
-		for (size_t i = 0; i < s.length(); i++)
-		{
-			wchar_t c = s[i];
-
-			if (c == L'[' && m_options.output_postformatting)
-			{
-				if (i == s.length()-1) break; // Malformed postformatting tag
-
-				if (s[i+1] == L'[')
-				{
-					// Escaped '['
-					i += 1;
-					put_and_increment(s[i]);
-				}
-				else
-				{
-					// Start of a postformatting tag
-					size_t closing = s.find(L']', i);
-					if (closing == std::wstring::npos) break; // Malformed, no closing ']'
-					apply_tag(s, i, closing);
-					i = closing;
-				}
-			}
-			else if (c == L']' && m_options.output_postformatting)
-			{
-				// This MUST be an escaped ']' because regular closing postformatting ']' will be
-				// consumed while parsing that tag
-
-				if (i == s.length()-1) break; // Malformed
-
-				i += 1;
-				put_and_increment(s[i]);
-			}
-			else if (c == '\n')
-			{
-				x = x0;
-				y += spacing.height;
-			}
-			else
-			{
-				put_and_increment(c);
-			}
-		}
-
-		// Revert state
-		m_world.state.color = original_color;
-		m_world.state.bkcolor = original_bkcolor;
-
-		return printed;
-	}
-	//*/
 
 	bool Terminal::HasInputInternalUnlocked()
 	{
