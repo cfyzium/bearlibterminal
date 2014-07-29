@@ -844,7 +844,7 @@ namespace BearLibTerminal
 	int Terminal::Print(int x0, int y0, const std::wstring& str, bool measure_only)
 	{
 		uint16_t base = 0;
-		Encoding<char>* codepage = nullptr;
+		const Encoding<char>* codepage = nullptr;
 		bool combine = false;
 		Point offset = Point(0, 0);
 		Size wrap = Size(0, 0);
@@ -887,12 +887,17 @@ namespace BearLibTerminal
 
 		auto AppendSymbol = [&](wchar_t code)
 		{
+			if (code == 0)
+			{
+				return;
+			}
+
 			if (codepage)
 			{
 				code = codepage->Convert(code);
 			}
 
-			if (code >= 0)
+			if (code > 0)
 			{
 				code += base;
 			}
@@ -949,6 +954,7 @@ namespace BearLibTerminal
 
 					std::wstring name = str.substr(i, params_pos-i);
 					std::wstring params = (params_pos < closing_bracket_pos)? str.substr(params_pos+1, closing_bracket_pos-(params_pos+1)): std::wstring();
+					uint16_t arbitrary_code = 0;
 
 					std::function<void()> tag;
 
@@ -986,11 +992,35 @@ namespace BearLibTerminal
 					else if (name == L"font" || name == L"base")
 					{
 						size_t colon_pos = params.find(L':');
+						std::wstring codepage_name;
 						if (colon_pos != std::wstring::npos && colon_pos > 0 && colon_pos < params.length()-1)
 						{
-							std::wstring codepage_name = params.substr(colon_pos+1);
+							codepage_name = params.substr(colon_pos+1);
 							params = params.substr(0, colon_pos);
+						}
 
+						if (!try_parse(params, base))
+						{
+							base = 0;
+							codepage = nullptr;
+							continue;
+						}
+
+						if (codepage_name.empty())
+						{
+							// Use tileset codepage
+							auto i = m_world.tilesets.find(base);
+							if (i != m_world.tilesets.end())
+							{
+								codepage = i->second->GetCodepage();
+							}
+							else
+							{
+								codepage = nullptr;
+							}
+						}
+						else
+						{
 							auto cached = m_codepage_cache.find(codepage_name);
 							if (cached != m_codepage_cache.end())
 							{
@@ -1003,13 +1033,11 @@ namespace BearLibTerminal
 									codepage = p.get();
 									m_codepage_cache[codepage_name] = std::move(p);
 								}
+								else
+								{
+									codepage = nullptr;
+								}
 							}
-						}
-
-						if (!try_parse(params, base))
-						{
-							base = 0;
-							codepage = nullptr;
 						}
 					}
 					else if (name == L"/font" || name == L"/base")
@@ -1028,6 +1056,10 @@ namespace BearLibTerminal
 					else if (name == L"raw")
 					{
 						raw = true;
+					}
+					else if (try_parse(name, arbitrary_code))
+					{
+						AppendSymbol(arbitrary_code);
 					}
 
 					if (tag)

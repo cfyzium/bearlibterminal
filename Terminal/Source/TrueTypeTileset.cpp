@@ -318,6 +318,11 @@ namespace BearLibTerminal
 		return m_bbox_size;
 	}
 
+	const Encoding<char>* TrueTypeTileset::GetCodepage()
+	{
+		return m_codepage.get();
+	}
+
 	Tileset::Type TrueTypeTileset::GetType()
 	{
 		return Type::TrueType;
