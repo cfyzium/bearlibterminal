@@ -42,6 +42,7 @@ void TestTextAlignment()
 	{
 		terminal_clear();
 
+		// Background square
 		terminal_bkcolor("darkest gray");
 		terminal_clear_area
 		(
@@ -52,6 +53,7 @@ void TestTextAlignment()
 		);
 		terminal_bkcolor("none");
 
+		// Comment
 		terminal_printf
 		(
 			padding_sides*2,
@@ -61,6 +63,7 @@ void TestTextAlignment()
 			vertical_names[(int)vertical], horisontal_names[(int)horisontal]
 		);
 
+		// Origin
 		int x, y;
 
 		switch (horisontal)
@@ -89,6 +92,7 @@ void TestTextAlignment()
 			break;
 		}
 
+		// Wrapped text
 		terminal_printf
 		(
 			x, y,
