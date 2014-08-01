@@ -828,7 +828,7 @@ namespace BearLibTerminal
 
 	void Line::UpdateSize()
 	{
-		size = Size();
+		size = Size(0, 1);
 		for (auto& symbol: symbols)
 		{
 			if (symbol.code <= 0)
@@ -1123,13 +1123,15 @@ namespace BearLibTerminal
 					{
 						if (last_line_break == 0)
 						{
+							// If there was no line-break characters in the line, cut the word in half.
+							// Current symbol makes work overflow so it cannot be left on this line.
 							last_line_break = j - 1;
 						}
 
 						int offset = last_line_break + 1;
 						int leave = offset;
 
-						if (GetTileRelativeIndex(line.symbols[last_line_break].code) == (int)L' ')
+						if (line.symbols[last_line_break].code > 0 && GetTileRelativeIndex(line.symbols[last_line_break].code) == (int)L' ')
 						{
 							leave -= 1;
 						}
