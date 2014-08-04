@@ -13,6 +13,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+namespace { // anonymous
+
 std::vector<std::string> vocabulary =
 {
 	"ad", "adipisicing", "aliqua", "aliquip", "amet", "anim", "aute", "cillum",
@@ -36,42 +38,45 @@ std::vector<std::string> colors =
 	"gray"
 };
 
-std::vector<int> alternative_fonts =
-{
-	// ...
-};
+std::vector<int> alternative_fonts = { };
 
 static std::string GenerateRandomMessage()
 {
 	std::ostringstream ss;
 
-	// Total number of words in a message: [5..55].
-	int n_words = 5 + rand()%50;
-	for (int i=0; i<n_words; i++)
+	// Total number of sentences in a message: [1..10].
+	int n_sentences = 1 + rand()%9;
+	for (int j=0; j<n_sentences; j++)
 	{
-		// Pick up a random word from the vocabulary above.
-		std::string word = vocabulary[rand()%vocabulary.size()];
+		// Total number of words in a sentence: [5..15].
+		int n_words = 5 + rand()%10;
+		for (int i=0; i<n_words; i++)
+		{
+			// Pick up a random word from the vocabulary above.
+			std::string word = vocabulary[rand()%vocabulary.size()];
 
-		// First word in a message starts from capital letter.
-		if (i == 0) word[0] = toupper(word[0]);
+			// First word in a sentence starts from capital letter.
+			if (i == 0) word[0] = toupper(word[0]);
 
-		// 1/6 chance to be colored.
-		bool colored = (rand()%6 == 0);
+			// 1/10 chance to be randomly colored.
+			bool colored = (rand()%10 == 0);
 
-		// 1/8 chance to have another font face.
-		bool alt_font = !alternative_fonts.empty() && (rand()%8 == 0);
+			// 1/20 chance to have another font face.
+			bool alt_font = !alternative_fonts.empty() && (rand()%20 == 0);
 
-		if (colored) ss << "[color=" << colors[rand()%colors.size()] << "]";
-		if (alt_font) ss << "[font=" << alternative_fonts[rand()%alternative_fonts.size()] << "]";
+			if (colored) ss << "[color=" << colors[rand()%colors.size()] << "]";
+			if (alt_font) ss << "[font=" << alternative_fonts[rand()%alternative_fonts.size()] << "]";
 
-		ss << word;
+			ss << word;
 
-		if (alt_font) ss << "[/font]";
-		if (colored) ss << "[/color]";
+			if (alt_font) ss << "[/font]";
+			if (colored) ss << "[/color]";
 
-		if (i != n_words-1) ss << " ";
+			if (i != n_words-1) ss << " ";
+		}
+		ss << ".";
+		if (j != n_sentences-1) ss << " ";
 	}
-	ss << ".";
 
 	return ss.str();
 }
@@ -92,18 +97,27 @@ struct Message
 	int height;
 };
 
-std::vector<Message> messages;
-
 const int padding_left = 4;
 const int padding_right = 4;
 const int padding_top = 2;
 const int padding_bottom = 2;
+const int mouse_scroll_step = 2; // 2 text rows per mouse wheel step.
 
+std::vector<Message> messages;
 int frame_offset = 0;
 int frame_width = 0;
 int frame_height = 0;
 int total_messages_height = 1;
 int scrollbar_height = 0;
+bool dragging_scrollbar = false;
+int dragging_scrollbar_offset = 0;
+
+void Reset()
+{
+	messages.clear();
+	frame_offset = 0;
+	dragging_scrollbar = false;
+}
 
 int UpdateHeights()
 {
@@ -141,21 +155,24 @@ void UpdateGeometry()
 	if (total_messages_height <= frame_height) frame_offset = 0;
 }
 
+void ScrollToPixel(int py)
+{
+	py -= padding_top * terminal_state(TK_CELL_HEIGHT);
+	float factor = py / ((float)frame_height * terminal_state(TK_CELL_HEIGHT));
+	frame_offset = total_messages_height * factor;
+	frame_offset = std::max(0, std::min(total_messages_height-frame_height, frame_offset));
+}
+
+} // namespace anonymous
+
 void TestFormattedLog()
 {
-	/*
-	terminal_set("window: size=64x20, resizeable=true, minimum-size=20x8; font: ../Media/VeraMono.ttf, size=10x20");
-	terminal_set("U+E100: ../Media/VeraMoIt.ttf, size=10x20");
-	terminal_set("U+E200: ../Media/VeraMoBd.ttf, size=10x20");
-	/*/
 	terminal_set("window: resizeable=true, minimum-size=20x8; font: default");
-	//terminal_set("U+E100: ../Media/VeraMoIt.ttf, size=8x16");
-	//terminal_set("U+E200: ../Media/VeraMoBd.ttf, size=8x16");
-	//*/
-	//alternative_fonts.push_back(0xE100);
-	//alternative_fonts.push_back(0xE200);
+	terminal_set("input.precise-mouse=true");
+	terminal_set("0xE100: ../Media/Tigrex3drunes_16x16_437.PNG, spacing=2x1, transparent=auto");
+	alternative_fonts.push_back(0xE100);
 
-	//std::vector<Message> messages;
+	Reset();
 
 	const std::string prompt =
 		"Use arrow keys or mouse wheel to scroll the list up and down. "
@@ -197,7 +214,7 @@ void TestFormattedLog()
 		}
 		int delta = first_line - frame_offset;
 
-		// Drawin messages (+crop)
+		// Drawing messages (+crop)
 		terminal_layer(1);
 		for (; index < messages.size() && delta <= frame_height; index++)
 		{
@@ -213,10 +230,13 @@ void TestFormattedLog()
 		terminal_clear_area(padding_left+frame_width, padding_top, 1, frame_height);
 		terminal_bkcolor("none");
 		terminal_color("dark orange");
-		float bar_offset = (frame_height-scrollbar_height) * (frame_offset / (float)(total_messages_height - frame_height));
+		int scrollbar_column = padding_left+frame_width;
+		int scrollbar_offset =
+			(padding_top + (frame_height-scrollbar_height) * (frame_offset / (float)(total_messages_height - frame_height))) *
+			terminal_state(TK_CELL_HEIGHT);
 		for (int i = 0; i < scrollbar_height; i++)
 		{
-			terminal_put_ext(padding_left+frame_width, padding_top+i, 0, bar_offset*16, 0x2588, 0);
+			terminal_put_ext(scrollbar_column, i, 0, scrollbar_offset, 0x2588, 0);
 		}
 
 		// Render
@@ -230,26 +250,53 @@ void TestFormattedLog()
 				proceed = false;
 				break;
 			}
-			else if (key == TK_UP || (key == TK_MOUSE_SCROLL && terminal_state(TK_MOUSE_WHEEL) < 0))
+			else if (key == TK_UP)
 			{
-				if (frame_offset > 0) frame_offset -= 1;
+				frame_offset = std::max(0, frame_offset-1);
 			}
-			else if (key == TK_DOWN || (key == TK_MOUSE_SCROLL && terminal_state(TK_MOUSE_WHEEL) > 0))
+			else if (key == TK_DOWN)
 			{
-				if (frame_offset < total_messages_height-frame_height) frame_offset += 1;
+				frame_offset = std::min(total_messages_height-frame_height, frame_offset+1);
+			}
+			else if (key == TK_MOUSE_SCROLL)
+			{
+				// Mouse wheel scroll
+				frame_offset += mouse_scroll_step * terminal_state(TK_MOUSE_WHEEL);
+				frame_offset = std::max(0, std::min(total_messages_height-frame_height, frame_offset));
+			}
+			else if (key == TK_MOUSE_LEFT && terminal_state(TK_MOUSE_X) == scrollbar_column)
+			{
+				int py = terminal_state(TK_MOUSE_PIXEL_Y);
+				if (py >= scrollbar_offset && py <= scrollbar_offset + (scrollbar_height * terminal_state(TK_CELL_HEIGHT)))
+				{
+					// Clicked on the scrollbar handle: start dragging
+					dragging_scrollbar = true;
+					dragging_scrollbar_offset = py - scrollbar_offset;
+				}
+				else
+				{
+					// Clicked outside of the handle: jump to position
+					ScrollToPixel(terminal_state(TK_MOUSE_PIXEL_Y) - scrollbar_height * terminal_state(TK_CELL_HEIGHT) / 2);
+				}
+			}
+			else if (key == (TK_MOUSE_LEFT|TK_KEY_RELEASED))
+			{
+				dragging_scrollbar = false;
+			}
+			else if (key == TK_MOUSE_MOVE && dragging_scrollbar)
+			{
+				ScrollToPixel(terminal_state(TK_MOUSE_PIXEL_Y) - dragging_scrollbar_offset);
 			}
 			else if (key == TK_RESIZED)
 			{
-				UpdateGeometry();//messages);
+				UpdateGeometry();
 				break;
 			}
 		}
 		while (terminal_has_input());
 	}
 
-	/*
-	terminal_set("window: size=80x25, resizeable=false; font: default; U+E100: none; U+E200: none; U+E300: none");
-	/*/
-	terminal_set("window: size=80x25, resizeable=false; font: default; U+E100: none; U+E200: none; U+E300: none");
-	//*/
+	terminal_set("window: resizeable=false");
+	terminal_set("U+E100: none; U+E200: none; U+E300: none");
+	terminal_set("input.precise-mouse=false;");
 }

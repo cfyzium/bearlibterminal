@@ -1179,9 +1179,9 @@ namespace BearLibTerminal
 				cutoff_bottom = y0;
 				break;
 			case Alignment::Center:
-				y = y0 - (int)std::floor((total_height-1)/2.0f);
-				cutoff_top = y0 - (int)std::floor((wrap.height-1)/2.0f);
-				cutoff_bottom = y0 + wrap.height;
+				y = y0 - (int)std::ceil((total_height-1)/2.0f); // NOTE: floor for lower-or-equal origin
+				cutoff_top = y0 - (int)std::ceil((wrap.height-1)/2.0f);
+				cutoff_bottom = cutoff_top + wrap.height-1;
 				break;
 			default: // Top
 				y = y0;
@@ -1192,7 +1192,7 @@ namespace BearLibTerminal
 
 			for (auto& line: lines)
 			{
-				int line_bottom = y + line.size.height;
+				int line_bottom = y + (line.size.height - 1);
 
 				if (wrap.height == 0 || (y >= cutoff_top && y <= cutoff_bottom) || (line_bottom >= cutoff_top && line_bottom <= cutoff_bottom))
 				{
@@ -1202,7 +1202,7 @@ namespace BearLibTerminal
 						x = x0 - (line.size.width - 1);
 						break;
 					case Alignment::Center:
-						x = x0 - (int)std::floor(line.size.width/2.0f);
+						x = x0 - (int)std::ceil((line.size.width-1)/2.0f); // NOTE: floor for lower-or-equal origin
 						break;
 					default: // Left
 						x = x0;
