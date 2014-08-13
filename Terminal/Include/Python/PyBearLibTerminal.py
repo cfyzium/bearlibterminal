@@ -1,5 +1,27 @@
-import ctypes, sys
-from numbers import Number
+#
+# BearLibTerminal
+# Copyright (C) 2013-2014 Cfyz
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+# of the Software, and to permit persons to whom the Software is furnished to do
+# so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+# FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+# COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+# IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+# CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+#
+# Release date: 2014-08-13
+
+import sys, ctypes, numbers
 
 _version3 = sys.version_info >= (3, 0)
  
@@ -73,13 +95,13 @@ clear_area = _library.terminal_clear_area
 layer = _library.terminal_layer
 
 def color(v):
-	if isinstance(v, Number):
+	if isinstance(v, numbers.Number):
 		_library.terminal_color(v)
 	else:
 		_library.terminal_color(color_from_name(v))
 
 def bkcolor(v):
-	if isinstance(v, Number):
+	if isinstance(v, numbers.Number):
 		_library.terminal_bkcolor(v)
 	else:
 		_library.terminal_bkcolor(color_from_name(v))
@@ -87,12 +109,12 @@ def bkcolor(v):
 composition = _library.terminal_composition
 
 def put(x, y, c):
-	if not isinstance(c, Number):
+	if not isinstance(c, numbers.Number):
 		c = ord(c)
 	_library.terminal_put(x, y, c)
 
 def put_ext(x, y, dx, dy, c, corners=None):
-	if not isinstance(c, Number):
+	if not isinstance(c, numbers.Number):
 		c = ord(c)
 	if corners is None:
 		_library.terminal_put_ext(x, y, dx, dy, c, None)
