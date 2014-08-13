@@ -170,7 +170,11 @@ void TestFormattedLog()
 	terminal_set("window: resizeable=true, minimum-size=20x8; font: default");
 	terminal_set("input.precise-mouse=true");
 	terminal_set("0xE100: ../Media/Tigrex3drunes_16x16_437.PNG, spacing=2x1, transparent=auto");
+	terminal_set("0xE200: ../Media/Aesomatica_16x16_437.png, spacing=2x1, transparent=#FF00FF");
+	terminal_set("0xE300: ../Media/Cheepicus_16x16_437.png, spacing=2x1, transparent=auto");
 	alternative_fonts.push_back(0xE100);
+	alternative_fonts.push_back(0xE200);
+	alternative_fonts.push_back(0xE300);
 
 	Reset();
 

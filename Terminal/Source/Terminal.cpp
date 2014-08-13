@@ -841,7 +841,7 @@ namespace BearLibTerminal
 		}
 	}
 
-	int Terminal::Print(int x0, int y0, const std::wstring& str, bool measure_only)
+	int Terminal::Print(int x0, int y0, const std::wstring& str, bool raw, bool measure_only)
 	{
 		uint16_t base = 0;
 		const Encoding<char>* codepage = nullptr;
@@ -849,7 +849,6 @@ namespace BearLibTerminal
 		Point offset = Point(0, 0);
 		Size wrap = Size(0, 0);
 		Alignment alignment;
-		bool raw = false;
 		Color original_fore = m_world.state.color;
 		Color original_back = m_world.state.bkcolor;
 
@@ -1335,7 +1334,7 @@ namespace BearLibTerminal
 
 		auto put_buffer = [&](bool put_cursor)
 		{
-			Print(x, y, buffer);
+			Print(x, y, buffer, true, false);
 			if (put_cursor && cursor < max) Put(x+cursor, y, m_options.input_cursor_symbol);
 		};
 
