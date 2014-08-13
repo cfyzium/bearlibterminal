@@ -25,6 +25,7 @@
 
 #include "Atlas.hpp"
 #include "OptionGroup.hpp"
+#include "Encoding.hpp"
 #include <unordered_map>
 #include <stdexcept>
 #include <string>
@@ -49,6 +50,8 @@ namespace BearLibTerminal
 		virtual bool Save() = 0;
 		virtual void Remove() = 0;
 		virtual Size GetBoundingBoxSize() = 0;
+		virtual Size GetSpacing() = 0;
+		virtual const Encoding<char>* GetCodepage() = 0;
 		virtual Type GetType() = 0;
 		virtual void Reload(Tileset&& tileset) = 0;
 		virtual bool Provides(uint16_t code) = 0;

@@ -293,6 +293,14 @@ namespace BearLib
         {
             return Print(x, y, string.Format(text, args));
         }
+        
+        [DllImport("BearLibTerminal.dll", CharSet = CharSet.Unicode, EntryPoint = "terminal_measure16", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int Measure(string text);
+
+        public static int Measure(string text, params object[] args)
+        {
+            return Measure(string.Format(text, args));
+        }
 
         [DllImport("BearLibTerminal.dll", EntryPoint = "terminal_has_input", CallingConvention = CallingConvention.Cdecl)]
         public static extern bool HasInput();

@@ -11,6 +11,7 @@
 namespace BearLibTerminal
 {
 	Options::Options():
+		terminal_encoding_affects_put(true),
 		window_size(0, 0),
 		window_cellsize(0, 0),
 		window_title(L"BearLibTerminal"),

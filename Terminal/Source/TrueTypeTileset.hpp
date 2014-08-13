@@ -26,6 +26,8 @@ namespace BearLibTerminal
 		bool Save();
 		void Reload(TrueTypeTileset&& tileset);
 		Size GetBoundingBoxSize();
+		Size GetSpacing();
+		const Encoding<char>* GetCodepage();
 		Type GetType();
 		bool Provides(uint16_t code);
 		void Prepare(uint16_t code);

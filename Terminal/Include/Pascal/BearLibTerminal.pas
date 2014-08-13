@@ -249,15 +249,26 @@ procedure terminal_put_ext(X, Y, dX, dY: Integer; Code: Integer);
 procedure terminal_put_ext(X, Y, dX, dY: Integer; Code: UnicodeChar);
 
 // Print
-function terminal_print(X, Y: Integer; const s: PChar): Cardinal;
+function terminal_print(X, Y: Integer; const S: PChar): Cardinal;
   cdecl; external 'BearLibTerminal' name 'terminal_print8';
 
 function terminal_print(X, Y: Integer; const S: string): Cardinal;
 
-function terminal_print(X, Y: Integer; const s: PUnicodeChar): Cardinal;
+function terminal_print(X, Y: Integer; const S: PUnicodeChar): Cardinal;
   cdecl; external 'BearLibTerminal' name 'terminal_print16';
 
 function terminal_print(X, Y: Integer; const S: UnicodeString): Cardinal;
+
+// Measure
+function terminal_measure(const S: PChar): Cardinal;
+  cdecl; external 'BearLibTerminal' name 'terminal_measure8';
+
+function terminal_measure(const S: string): Cardinal;
+
+function terminal_measure(const S: PUnicodeChar): Cardinal;
+  cdecl; extrnal 'BearLibTerminal' name 'terminal_measure16';
+
+function terminal_measure(const S: UnicodeString): Cardinal;
 
 // HasInput
 function terminal_has_input(): LongBool;
@@ -347,6 +358,16 @@ end;
 function terminal_print(X, Y: Integer; const S: UnicodeString): Cardinal;
 begin
 	terminal_print := terminal_print(X, Y, PUnicodeChar(S));
+end;
+
+function terminal_measure(const S: string): Cardinal;
+begin
+    terminal_measure := terminal_measure(PChar(S));
+end;
+
+function terminal_measure(const S: UnicodeString): Cardinal;
+begin
+	terminal_measure := terminal_measure(PUnicodeChar(S));
 end;
 
 function terminal_check(Code: Integer): Boolean;

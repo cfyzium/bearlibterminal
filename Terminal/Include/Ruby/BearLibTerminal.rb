@@ -73,6 +73,7 @@ module Terminal
 	Put = Fiddle::Function.new(Lib['terminal_put'], [Fiddle::TYPE_INT, Fiddle::TYPE_INT, Fiddle::TYPE_INT], Fiddle::TYPE_VOID)
 	PutExt = Fiddle::Function.new(Lib['terminal_put_ext'], [Fiddle::TYPE_INT, Fiddle::TYPE_INT, Fiddle::TYPE_INT, Fiddle::TYPE_INT, Fiddle::TYPE_INT, Fiddle::TYPE_VOIDP], Fiddle::TYPE_VOID)
 	Print = Fiddle::Function.new(Lib['terminal_print8'], [Fiddle::TYPE_INT, Fiddle::TYPE_INT, Fiddle::TYPE_VOIDP], Fiddle::TYPE_INT)
+	Measure = Fiddle::Function.new(Lib['terminal_measure8'], [Fiddle::TYPE_VOIDP], Fiddle::TYPE_INT)
 	HasInput = Fiddle::Function.new(Lib['terminal_has_input'], [], Fiddle::TYPE_INT)
 	State = Fiddle::Function.new(Lib['terminal_state'], [Fiddle::TYPE_INT], Fiddle::TYPE_INT)
 	Read = Fiddle::Function.new(Lib['terminal_read'], [], Fiddle::TYPE_INT)
@@ -105,6 +106,7 @@ module Terminal
 		end
 	end
 	def self.print x, y, s; return Print.call x, y, Ptr[s]; end
+	def self.measure s; return Measure.call Ptr[s]; end
 	def self.has_input?; return HasInput.call == 1; end
 	def self.state code; return State.call code; end
 	def self.check? code; return state(code) > 0; end

@@ -325,6 +325,16 @@ namespace BearLibTerminal
 		return m_tile_size;
 	}
 
+	Size DynamicTileset::GetSpacing()
+	{
+		return Size(1, 1);
+	}
+
+	const Encoding<char>* DynamicTileset::GetCodepage()
+	{
+		return nullptr;
+	}
+
 	Tileset::Type DynamicTileset::GetType()
 	{
 		return Type::Dynamic;

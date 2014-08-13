@@ -121,6 +121,11 @@ namespace BearLibTerminal
 			throw std::runtime_error("BitmapTileset: failed to parse 'bbox' attribute");
 		}
 
+		if (group.attributes.count(L"spacing") && !try_parse(group.attributes[L"spacing"], m_bbox_size))
+		{
+			throw std::runtime_error("BitmapTileset: failed to parse 'spacing' attribute");
+		}
+
 		if (group.attributes.count(L"align") && !try_parse(group.attributes[L"align"], m_alignment))
 		{
 			throw std::runtime_error("BitmapTileset: failed to parse 'alignment' attribute");
@@ -272,6 +277,16 @@ namespace BearLibTerminal
 		return m_tile_size;
 	}
 
+	Size BitmapTileset::GetSpacing()
+	{
+		return m_bbox_size;
+	}
+
+	const Encoding<char>* BitmapTileset::GetCodepage()
+	{
+		return m_codepage.get();
+	}
+
 	Tileset::Type BitmapTileset::GetType()
 	{
 		return Type::Bitmap;
@@ -279,7 +294,9 @@ namespace BearLibTerminal
 
 	bool BitmapTileset::Provides(uint16_t code)
 	{
-		int index = m_codepage->Convert((wchar_t)(code - m_base_code)); // FIXME: negative
+		if (code < m_base_code) return false;
+		int index = code - m_base_code;
+		if (m_base_code == 0) index = m_codepage->Convert((wchar_t)index);
 		return (index >= 0 && index <= m_grid_size.Area());
 	}
 
@@ -294,7 +311,10 @@ namespace BearLibTerminal
 				offset = Point(-m_tile_size.width/2, -m_tile_size.height/2);
 			}
 
-			int index = m_codepage->Convert((wchar_t)(code-m_base_code));
+			if (code < m_base_code) return;
+			int index = code - m_base_code;
+			if (m_base_code == 0) index = m_codepage->Convert((wchar_t)index);
+
 			int column = index % m_grid_size.width;
 			int row = (index-column) / m_grid_size.width;
 

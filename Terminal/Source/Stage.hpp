@@ -41,6 +41,7 @@ namespace BearLibTerminal
 	{
 		Layer(Size size);
 		std::vector<Cell> cells;
+		Rectangle crop;
 	};
 
 	struct Scene
