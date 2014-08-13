@@ -340,6 +340,11 @@ namespace BearLibTerminal
 		{
 			options.terminal_encoding = group.attributes[L"encoding"];
 		}
+
+		if (group.attributes.count(L"encoding-affects-put"))
+		{
+			try_parse<bool>(group.attributes[L"encoding-affects-put"], options.terminal_encoding_affects_put);
+		}
 	}
 
 	void Terminal::ValidateWindowOptions(OptionGroup& group, Options& options)
@@ -679,6 +684,11 @@ namespace BearLibTerminal
 	void Terminal::PutInternal(int x, int y, int dx, int dy, wchar_t code, Color* colors)
 	{
 		if (x < 0 || y < 0 || x >= m_world.stage.size.width || y >= m_world.stage.size.height) return;
+
+		if (m_options.terminal_encoding_affects_put)
+		{
+			code = m_encoding->Convert(code);
+		}
 
 		uint16_t u16code = (uint16_t)code;
 		if (m_world.tiles.slots.find(u16code) == m_world.tiles.slots.end())

@@ -19,6 +19,7 @@ namespace BearLibTerminal
 	{
 		// Terminal
 		std::wstring terminal_encoding;
+		bool terminal_encoding_affects_put;
 
 		// Window
 		Size window_size;
