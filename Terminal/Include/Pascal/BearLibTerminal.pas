@@ -19,7 +19,7 @@
 * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *
-* Release date: 2014-07-04
+* Release date: 2014-08-13
 *}
 
 {$H+}
@@ -207,6 +207,10 @@ procedure terminal_clear();
 // ClearArea
 procedure terminal_clear_area(Left, Top, Width, Height: Integer);
   cdecl; external 'BearLibTerminal' name 'terminal_clear_area';
+
+// Crop
+procedure terminal_crop(Left, Top, Width, Height: Integer);
+  cdecl; external 'BearLibTerminal' name 'terminal_crop';
 
 // Color
 procedure terminal_color(Color: Color);

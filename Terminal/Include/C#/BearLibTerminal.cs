@@ -19,7 +19,7 @@
 * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *
-* Release date: 2014-07-04
+* Release date: 2014-08-13
 */
 
 using System;
@@ -220,6 +220,9 @@ namespace BearLib
 
         [DllImport("BearLibTerminal.dll", EntryPoint = "terminal_clear_area", CallingConvention = CallingConvention.Cdecl)]
         public static extern void ClearArea(int x, int y, int w, int h);
+        
+        [DllImport("BearLibTerminal.dll", EntryPoint = "terminal_crop", CallingConvention = CallingConvention.Cdecl)]
+        public static extern void Crop(int x, int y, int w, int h);
 
         [DllImport("BearLibTerminal.dll", EntryPoint = "terminal_color", CallingConvention = CallingConvention.Cdecl)]
         private static extern void ColorImpl(int argb);

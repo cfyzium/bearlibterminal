@@ -92,6 +92,8 @@ clear = _library.terminal_clear
 
 clear_area = _library.terminal_clear_area
 
+crop = _library.terminal_crop
+
 layer = _library.terminal_layer
 
 def color(v):

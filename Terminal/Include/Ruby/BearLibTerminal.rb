@@ -19,7 +19,7 @@
 # IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #
-# Release date: 2014-07-04
+# Release date: 2014-08-13
 
 require 'fiddle'
 require 'rbconfig'
@@ -66,6 +66,7 @@ module Terminal
 	Refresh = Fiddle::Function.new(Lib['terminal_refresh'], [], Fiddle::TYPE_VOID)
 	Clear = Fiddle::Function.new(Lib['terminal_clear'], [], Fiddle::TYPE_VOID)
 	ClearArea = Fiddle::Function.new(Lib['terminal_clear_area'], [Fiddle::TYPE_INT, Fiddle::TYPE_INT, Fiddle::TYPE_INT, Fiddle::TYPE_INT], Fiddle::TYPE_VOID)
+	Crop = Fiddle::Function.new(Lib['terminal_crop'], [Fiddle::TYPE_INT, Fiddle::TYPE_INT, Fiddle::TYPE_INT, Fiddle::TYPE_INT], Fiddle::TYPE_VOID)
 	Layer = Fiddle::Function.new(Lib['terminal_layer'], [Fiddle::TYPE_INT], Fiddle::TYPE_VOID)
 	Color = Fiddle::Function.new(Lib['terminal_color'], [-Fiddle::TYPE_INT], Fiddle::TYPE_VOID)
 	BkColor = Fiddle::Function.new(Lib['terminal_bkcolor'], [-Fiddle::TYPE_INT], Fiddle::TYPE_VOID)
@@ -87,6 +88,7 @@ module Terminal
 	def self.refresh; Refresh.call; end
 	def self.clear; Clear.call; end
 	def self.clear_area x, y, w, h; ClearArea.call x, y, w, h; end
+	def self.crop x, y, w, h; Crop.call x, y, w, h; end
 	def self.layer index; Layer.call index; end
 	def self.color value
 		Color.call (value.is_a? String)? (ColorFromName.call Ptr[value]): value

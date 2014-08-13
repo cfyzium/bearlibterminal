@@ -451,6 +451,7 @@ int luaterminal_check(lua_State* L)
 int luaterminal_read(lua_State* L)
 {
 	int code = terminal_read();
+	/*
 	int released = (code & TK_KEY_RELEASED) > 0;
 	code = code & 0xFF;
 
@@ -458,6 +459,10 @@ int luaterminal_read(lua_State* L)
 	lua_pushboolean(L, released);
 
 	return 2;
+	/*/
+	lua_pushnumber(L, code);
+	return 1;
+	//*/
 }
 
 int luaterminal_read_str(lua_State* L)
