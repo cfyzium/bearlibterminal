@@ -740,21 +740,21 @@ namespace BearLibTerminal
 		}
 	}
 
-	void Terminal::Put(int x, int y, wchar_t code)
+	void Terminal::Put(int x, int y, int code)
 	{
 		if (m_options.terminal_encoding_affects_put)
 		{
-			code = m_encoding->Convert((int)code);
+			code = m_encoding->Convert(code);
 		}
 
 		PutInternal(x, y, 0, 0, code, nullptr);
 	}
 
-	void Terminal::PutExtended(int x, int y, int dx, int dy, wchar_t code, Color* corners)
+	void Terminal::PutExtended(int x, int y, int dx, int dy, int code, Color* corners)
 	{
 		if (m_options.terminal_encoding_affects_put)
 		{
-			code = m_encoding->Convert((int)code);
+			code = m_encoding->Convert(code);
 		}
 
 		PutInternal(x, y, dx, dy, code, corners);

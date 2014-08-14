@@ -51,8 +51,8 @@ namespace BearLibTerminal
 		void SetForeColor(Color color);
 		void SetBackColor(Color color);
 		void SetComposition(int mode);
-		void Put(int x, int y, wchar_t code);
-		void PutExtended(int x, int y, int dx, int dy, wchar_t code, Color* corners);
+		void Put(int x, int y, int code);
+		void PutExtended(int x, int y, int dx, int dy, int code, Color* corners);
 		int Print(int x, int y, const std::wstring& str, bool raw, bool measure_only);
 		int HasInput();
 		int GetState(int code);

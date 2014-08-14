@@ -145,7 +145,7 @@ namespace BearLibTerminal
 		for (size_t i=0; i<value.length(); i++)
 		{
 			auto c = value[i];
-			auto j = m_forward.find(c < 0? (int)((unsigned char)c): c);
+			auto j = m_forward.find(c < 0? (int)((unsigned char)c): (int)c);
 			result[i] = (j == m_forward.end())? kUnicodeReplacementCharacter: (wchar_t)j->second;
 		}
 		return result;
