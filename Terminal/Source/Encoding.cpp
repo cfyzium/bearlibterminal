@@ -129,7 +129,7 @@ namespace BearLibTerminal
 
 	wchar_t CustomCodepage::Convert(int value) const
 	{
-		auto i = m_forward.find((unsigned char)value);
+		auto i = m_forward.find(value < 0? (int)((unsigned char)value): value);
 		return (i == m_forward.end())? kUnicodeReplacementCharacter: i->second;
 	}
 
@@ -144,7 +144,8 @@ namespace BearLibTerminal
 		std::wstring result(value.length(), 0);
 		for (size_t i=0; i<value.length(); i++)
 		{
-			auto j = m_forward.find((unsigned char)value[i]);
+			auto c = value[i];
+			auto j = m_forward.find(c < 0? (int)((unsigned char)c): c);
 			result[i] = (j == m_forward.end())? kUnicodeReplacementCharacter: (wchar_t)j->second;
 		}
 		return result;
