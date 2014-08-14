@@ -685,11 +685,6 @@ namespace BearLibTerminal
 	{
 		if (x < 0 || y < 0 || x >= m_world.stage.size.width || y >= m_world.stage.size.height) return;
 
-		if (m_options.terminal_encoding_affects_put)
-		{
-			code = m_encoding->Convert(code);
-		}
-
 		uint16_t u16code = (uint16_t)code;
 		if (m_world.tiles.slots.find(u16code) == m_world.tiles.slots.end())
 		{
@@ -747,11 +742,21 @@ namespace BearLibTerminal
 
 	void Terminal::Put(int x, int y, wchar_t code)
 	{
+		if (m_options.terminal_encoding_affects_put)
+		{
+			code = m_encoding->Convert((int)code);
+		}
+
 		PutInternal(x, y, 0, 0, code, nullptr);
 	}
 
 	void Terminal::PutExtended(int x, int y, int dx, int dy, wchar_t code, Color* corners)
 	{
+		if (m_options.terminal_encoding_affects_put)
+		{
+			code = m_encoding->Convert((int)code);
+		}
+
 		PutInternal(x, y, dx, dy, code, corners);
 	}
 
