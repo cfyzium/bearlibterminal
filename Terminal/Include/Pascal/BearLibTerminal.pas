@@ -270,7 +270,7 @@ function terminal_measure(const S: PChar): Cardinal;
 function terminal_measure(const S: string): Cardinal;
 
 function terminal_measure(const S: PUnicodeChar): Cardinal;
-  cdecl; extrnal 'BearLibTerminal' name 'terminal_measure16';
+  cdecl; external 'BearLibTerminal' name 'terminal_measure16';
 
 function terminal_measure(const S: UnicodeString): Cardinal;
 
