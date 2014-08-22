@@ -177,6 +177,10 @@ type
   Color = CUInt32;
   PColor = ^Color;
 
+// ----------------------------------------------------------------------------
+// Module interface
+// ----------------------------------------------------------------------------
+
 // Open
 function terminal_open(): LongBool;
   cdecl; external 'BearLibTerminal' name 'terminal_open';
@@ -186,13 +190,7 @@ procedure terminal_close();
   cdecl; external 'BearLibTerminal' name 'terminal_close';
 
 // Set
-function terminal_set(const Options: PChar): LongBool;
-  cdecl; external 'BearLibTerminal' name 'terminal_set8';
-
 function terminal_set(const Options: String): LongBool;
-
-function terminal_set(const Options: PUnicodeChar): LongBool;
-  cdecl; external 'BearLibTerminal' name 'terminal_set16';
 
 function terminal_set(const Options: UnicodeString): LongBool;
 
@@ -253,24 +251,12 @@ procedure terminal_put_ext(X, Y, dX, dY: Integer; Code: Integer);
 procedure terminal_put_ext(X, Y, dX, dY: Integer; Code: UnicodeChar);
 
 // Print
-function terminal_print(X, Y: Integer; const S: PChar): Cardinal;
-  cdecl; external 'BearLibTerminal' name 'terminal_print8';
-
-function terminal_print(X, Y: Integer; const S: string): Cardinal;
-
-function terminal_print(X, Y: Integer; const S: PUnicodeChar): Cardinal;
-  cdecl; external 'BearLibTerminal' name 'terminal_print16';
+function terminal_print(X, Y: Integer; const S: String): Cardinal;
 
 function terminal_print(X, Y: Integer; const S: UnicodeString): Cardinal;
 
 // Measure
-function terminal_measure(const S: PChar): Cardinal;
-  cdecl; external 'BearLibTerminal' name 'terminal_measure8';
-
-function terminal_measure(const S: string): Cardinal;
-
-function terminal_measure(const S: PUnicodeChar): Cardinal;
-  cdecl; external 'BearLibTerminal' name 'terminal_measure16';
+function terminal_measure(const S: String): Cardinal;
 
 function terminal_measure(const S: UnicodeString): Cardinal;
 
@@ -281,7 +267,8 @@ function terminal_has_input(): LongBool;
 // State
 function terminal_state(Code: Integer): Integer;
   cdecl; external 'BearLibTerminal' name 'terminal_state';
-  
+
+// Check
 function terminal_check(Code: Integer): Boolean;
 
 // Read
@@ -289,29 +276,33 @@ function terminal_read(): Integer;
   cdecl; external 'BearLibTerminal' name 'terminal_read';
 
 // ColorFromName
-function color_from_name(const Name: PChar): Color;
-  cdecl; external 'BearLibTerminal' name 'color_from_name8';
-
 function color_from_name(const Name: String): Color;
-
-function color_from_name(const Name: PUnicodeChar): Color;
-  cdecl; external 'BearLibTerminal' name 'color_from_name16';
 
 function color_from_name(const Name: UnicodeString): Color;
 
 // ColorFromARGB
 function color_from_argb(a, r, g, b: Integer): Color;
 
+// ----------------------------------------------------------------------------
+// Module implementation
+// ----------------------------------------------------------------------------
+
 implementation
+
+function terminal_set_ansi(const Options: PChar): LongBool;
+  cdecl; external 'BearLibTerminal' name 'terminal_set8';
 
 function terminal_set(const Options: String): LongBool;
 begin
-    terminal_set := terminal_set(PChar(Options));
+    terminal_set := terminal_set_ansi(PChar(Options));
 end;
+
+function terminal_set_unicode(const Options: PUnicodeChar): LongBool;
+  cdecl; external 'BearLibTerminal' name 'terminal_set16';
 
 function terminal_set(const Options: UnicodeString): LongBool;
 begin
-    terminal_set := terminal_set(PUnicodeChar(Options));
+    terminal_set := terminal_set_unicode(PUnicodeChar(Options));
 end;
 
 procedure terminal_color(Color: String);
@@ -354,24 +345,36 @@ begin
 	terminal_put_ext(X, Y, dX, dY, ord(Code), PColor(0));
 end;
 
-function terminal_print(X, Y: Integer; const S: string): Cardinal;
+function terminal_print_ansi(X, Y: Integer; const S: PChar): Cardinal;
+  cdecl; external 'BearLibTerminal' name 'terminal_print8';
+
+function terminal_print(X, Y: Integer; const S: String): Cardinal;
 begin
-    terminal_print := terminal_print(X, Y, PChar(S));
+    terminal_print := terminal_print_ansi(X, Y, PChar(S));
 end;
+
+function terminal_print_unicode(X, Y: Integer; const S: PUnicodeChar): Cardinal;
+  cdecl; external 'BearLibTerminal' name 'terminal_print16';
 
 function terminal_print(X, Y: Integer; const S: UnicodeString): Cardinal;
 begin
-	terminal_print := terminal_print(X, Y, PUnicodeChar(S));
+	terminal_print := terminal_print_unicode(X, Y, PUnicodeChar(S));
 end;
 
-function terminal_measure(const S: string): Cardinal;
+function terminal_measure_ansi(const S: PChar): Cardinal;
+  cdecl; external 'BearLibTerminal' name 'terminal_measure8';
+
+function terminal_measure(const S: String): Cardinal;
 begin
-    terminal_measure := terminal_measure(PChar(S));
+    terminal_measure := terminal_measure_ansi(PChar(S));
 end;
+
+function terminal_measure_unicode(const S: PUnicodeChar): Cardinal;
+  cdecl; external 'BearLibTerminal' name 'terminal_measure16';
 
 function terminal_measure(const S: UnicodeString): Cardinal;
 begin
-	terminal_measure := terminal_measure(PUnicodeChar(S));
+	terminal_measure := terminal_measure_unicode(PUnicodeChar(S));
 end;
 
 function terminal_check(Code: Integer): Boolean;
@@ -379,14 +382,20 @@ begin
 	terminal_check := terminal_state(Code) > 0;
 end;
 
-function color_from_name(const Name: string): Color;
+function color_from_name_ansi(const Name: PChar): Color;
+  cdecl; external 'BearLibTerminal' name 'color_from_name8';
+
+function color_from_name(const Name: String): Color;
 begin
-    color_from_name := color_from_name(PChar(Name));
+    color_from_name := color_from_name_ansi(PChar(Name));
 end;
+
+function color_from_name_unicode(const Name: PUnicodeChar): Color;
+  cdecl; external 'BearLibTerminal' name 'color_from_name16';
 
 function color_from_name(const Name: UnicodeString): Color;
 begin
-    color_from_name := color_from_name(PUnicodeChar(Name));
+    color_from_name := color_from_name_unicode(PUnicodeChar(Name));
 end;
 
 function color_from_argb(a, r, g, b: Integer): Color;
