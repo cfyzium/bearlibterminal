@@ -91,10 +91,14 @@ module Terminal
 	def self.crop x, y, w, h; Crop.call x, y, w, h; end
 	def self.layer index; Layer.call index; end
 	def self.color value
-		Color.call (value.is_a? String)? (ColorFromName.call Ptr[value]): value
+		v = (value.is_a? String)? (ColorFromName.call Ptr[value]): value
+		if v > 2**31-1 then v -= 2**32 end
+		Color.call v
 	end
 	def self.bkcolor value
-		BkColor.call (value.is_a? String)? (ColorFromName.call Ptr[value]): value
+		v = (value.is_a? String)? (ColorFromName.call Ptr[value]): value
+		if v > 2**31-1 then v -= 2**32 end
+		BkColor.call v
 	end
 	def self.composition mode; Composition.call mode; end
 	def self.put x, y, code; Put.call x, y, code; end
