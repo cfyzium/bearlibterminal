@@ -29,6 +29,7 @@
 #include "Options.hpp"
 #include "Encoding.hpp"
 #include "OptionGroup.hpp"
+#include "Log.hpp"
 #include <mutex>
 #include <deque>
 #include <atomic>
@@ -84,6 +85,7 @@ namespace BearLibTerminal
 		enum state_t {kHidden, kVisible, kClosed} m_state;
 		mutable std::mutex m_lock;
 		mutable std::mutex m_input_lock;
+		std::unique_ptr<Log> m_log; // FIXME: dependency hack
 		std::unique_ptr<Window> m_window;
 		std::deque<Event> m_input_queue;
 		std::condition_variable m_input_condvar;

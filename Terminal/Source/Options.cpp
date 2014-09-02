@@ -28,8 +28,8 @@ namespace BearLibTerminal
 		input_cursor_symbol((uint16_t)'_'),
 		input_cursor_blink_rate(500),
 		input_mouse_cursor(true),
-		log_filename(g_logger->GetFile()),
-		log_level(g_logger->GetLevel()),
-		log_mode(g_logger->GetMode())
+		log_filename(L"bearlibterminal.log"), // FIXME: dependency failure
+		log_level(Log::Level::Error),
+		log_mode(Log::Mode::Truncate)
 	{ }
 }

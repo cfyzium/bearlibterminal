@@ -59,7 +59,7 @@ namespace BearLibTerminal
 	std::wostream& operator<< (std::wostream& stream, const Log::Mode& value);
 	std::wistream& operator>> (std::wistream& stream, Log::Mode& mode);
 
-	extern std::unique_ptr<Log> g_logger;
+	extern Log* g_logger; // FIXME: dependency hack
 }
 
 #define LOG(level, what)\

@@ -69,12 +69,12 @@ namespace BearLibTerminal
 #if defined(_MSC_VER)
 			result.reset(new std::ifstream(name, std::ios_base::in|std::ios_base::binary));
 #else
-			std::string name_u8 = UTF8->Convert(name);
+			std::string name_u8 = UTF8Encoding().Convert(name);
 			result.reset(new std::ifstream(name_u8, std::ios_base::in|std::ios_base::binary));
 #endif
 			if (result->fail())
 			{
-				throw std::runtime_error("resource \"" + UTF8->Convert(name) + "\" cannot be opened");
+				throw std::runtime_error("resource \"" + UTF8Encoding().Convert(name) + "\" cannot be opened");
 				result.reset();
 			}
 			return result;

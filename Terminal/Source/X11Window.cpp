@@ -316,7 +316,7 @@ namespace BearLibTerminal
 	{
 		std::lock_guard<std::mutex> guard(m_lock);
 		if ( m_private->window == 0 ) return;
-		std::string u8 = UTF8->Convert(title);
+		std::string u8 = UTF8Encoding().Convert(title);
 		XChangeProperty
 		(
 			m_private->display,

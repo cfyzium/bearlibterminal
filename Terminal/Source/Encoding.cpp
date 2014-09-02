@@ -210,15 +210,6 @@ namespace BearLibTerminal
 
 	static const wchar_t kReplacementChar = 0x1A; // ASCII 'replacement' character
 
-	struct UTF8Encoding: Encoding8
-	{
-		wchar_t Convert(int value) const;
-		int Convert(wchar_t value) const;
-		std::wstring Convert(const std::string& value) const;
-		std::string Convert(const std::wstring& value) const;
-		std::wstring GetName() const;
-	};
-
 	wchar_t UTF8Encoding::Convert(int value) const
 	{
 		return (wchar_t)value;
@@ -305,18 +296,7 @@ namespace BearLibTerminal
 		return L"utf-8";
 	}
 
-	std::unique_ptr<Encoding8> UTF8(new UTF8Encoding());
-
 	// ------------------------------------------------------------------------
-
-	struct UCS2Encoding: Encoding16
-	{
-		wchar_t Convert(int value) const;
-		int Convert(wchar_t value) const;
-		std::wstring Convert(const std::u16string& value) const;
-		std::u16string Convert(const std::wstring& value) const;
-		std::wstring GetName() const;
-	};
 
 	wchar_t UCS2Encoding::Convert(int value) const
 	{
@@ -355,18 +335,7 @@ namespace BearLibTerminal
 		return L"ucs-2";
 	}
 
-	std::unique_ptr<Encoding16> UTF16(new UCS2Encoding());
-
 	// ------------------------------------------------------------------------
-
-	struct UCS4Encoding: Encoding32
-	{
-		wchar_t Convert(int value) const;
-		int Convert(wchar_t value) const;
-		std::wstring Convert(const std::u32string& value) const;
-		std::u32string Convert(const std::wstring& value) const;
-		std::wstring GetName() const;
-	};
 
 	wchar_t UCS4Encoding::Convert(int value) const
 	{
@@ -405,8 +374,6 @@ namespace BearLibTerminal
 		return L"ucs-4";
 	}
 
-	std::unique_ptr<Encoding32> UTF32(new UCS4Encoding());
-
 	// ------------------------------------------------------------------------
 
 	std::unique_ptr<Encoding8> GetUnibyteEncoding(const std::wstring& name)
@@ -420,7 +387,7 @@ namespace BearLibTerminal
 			auto stream = Resource::Open(name, L"codepage-");
 			if (!stream)
 			{
-				throw std::runtime_error("failed to locate codepage resource for \"" + UTF8->Convert(name) + "\"");
+				throw std::runtime_error("failed to locate codepage resource for \"" + UTF8Encoding().Convert(name) + "\"");
 			}
 			return std::unique_ptr<Encoding8>(new CustomCodepage(name, *stream));
 		}

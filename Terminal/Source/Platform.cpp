@@ -48,7 +48,7 @@ namespace BearLibTerminal
 			throw std::runtime_error(""); // FIXME: GetLastError string
 		}
 #else
-		m_handle = dlopen(UTF8->Convert(name).c_str(), RTLD_NOW|RTLD_GLOBAL);
+		m_handle = dlopen(UTF8Encoding().Convert(name).c_str(), RTLD_NOW|RTLD_GLOBAL);
 		if (m_handle == nullptr)
 		{
 			throw std::runtime_error(dlerror());

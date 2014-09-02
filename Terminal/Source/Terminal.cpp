@@ -49,7 +49,8 @@ namespace BearLibTerminal
 		m_scale_step(kScaleDefault)
 	{
 		// Reset logger (this is terrible)
-		g_logger = std::unique_ptr<Log>(new Log());
+		m_log = std::make_unique<Log>();
+		g_logger = m_log.get();
 
 		// Try to create window
 		m_window = Window::Create();
@@ -742,12 +743,7 @@ namespace BearLibTerminal
 
 	void Terminal::Put(int x, int y, int code)
 	{
-		if (m_options.terminal_encoding_affects_put)
-		{
-			code = m_encoding->Convert(code);
-		}
-
-		PutInternal(x, y, 0, 0, code, nullptr);
+		PutExtended(x, y, 0, 0, code, nullptr);
 	}
 
 	void Terminal::PutExtended(int x, int y, int dx, int dy, int code, Color* corners)
@@ -1397,12 +1393,10 @@ namespace BearLibTerminal
 					show_cursor = true;
 				}
 			}
-			//else if (m_vars[TK_WCHAR])
 			else if (wchar_t ch = GetState(TK_WCHAR))
 			{
 				if (cursor < max)
 				{
-					//buffer[cursor++] = (wchar_t)m_vars[TK_WCHAR];
 					buffer[cursor++] = ch;
 					show_cursor = true;
 				}

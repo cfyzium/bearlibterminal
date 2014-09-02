@@ -44,7 +44,6 @@ int terminal_open()
 	}
 	catch (std::exception& e)
 	{
-		LOG(Fatal, "Failed to initialize terminal instance: " << e.what());
 		return 0;
 	}
 }
@@ -64,13 +63,13 @@ int terminal_set8(const int8_t* value)
 int terminal_set16(const int16_t* value)
 {
 	if (!g_instance || !value) return -1;
-	return g_instance->SetOptions(BearLibTerminal::UTF16->Convert((const char16_t*)value));
+	return g_instance->SetOptions(BearLibTerminal::UCS2Encoding().Convert((const char16_t*)value));
 }
 
 int terminal_set32(const int32_t* value)
 {
 	if (!g_instance || !value) return -1;
-	return g_instance->SetOptions(BearLibTerminal::UTF32->Convert((const char32_t*)value));
+	return g_instance->SetOptions(BearLibTerminal::UCS4Encoding().Convert((const char32_t*)value));
 }
 
 void terminal_refresh()
@@ -143,13 +142,13 @@ int terminal_print8(int x, int y, const int8_t* s)
 int terminal_print16(int x, int y, const int16_t* s)
 {
 	if (!g_instance || !s) return -1;
-	return g_instance->Print(x, y, BearLibTerminal::UTF16->Convert((const char16_t*)s), false, false);
+	return g_instance->Print(x, y, BearLibTerminal::UCS2Encoding().Convert((const char16_t*)s), false, false);
 }
 
 int terminal_print32(int x, int y, const int32_t* s)
 {
 	if (!g_instance || !s) return -1;
-	return g_instance->Print(x, y, BearLibTerminal::UTF32->Convert((const char32_t*)s), false, false);
+	return g_instance->Print(x, y, BearLibTerminal::UCS4Encoding().Convert((const char32_t*)s), false, false);
 }
 
 int terminal_measure8(const int8_t* s)
@@ -162,13 +161,13 @@ int terminal_measure8(const int8_t* s)
 int terminal_measure16(const int16_t* s)
 {
 	if (!g_instance || !s) return -1;
-	return g_instance->Print(0, 0, BearLibTerminal::UTF16->Convert((const char16_t*)s), false, true);
+	return g_instance->Print(0, 0, BearLibTerminal::UCS2Encoding().Convert((const char16_t*)s), false, true);
 }
 
 int terminal_measure32(const int32_t* s)
 {
 	if (!g_instance || !s) return -1;
-	return g_instance->Print(0, 0, BearLibTerminal::UTF32->Convert((const char32_t*)s), false, true);
+	return g_instance->Print(0, 0, BearLibTerminal::UCS4Encoding().Convert((const char32_t*)s), false, true);
 }
 
 int terminal_has_input()
@@ -189,7 +188,7 @@ int terminal_read()
 	return g_instance->Read();
 }
 
-template<typename char_t, typename enc_t> int read_str(int x, int y, char_t* buffer, int max, enc_t& encoding)
+template<typename char_t, typename enc_t> int read_str(int x, int y, char_t* buffer, int max, const enc_t& encoding)
 {
 	if (!g_instance) return -1;
 	std::wstring wide_buffer = encoding.Convert((const char_t*)buffer);
@@ -212,13 +211,13 @@ int terminal_read_str8(int x, int y, int8_t* buffer, int max)
 int terminal_read_str16(int x, int y, int16_t* buffer, int max)
 {
 	if (!g_instance) return TK_INPUT_CANCELLED;
-	return read_str(x, y, (char16_t*)buffer, max, *BearLibTerminal::UTF16);
+	return read_str(x, y, (char16_t*)buffer, max, BearLibTerminal::UCS2Encoding());
 }
 
 int terminal_read_str32(int x, int y, int32_t* buffer, int max)
 {
 	if (!g_instance) return TK_INPUT_CANCELLED;
-	return read_str(x, y, (char32_t*)buffer, max, *BearLibTerminal::UTF32);
+	return read_str(x, y, (char32_t*)buffer, max, BearLibTerminal::UCS4Encoding());
 }
 
 color_t color_from_name8(const int8_t* name)
@@ -231,11 +230,11 @@ color_t color_from_name8(const int8_t* name)
 color_t color_from_name16(const int16_t* name)
 {
 	if (!g_instance || !name) return -1;
-	return BearLibTerminal::Palette::Instance[BearLibTerminal::UTF16->Convert((const char16_t*)name)];
+	return BearLibTerminal::Palette::Instance[BearLibTerminal::UCS2Encoding().Convert((const char16_t*)name)];
 }
 
 color_t color_from_name32(const int32_t* name)
 {
 	if (!g_instance || !name) return -1;
-	return BearLibTerminal::Palette::Instance[BearLibTerminal::UTF32->Convert((const char32_t*)name)];
+	return BearLibTerminal::Palette::Instance[BearLibTerminal::UCS4Encoding().Convert((const char32_t*)name)];
 }

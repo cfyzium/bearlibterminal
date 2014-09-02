@@ -14,7 +14,7 @@
 
 namespace BearLibTerminal
 {
-	std::unique_ptr<Log> g_logger(new Log()); // Leave empty? It is reset in Terminal ctor.
+	Log* g_logger = nullptr;
 
 	static std::string FormatTime()
 	{
@@ -71,11 +71,11 @@ namespace BearLibTerminal
 #else
 		// GCC on the other hand opens UTF-8 paths properly but has no wchar_t overload
 		// (as well it shouldn't, there is no such overload in standard)
-		stream.open(UTF8->Convert(m_filename), flags);
+		stream.open(UTF8Encoding().Convert(m_filename), flags);
 #endif
 		std::wostringstream ss;
 		ss << FormatTime().c_str() << " [" << level << "] " << what;
-		stream << UTF8->Convert(ss.str()) << "\n";
+		stream << UTF8Encoding().Convert(ss.str()) << "\n";
 	}
 
 	void Log::SetLevel(Level level)
