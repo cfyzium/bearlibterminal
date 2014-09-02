@@ -25,11 +25,6 @@ if (WIN32)
 	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -static")
 else()
 	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -static-libgcc")
-	if (${BITNESS} EQUAL 32)
-		# 32-bit build can take advantage of greater compatibility by statically linking to libstdc++.
-		# It is impossible to do that on 64-bit because of -fPIC requirement. 
-		set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -static-libstdc++")
-	endif()
 endif()
 
 find_package(OpenGL)
