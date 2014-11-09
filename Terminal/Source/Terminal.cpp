@@ -1254,7 +1254,7 @@ namespace BearLibTerminal
 	int Terminal::HasInput()
 	{
 		std::lock_guard<std::mutex> guard(m_input_lock);
-		if (m_state == kClosed || m_vars[TK_CLOSE]) return 1;
+		if (m_state == kClosed) return 1;
 		return HasInputInternalUnlocked();
 	}
 
@@ -1268,7 +1268,7 @@ namespace BearLibTerminal
 	{
 		std::unique_lock<std::mutex> lock(m_input_lock);
 
-		if (m_state == kClosed || m_vars[TK_CLOSE])
+		if (m_state == kClosed)
 		{
 			return Event(TK_CLOSE);
 		}
