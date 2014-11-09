@@ -243,6 +243,7 @@ TERMINAL_API int terminal_read();
 TERMINAL_API int terminal_read_str8(int x, int y, int8_t* buffer, int max);
 TERMINAL_API int terminal_read_str16(int x, int y, int16_t* buffer, int max);
 TERMINAL_API int terminal_read_str32(int x, int y, int32_t* buffer, int max);
+TERMINAL_API int terminal_peek();
 TERMINAL_API color_t color_from_name8(const int8_t* name);
 TERMINAL_API color_t color_from_name16(const int16_t* name);
 TERMINAL_API color_t color_from_name32(const int32_t* name);

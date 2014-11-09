@@ -1310,6 +1310,27 @@ namespace BearLibTerminal
 		return ReadEvent(std::numeric_limits<int>::max()).code;
 	}
 
+	int Terminal::Peek()
+	{
+		std::unique_lock<std::mutex> lock(m_input_lock);
+
+		if (m_state == kClosed)
+		{
+			return TK_CLOSE;
+		}
+		else if (m_input_queue.empty())
+		{
+			return TK_INPUT_NONE;
+		}
+		else
+		{
+			Event event = m_input_queue.front();
+			ConsumeEvent(event);
+			// ConsumeIrrelevantEvents(); FIXME: legacy code?
+			return event.code;
+		}
+	}
+
 	/**
 	 * Reads whole string.
 	 */

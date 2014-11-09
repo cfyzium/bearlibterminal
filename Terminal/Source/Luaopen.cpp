@@ -485,6 +485,12 @@ int luaterminal_read_str(lua_State* L)
 	return 2;
 }
 
+int luaterminal_peek(lua_State* L)
+{
+	lua_pushnumber(L, terminal_peek());
+	return 1;
+}
+
 int luaterminal_color_from_name(lua_State* L)
 {
 	lua_pushnumber(L, color_from_name8((const int8_t*)lua_tostring(L, 1)));
@@ -526,6 +532,7 @@ static const luaL_Reg luaterminal_lib[] =
 	{"check", luaterminal_check},
 	{"read", luaterminal_read},
 	{"read_str", luaterminal_read_str},
+	{"peek", luaterminal_peek},
 	{"color_from_name", luaterminal_color_from_name},
 	{"color_from_argb", luaterminal_color_from_argb},
 	{NULL, NULL}

@@ -220,6 +220,12 @@ int terminal_read_str32(int x, int y, int32_t* buffer, int max)
 	return read_str(x, y, (char32_t*)buffer, max, BearLibTerminal::UCS4Encoding());
 }
 
+int terminal_peek()
+{
+	if (!g_instance) return TK_CLOSE;
+	return g_instance->Peek();
+}
+
 color_t color_from_name8(const int8_t* name)
 {
 	if (!g_instance || !name) return -1;
