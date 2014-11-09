@@ -151,7 +151,7 @@ namespace BearLibTerminal
 				{
 					wchar_t filename[MAX_PATH];
 					GetModuleFileNameExW(process, m, filename, MAX_PATH);
-					LOG(Info, "Symbol \"" << name.c_str() << "\" was found in \"" << filename << "\"");
+					//LOG(Info, "Symbol \"" << name.c_str() << "\" was found in \"" << filename << "\""); // FIXME: global object dependency failure
 
 					return module;
 				}
@@ -159,7 +159,7 @@ namespace BearLibTerminal
 		}
 		catch (std::exception& e)
 		{
-			LOG(Error, "Module enumeration has failed: " << e.what());
+			//LOG(Error, "Module enumeration has failed: " << e.what()); // FIXME: global object dependency failure
 		}
 #else
 		void* m = dlopen(0, RTLD_NOW|RTLD_GLOBAL);

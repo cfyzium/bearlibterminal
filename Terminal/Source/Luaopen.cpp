@@ -707,7 +707,7 @@ int luaopen_BearLibTerminal(lua_State* L)
 	BearLibTerminal::Module liblua = BearLibTerminal::Module::GetProviding("lua_gettop");
 	if (!liblua)
 	{
-		LOG(Error, "Lua provider module was not found");
+		//LOG(Error, "Lua provider module was not found"); // FIXME: global object dependency failure
 		return 1; // This will cause lua runtime to fail on table dereferencing, thus notifying user that something went wrong
 	}
 
