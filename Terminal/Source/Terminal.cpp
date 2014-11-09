@@ -756,6 +756,36 @@ namespace BearLibTerminal
 		PutInternal(x, y, dx, dy, code, corners);
 	}
 
+	int Terminal::Pick(int x, int y, int index)
+	{
+		if (x < 0 || y < 0 || x >= m_world.stage.size.width || y >= m_world.stage.size.height) return 0;
+
+		int cell_index = y * m_world.stage.size.width + x;
+		auto& cell = m_world.stage.backbuffer.layers[m_world.state.layer].cells[cell_index];
+		wchar_t code = (index >= 0 || index < (int)cell.leafs.size())? (int)cell.leafs[index].code: 0;
+
+		// Must take into account possible terminal.encoding codepage.
+		int translated = m_encoding->Convert(code);
+		return translated >= 0? translated: (int)code;
+	}
+
+	Color Terminal::PickForeColor(int x, int y, int index)
+	{
+		if (x < 0 || y < 0 || x >= m_world.stage.size.width || y >= m_world.stage.size.height) return Color();
+
+		int cell_index = y * m_world.stage.size.width + x;
+		auto& cell = m_world.stage.backbuffer.layers[m_world.state.layer].cells[cell_index];
+		return (index >= 0 || index < (int)cell.leafs.size())? cell.leafs[index].color[0]: Color();
+	}
+
+	Color Terminal::PickBackColor(int x, int y)
+	{
+		if (x < 0 || y < 0 || x >= m_world.stage.size.width || y >= m_world.stage.size.height) return Color();
+
+		int cell_index = y * m_world.stage.size.width + x;
+		return m_world.stage.backbuffer.background[cell_index];
+	}
+
 	struct Alignment
 	{
 		Alignment();

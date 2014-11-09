@@ -362,6 +362,24 @@ int luaterminal_put_ext(lua_State* L)
 	return 0;
 }
 
+int luaterminal_pick(lua_State* L)
+{
+	lua_pushnumber(L, terminal_pick(lua_tointeger(L, 1), lua_tointeger(L, 2), lua_tointeger(L, 3)));
+	return 1;
+}
+
+int luaterminal_pick_color(lua_State* L)
+{
+	lua_pushnumber(L, terminal_pick_color(lua_tointeger(L, 1), lua_tointeger(L, 2), lua_tointeger(L, 3)));
+	return 1;
+}
+
+int luaterminal_pick_bkcolor(lua_State* L)
+{
+	lua_pushnumber(L, terminal_pick_bkcolor(lua_tointeger(L, 1), lua_tointeger(L, 2)));
+	return 1;
+}
+
 int luaterminal_print(lua_State* L)
 {
 	int rc = terminal_print8(lua_tonumber(L, 1), lua_tonumber(L, 2), (const int8_t*)lua_tostring(L, 3));
@@ -491,6 +509,12 @@ int luaterminal_peek(lua_State* L)
 	return 1;
 }
 
+int luaterminal_delay(lua_State* L)
+{
+	terminal_delay(lua_tointeger(L, 1));
+	return 0;
+}
+
 int luaterminal_color_from_name(lua_State* L)
 {
 	lua_pushnumber(L, color_from_name8((const int8_t*)lua_tostring(L, 1)));
@@ -523,6 +547,9 @@ static const luaL_Reg luaterminal_lib[] =
 	{"composition", luaterminal_composition},
 	{"put", luaterminal_put},
 	{"put_ext", luaterminal_put_ext},
+	{"pick", luaterminal_pick},
+	{"pick_color", luaterminal_pick_color},
+	{"pick_bkcolor", luaterminal_pick_bkcolor},
 	{"print", luaterminal_print},
 	{"printf", luaterminal_printf},
 	{"measure", luaterminal_measure},
@@ -533,6 +560,7 @@ static const luaL_Reg luaterminal_lib[] =
 	{"read", luaterminal_read},
 	{"read_str", luaterminal_read_str},
 	{"peek", luaterminal_peek},
+	{"delay",  luaterminal_delay},
 	{"color_from_name", luaterminal_color_from_name},
 	{"color_from_argb", luaterminal_color_from_argb},
 	{NULL, NULL}

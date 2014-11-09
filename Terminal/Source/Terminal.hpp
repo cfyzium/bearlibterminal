@@ -54,6 +54,9 @@ namespace BearLibTerminal
 		void SetComposition(int mode);
 		void Put(int x, int y, int code);
 		void PutExtended(int x, int y, int dx, int dy, int code, Color* corners);
+		int Pick(int x, int y, int index);
+		Color PickForeColor(int x, int y, int index);
+		Color PickBackColor(int x, int y);
 		int Print(int x, int y, const std::wstring& str, bool raw, bool measure_only);
 		int HasInput();
 		int GetState(int code);
