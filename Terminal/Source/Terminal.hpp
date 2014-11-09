@@ -60,6 +60,7 @@ namespace BearLibTerminal
 		int Read();
 		int ReadString(int x, int y, wchar_t* buffer, int max);
 		int Peek();
+		void Delay(int period);
 		const Encoding8& GetEncoding() const;
 	private:
 		void SetOptionsInternal(const std::wstring& params);

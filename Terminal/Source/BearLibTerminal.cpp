@@ -226,6 +226,12 @@ int terminal_peek()
 	return g_instance->Peek();
 }
 
+void terminal_delay(int period)
+{
+	if (!g_instance) return;
+	g_instance->Delay(period);
+}
+
 color_t color_from_name8(const int8_t* name)
 {
 	if (!g_instance || !name) return -1;

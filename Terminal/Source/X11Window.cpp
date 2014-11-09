@@ -468,6 +468,15 @@ namespace BearLibTerminal
 		});
 	}
 
+	void X11Window::Delay(int period)
+	{
+		timespec t;
+		int milliseconds = period % 1000;
+		t.tv_sec = (period - milliseconds) / 1000;
+		t.tv_nsec = (long)milliseconds * 1000000;
+		nanosleep(&t, nullptr);
+	}
+
 	void X11Window::Show()
 	{
 		std::lock_guard<std::mutex> guard(m_lock);

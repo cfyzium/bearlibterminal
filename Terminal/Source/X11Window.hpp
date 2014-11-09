@@ -53,6 +53,7 @@ namespace BearLibTerminal
 		Size GetActualSize();
 		void ToggleFullscreen();
 		void SetCursorVisibility(bool visible);
+		void Delay(int period);
 	protected:
 		void ThreadFunction();
 		bool Construct();

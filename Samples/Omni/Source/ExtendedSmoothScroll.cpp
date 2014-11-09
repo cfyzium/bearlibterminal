@@ -109,7 +109,7 @@ void TestExtendedSmoothScroll()
 			vspeed -= sgn(vspeed);
 		}
 
-		delay(1000/fps);
+		terminal_delay(1000/fps);
 	}
 
 	terminal_set("U+E000: none");

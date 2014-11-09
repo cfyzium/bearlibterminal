@@ -1431,6 +1431,11 @@ namespace BearLibTerminal
 		return rc;
 	}
 
+	void Terminal::Delay(int period)
+	{
+		m_window->Delay(period);
+	}
+
 	const Encoding<char>& Terminal::GetEncoding() const
 	{
 		return *m_encoding;

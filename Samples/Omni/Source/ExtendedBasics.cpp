@@ -79,7 +79,7 @@ void TestExtendedBasics()
 			}
 		}
 
-		delay(1000/fps);
+		terminal_delay(1000/fps);
 	}
 
 	// Clean up

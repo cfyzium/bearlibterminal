@@ -14,8 +14,6 @@
 
 uint64_t GetTime();
 
-void delay(int ms);
-
 template<typename T> std::string to_string(const T& value)
 {
 	std::ostringstream ss;

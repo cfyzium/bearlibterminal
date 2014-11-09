@@ -9,10 +9,6 @@
 
 #if defined(_WIN32)
 #include <Windows.h>
-void delay(int ms)
-{
-	Sleep(ms);
-}
 uint64_t GetTime()
 {
 	return timeGetTime();
@@ -21,10 +17,6 @@ uint64_t GetTime()
 #if defined(__linux)
 #include <unistd.h>
 #include <sys/time.h>
-void delay(int ms)
-{
-	usleep(ms*1000);
-}
 uint64_t GetTime()
 {
 	timeval t;

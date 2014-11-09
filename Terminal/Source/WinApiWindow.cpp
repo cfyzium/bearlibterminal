@@ -88,11 +88,17 @@ namespace BearLibTerminal
 		m_mouse_cursor_enabled(true),
 		m_mouse_cursor_visible(true),
 		m_wglSwapIntervalEXT(nullptr)
-	{ }
+	{
+		// Raising timing resolution for Delay function.
+		timeBeginPeriod(1);
+	}
 
 	WinApiWindow::~WinApiWindow()
 	{
 		Stop();
+
+		// Timing resolution restore.
+		timeEndPeriod(1);
 	}
 
 	HMODULE GetCurrentModule()
@@ -341,6 +347,11 @@ namespace BearLibTerminal
 	void WinApiWindow::SetCursorVisibility(bool visible)
 	{
 		Post([=]{m_mouse_cursor_enabled = visible;});
+	}
+
+	void WinApiWindow::Delay(int period)
+	{
+		Sleep(period);
 	}
 
 	Size WinApiWindow::GetActualSize()
