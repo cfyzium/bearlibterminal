@@ -21,8 +21,6 @@ namespace BearLibTerminal
 		window_toggle_fullscreen(false),
 		output_postformatting(true),
 		output_vsync(true),
-		input_keyboard(true),
-		input_mouse(true),
 		input_precise_mouse(false),
 		input_sticky_close(true),
 		input_cursor_symbol((uint16_t)'_'),

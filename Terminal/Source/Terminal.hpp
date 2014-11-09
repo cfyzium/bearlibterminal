@@ -74,11 +74,11 @@ namespace BearLibTerminal
 		void ValidateOutputOptions(OptionGroup& group, Options& options);
 		void ValidateTerminalOptions(OptionGroup& group, Options& options);
 		void ValidateLoggingOptions(OptionGroup& group, Options& options);
+		bool ParseInputFilter(const std::wstring& s, std::set<int>& out);
 		void ConfigureViewport();
 		void PutInternal(int x, int y, int dx, int dy, wchar_t code, Color* colors);
 		void PrepareFreshCharacters();
 		void ConsumeEvent(Event& event);
-		void ConsumeIrrelevantEvents();
 		bool HasInputInternalUnlocked();
 		Event ReadEvent(int timeout);
 		int ReadStringInternalBlocking(int x, int y, wchar_t* buffer, int max);
@@ -86,6 +86,7 @@ namespace BearLibTerminal
 		void HandleDestroy();
 		int Redraw(bool async);
 		int OnWindowEvent(Event event);
+		void PushEvent(Event event);
 	private:
 		enum state_t {kHidden, kVisible, kClosed} m_state;
 		mutable std::mutex m_lock;

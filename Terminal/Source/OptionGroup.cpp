@@ -40,7 +40,19 @@ namespace BearLibTerminal
 
 	static bool IsQuote(wchar_t c)
 	{
-	    return c == L'\'' || c == L'"';
+	    return c == L'\'' || c == L'"' || c == L'[';
+	}
+
+	static wchar_t ClosingQuoteCharacter(wchar_t opening)
+	{
+		static std::map<wchar_t, wchar_t> mapping =
+		{
+			{L'\'', L'\''},
+			{L'"', L'"'},
+			{L'[', L']'}
+		};
+
+		return mapping[opening];
 	}
 
 	std::list<OptionGroup> ParseOptions(const std::wstring& s)
@@ -131,7 +143,7 @@ namespace BearLibTerminal
 				else if (IsQuote(c))
 				{
 					low_state = LowState::String;
-					quote_character = c;
+					quote_character = ClosingQuoteCharacter(c);
 				}
 				else if ((IsGroupSeparator(c) && high_state == HighState::Group) || IsTokenSeparator(c))
 				{

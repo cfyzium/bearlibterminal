@@ -94,6 +94,22 @@ namespace BearLibTerminal
 		return s;
 	}
 
+	template<typename char_t> std::basic_string<char_t> trim(const std::basic_string<char_t>& s)
+	{
+		int start = 0, end = s.length()-1;
+
+		while (start < s.length() && ::isspace(s[start]))
+			start++;
+
+		while (end >= 0 && ::isspace(s[end]))
+			end--;
+
+		if (end >= start && (end-start+1) <= (int)s.length())
+			return s.substr(start, end-start+1);
+		else
+			return std::basic_string<char_t>();
+	}
+
 	uint64_t gettime();
 
 	inline uint64_t start_timing()

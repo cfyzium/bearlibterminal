@@ -41,6 +41,119 @@ namespace BearLibTerminal
 
 	static int kScaleDefault = 1;
 
+	static int GetInputEventNameByName(const std::wstring& name)
+	{
+		static std::map<std::wstring, int> mapping =
+		{
+			{L"a", TK_A},
+			{L"b", TK_B},
+			{L"c", TK_C},
+			{L"d", TK_D},
+			{L"e", TK_E},
+			{L"f", TK_F},
+			{L"g", TK_G},
+			{L"h", TK_H},
+			{L"i", TK_I},
+			{L"j", TK_G},
+			{L"k", TK_K},
+			{L"l", TK_L},
+			{L"m", TK_M},
+			{L"n", TK_N},
+			{L"o", TK_O},
+			{L"p", TK_P},
+			{L"q", TK_Q},
+			{L"r", TK_R},
+			{L"s", TK_S},
+			{L"t", TK_T},
+			{L"u", TK_U},
+			{L"v", TK_V},
+			{L"w", TK_W},
+			{L"x", TK_X},
+			{L"y", TK_Y},
+			{L"z", TK_Z},
+			{L"1", TK_1},
+			{L"2", TK_2},
+			{L"3", TK_3},
+			{L"4", TK_4},
+			{L"5", TK_5},
+			{L"6", TK_6},
+			{L"7", TK_7},
+			{L"8", TK_8},
+			{L"9", TK_9},
+			{L"0", TK_0},
+			{L"return", TK_ENTER},
+			{L"enter", TK_ENTER},
+			{L"escape", TK_ESCAPE},
+			{L"backspace", TK_BACKSPACE},
+			{L"tab", TK_TAB},
+			{L"space", TK_SPACE},
+			{L"minus", TK_MINUS},
+			{L"equals", TK_EQUALS},
+			{L"lbracket", TK_LBRACKET},
+			{L"rbracket", TK_RBRACKET},
+			{L"backslash", TK_BACKSLASH},
+			{L"semicolon", TK_SEMICOLON},
+			{L"apostrophe", TK_APOSTROPHE},
+			{L"grave", TK_GRAVE},
+			{L"comma", TK_COMMA},
+			{L"period", TK_PERIOD},
+			{L"slash", TK_SLASH},
+			{L"f1", TK_F1},
+			{L"f2", TK_F2},
+			{L"f3", TK_F3},
+			{L"f4", TK_F4},
+			{L"f5", TK_F5},
+			{L"f6", TK_F6},
+			{L"f7", TK_F7},
+			{L"f8", TK_F8},
+			{L"f9", TK_F9},
+			{L"f10", TK_F10},
+			{L"f11", TK_F11},
+			{L"f12", TK_F12},
+			{L"pause", TK_PAUSE},
+			{L"insert", TK_INSERT},
+			{L"home", TK_HOME},
+			{L"pageup", TK_PAGEUP},
+			{L"delete", TK_DELETE},
+			{L"end", TK_END},
+			{L"pagedown", TK_PAGEDOWN},
+			{L"right", TK_RIGHT},
+			{L"left", TK_LEFT},
+			{L"down", TK_DOWN},
+			{L"up", TK_UP},
+			{L"kp-divide", TK_KP_DIVIDE},
+			{L"kp-multiply", TK_KP_MULTIPLY},
+			{L"kp-minus", TK_KP_MINUS},
+			{L"kp-plus", TK_KP_PLUS},
+			{L"kp-enter", TK_KP_ENTER},
+			{L"kp-1", TK_KP_1},
+			{L"kp-2", TK_KP_2},
+			{L"kp-3", TK_KP_3},
+			{L"kp-4", TK_KP_4},
+			{L"kp-5", TK_KP_5},
+			{L"kp-6", TK_KP_6},
+			{L"kp-7", TK_KP_7},
+			{L"kp-8", TK_KP_8},
+			{L"kp-9", TK_KP_9},
+			{L"kp-0", TK_KP_0},
+			{L"kp-period", TK_KP_PERIOD},
+			{L"shift", TK_SHIFT},
+			{L"control", TK_CONTROL},
+			{L"mouse-left", TK_MOUSE_LEFT},
+			{L"mouse-right", TK_MOUSE_RIGHT},
+			{L"mouse-middle", TK_MOUSE_MIDDLE},
+			{L"mouse-x1", TK_MOUSE_X1},
+			{L"mouse-x2", TK_MOUSE_X2},
+			{L"mouse-move", TK_MOUSE_MOVE},
+			{L"mouse-scroll", TK_MOUSE_SCROLL},
+			{L"close", TK_CLOSE},
+			{L"resized", TK_RESIZED}
+		};
+
+		auto i = mapping.find(name);
+		return i == mapping.end()? 0: i->second;
+	}
+
 	Terminal::Terminal():
 		m_state{kHidden},
 		m_vars{},
@@ -446,14 +559,19 @@ namespace BearLibTerminal
 			throw std::runtime_error("input.sticky-close cannot be parsed");
 		}
 
-		if (group.attributes.count(L"keyboard") && !try_parse(group.attributes[L"keyboard"], options.input_keyboard))
-		{
-			throw std::runtime_error("input.keyboard cannot be parsed");
-		}
+		//if (group.attributes.count(L"keyboard") && !try_parse(group.attributes[L"keyboard"], options.input_keyboard))
+		//{
+		//	throw std::runtime_error("input.keyboard cannot be parsed");
+		//}
 
-		if (group.attributes.count(L"mouse") && !try_parse(group.attributes[L"mouse"], options.input_mouse))
+		//if (group.attributes.count(L"mouse") && !try_parse(group.attributes[L"mouse"], options.input_mouse))
+		//{
+		//	throw std::runtime_error("input.mouse cannot be parsed");
+		//}
+
+		if (group.attributes.count(L"filter") && !ParseInputFilter(group.attributes[L"filter"], options.input_filter))
 		{
-			throw std::runtime_error("input.mouse cannot be parsed");
+			throw std::runtime_error("input.filter cannot be parsed");
 		}
 
 		if (group.attributes.count(L"cursor-symbol") && !try_parse(group.attributes[L"cursor-symbol"], options.input_cursor_symbol))
@@ -472,6 +590,93 @@ namespace BearLibTerminal
 		{
 			throw std::runtime_error("input.mouse-cursor cannot be parsed");
 		}
+	}
+
+	bool Terminal::ParseInputFilter(const std::wstring& s, std::set<int>& out)
+	{
+		// s: list of case-insensitive input event names separated by a comma.
+		// macro names: keyboard, mouse
+
+		LOG(Error, L"filer: s = [" << s << L"]");
+
+		std::set<int> result;
+
+		auto add = [&result](int code, bool release_too)
+		{
+			result.insert(code);
+
+			if (release_too)
+				result.insert(code | TK_KEY_RELEASED);
+		};
+
+		for (size_t start = 0, end = 0; start < s.length(); )
+		{
+			end = s.find(L",", start);
+			if (end == std::wstring::npos) end = s.length();
+
+			if (end > start)
+			{
+				std::wstring name = trim(s.substr(start, end-start));
+				bool release_too = false;
+
+				if (!name.empty() && name.back() == L'+')
+				{
+					release_too = true;
+					name.resize(name.length()-1);
+				}
+
+				LOG(Error, L"filer: name = [" << name << L"], release_too = " << release_too);
+
+				if (!name.empty())
+				{
+					if (name == L"keyboard")
+					{
+						for (int i = TK_A; i <= TK_CONTROL; i++)
+							add(i, release_too);
+					}
+					else if (name == L"mouse")
+					{
+						for (int i = TK_MOUSE_LEFT; i <= TK_MOUSE_X2; i++)
+							add(i, release_too);
+
+						add(TK_MOUSE_MOVE, false);
+						add(TK_MOUSE_SCROLL, false);
+					}
+					else if (int code = GetInputEventNameByName(name))
+					{
+						add(code, release_too);
+					}
+					else
+					{
+						// Maybe, shortened list of alphanumeric keys?
+						bool correct = true;
+
+						for (auto& c: name) // TODO: shorter check
+						{
+							if (!::isalpha((int)c) && !::isdigit((int)c))
+							{
+								correct = false;
+								break;
+							}
+						}
+
+						if (correct)
+						{
+							for (auto& c: name)
+							{
+								add(GetInputEventNameByName(std::wstring(1, c)), release_too);
+							}
+						}
+					}
+				}
+			}
+
+			start = end+1;
+		}
+
+		out = result;
+
+		return true;
 	}
 
 	void Terminal::ValidateOutputOptions(OptionGroup& group, Options& options)
@@ -1320,7 +1525,6 @@ namespace BearLibTerminal
 			Event event = m_input_queue.front();
 			ConsumeEvent(event);
 			m_input_queue.pop_front();
-			ConsumeIrrelevantEvents();
 			return event;
 		}
 		else if (m_state == kClosed)
@@ -1356,7 +1560,6 @@ namespace BearLibTerminal
 		{
 			Event event = m_input_queue.front();
 			ConsumeEvent(event);
-			// ConsumeIrrelevantEvents(); FIXME: legacy code?
 			return event.code;
 		}
 	}
@@ -1783,6 +1986,27 @@ namespace BearLibTerminal
 		m_input_condvar.notify_all();
 	}
 
+	void Terminal::PushEvent(Event event)
+	{
+		bool must_be_consumed = false;
+		{
+			std::lock_guard<std::mutex> guard(m_lock);
+			must_be_consumed = !m_options.input_filter.empty() && !m_options.input_filter.count(event.code);
+		}
+
+		std::lock_guard<std::mutex> guard(m_input_lock);
+
+		if (must_be_consumed)
+		{
+			ConsumeEvent(event);
+		}
+		else
+		{
+			m_input_queue.push_back(event);
+			m_input_condvar.notify_all();
+		}
+	}
+
 	int Terminal::OnWindowEvent(Event event)
 	{
 		bool alt = get_locked(m_vars[TK_ALT], m_input_lock);
@@ -1804,19 +2028,12 @@ namespace BearLibTerminal
 		}
 		else if (event.code == TK_ACTIVATED)
 		{
-			std::lock_guard<std::mutex> guard(m_input_lock);
-
-			// Cancel all pressed keys
-			for (int i = 0; i <= TK_ALT; i++)
+			for (int i = TK_A; i <= TK_CONTROL; i++)
 			{
-				if (i == TK_CLOSE) continue;
-				if (m_vars[i])
-				{
-					m_input_queue.push_back(Event(i|TK_KEY_RELEASED, {{i, 0}}));
-				}
+				if (m_vars[i]) // FIXME: race condition
+					PushEvent(Event(i|TK_KEY_RELEASED, {{i, 0}}));
 			}
 
-			ConsumeIrrelevantEvents();
 			return 0;
 		}
 		else if (event.code == TK_STATE_UPDATE)
@@ -1956,15 +2173,7 @@ namespace BearLibTerminal
 			return 0;
 		}
 
-		std::lock_guard<std::mutex> guard(m_input_lock);
-		m_input_queue.push_back(std::move(event));
-
-		ConsumeIrrelevantEvents();
-
-		if (!m_input_queue.empty())
-		{
-			m_input_condvar.notify_all();
-		}
+		PushEvent(std::move(event));
 
 		return 0;
 	}
@@ -2026,28 +2235,5 @@ namespace BearLibTerminal
 		}
 
 		m_vars[TK_EVENT] = event.code;
-	}
-
-	void Terminal::ConsumeIrrelevantEvents()
-	{
-		while (!m_input_queue.empty())
-		{
-			Event& event = m_input_queue.front();
-
-			bool must_be_consumed =
-				(event.domain == Event::Domain::Internal) ||
-				(event.domain == Event::Domain::Keyboard && !m_options.input_keyboard) ||
-				(event.domain == Event::Domain::Mouse && !m_options.input_mouse);
-
-			if (must_be_consumed)
-			{
-				ConsumeEvent(event);
-				m_input_queue.pop_front();
-			}
-			else
-			{
-				break;
-			}
-		}
 	}
 }

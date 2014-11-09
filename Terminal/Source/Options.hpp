@@ -12,6 +12,7 @@
 #include "Log.hpp"
 #include <string>
 #include <atomic>
+#include <set>
 
 namespace BearLibTerminal
 {
@@ -35,13 +36,12 @@ namespace BearLibTerminal
 		bool output_vsync;
 
 		// Input
-		bool input_keyboard;
-		bool input_mouse;
 		bool input_precise_mouse;
 		bool input_sticky_close;
 		uint16_t input_cursor_symbol;
 		int input_cursor_blink_rate;
 		bool input_mouse_cursor;
+		std::set<int> input_filter;
 
 		// Log
 		std::wstring log_filename;
