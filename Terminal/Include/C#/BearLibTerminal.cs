@@ -19,7 +19,7 @@
 * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *
-* Release date: 2014-08-13
+* Release date: 2014-11-10
 */
 
 using System;
@@ -288,6 +288,35 @@ namespace BearLib
         {
         	PutExt(x, y, dx, dy, (int)code, corners);
         }
+        
+        public static int Pick(int x, int y)
+        {
+        	return Pick(x, y, 0);
+        }
+        
+        [DllImport("BearLibTerminal.dll", EntryPoint = "terminal_pick", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int Pick(int x, int y, int index);
+        
+        public static Color PickColor(int x, int y)
+        {
+        	return PickColor(x, y, 0);
+        }
+        
+        [DllImport("BearLibTerminal.dll", EntryPoint = "terminal_pick_color", CallingConvention = CallingConvention.Cdecl)]
+        private static extern int PickColorImpl(int x, int y, int index);
+        
+        public static Color PickColor(int x, int y, int index)
+        {
+        	return System.Drawing.Color.FromArgb(PickColorImpl(x, y, index));
+        }
+        
+        [DllImport("BearLibTerminal.dll", EntryPoint = "terminal_pick_bkcolor", CallingConvention = CallingConvention.Cdecl)]
+        private static extern int PickBkColorImpl(int x, int y);
+        
+        public static Color PickBkColor(int x, int y)
+        {
+        	return System.Drawing.Color.FromArgb(PickBkColorImpl(x, y));
+        }
 
         [DllImport("BearLibTerminal.dll", CharSet = CharSet.Unicode, EntryPoint = "terminal_print16", CallingConvention = CallingConvention.Cdecl)]
         public static extern int Print(int x, int y, string text);
@@ -329,6 +358,12 @@ namespace BearLib
             text = buffer.ToString();
             return result;
         }
+        
+        [DllImport("BearLibTerminal.dll", EntryPoint = "terminal_peek", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int Peek();
+        
+        [DllImport("BearLibTerminal.dll", EntryPoint = "terminal_delay", CallingConvention = CallingConvention.Cdecl)]
+        public static extern void Delay(int period);
 
         [DllImport("BearLibTerminal.dll", CharSet = CharSet.Unicode, EntryPoint = "color_from_name16", CallingConvention=CallingConvention.Cdecl)]
         private static extern int ColorFromNameImpl(string name);

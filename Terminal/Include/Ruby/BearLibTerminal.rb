@@ -19,7 +19,7 @@
 # IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #
-# Release date: 2014-08-13
+# Release date: 2014-11-10
 
 require 'fiddle'
 require 'rbconfig'
@@ -73,12 +73,17 @@ module Terminal
 	Composition = Fiddle::Function.new(Lib['terminal_composition'], [Fiddle::TYPE_INT], Fiddle::TYPE_VOID)
 	Put = Fiddle::Function.new(Lib['terminal_put'], [Fiddle::TYPE_INT, Fiddle::TYPE_INT, Fiddle::TYPE_INT], Fiddle::TYPE_VOID)
 	PutExt = Fiddle::Function.new(Lib['terminal_put_ext'], [Fiddle::TYPE_INT, Fiddle::TYPE_INT, Fiddle::TYPE_INT, Fiddle::TYPE_INT, Fiddle::TYPE_INT, Fiddle::TYPE_VOIDP], Fiddle::TYPE_VOID)
+	Pick = Fiddle::Function.new(Lib['terminal_pick'], [Fiddle::TYPE_INT, Fiddle::TYPE_INT, Fiddle::TYPE_INT], Fiddle::TYPE_INT)
+	PickColor = Fiddle::Function.new(Lib['terminal_pick_color'], [Fiddle::TYPE_INT, Fiddle::TYPE_INT, Fiddle::TYPE_INT], -Fiddle::TYPE_INT)
+	PickBkColor = Fiddle::Function.new(Lib['terminal_pick_bkcolor'], [Fiddle::TYPE_INT, Fiddle::TYPE_INT], -Fiddle::TYPE_INT)
 	Print = Fiddle::Function.new(Lib['terminal_print8'], [Fiddle::TYPE_INT, Fiddle::TYPE_INT, Fiddle::TYPE_VOIDP], Fiddle::TYPE_INT)
 	Measure = Fiddle::Function.new(Lib['terminal_measure8'], [Fiddle::TYPE_VOIDP], Fiddle::TYPE_INT)
 	HasInput = Fiddle::Function.new(Lib['terminal_has_input'], [], Fiddle::TYPE_INT)
 	State = Fiddle::Function.new(Lib['terminal_state'], [Fiddle::TYPE_INT], Fiddle::TYPE_INT)
 	Read = Fiddle::Function.new(Lib['terminal_read'], [], Fiddle::TYPE_INT)
+	Peek = Fiddle::Function.new(Lib['terminal_peek'], [], Fiddle::TYPE_INT)
 	ReadStr = Fiddle::Function.new(Lib['terminal_read_str8'], [Fiddle::TYPE_INT, Fiddle::TYPE_INT, Fiddle::TYPE_VOIDP, Fiddle::TYPE_INT], Fiddle::TYPE_INT)
+	Delay = Fiddle::Function.new(Lib['terminal_delay'], [Fiddle::TYPE_INT], Fiddle::TYPE_VOID)
 	ColorFromName = Fiddle::Function.new(Lib['color_from_name8'], [Fiddle::TYPE_VOIDP], -Fiddle::TYPE_INT)
 	
 	# Wrappers
@@ -111,12 +116,16 @@ module Terminal
 			PutExt.call x, y, dx, dy, code, ptr
 		end
 	end
+	def self.pick x, y, z=0; Pick.call x, y, z; end
+	def self.pick_color x, y, z=0; PickColor.call x, y, z; end
+	def self.pick_bkcolor x, y; PickBkColor.call x, y; end
 	def self.print x, y, s; return Print.call x, y, Ptr[s]; end
 	def self.measure s; return Measure.call Ptr[s]; end
 	def self.has_input?; return HasInput.call == 1; end
 	def self.state code; return State.call code; end
 	def self.check? code; return state(code) > 0; end
 	def self.read; return Read.call; end
+	def self.peek; return Peek.call; end
 	def self.read_str x, y, s, max
 		p = Ptr.malloc max*3+1
 		ps = Ptr[s]
@@ -127,6 +136,7 @@ module Terminal
 		s.replace p.to_s
 		return rc
 	end
+	def self.delay period; Delay.call period; end
 	def self.color_from_name name; return ColorFromName.call Ptr[name]; end
 	def self.color_from_argb a, r, g, b
 		return (a << 24) | (r << 16) | (g << 8) | b

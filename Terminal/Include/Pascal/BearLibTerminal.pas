@@ -19,7 +19,7 @@
 * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *
-* Release date: 2014-08-13
+* Release date: 2014-11-10
 *}
 
 {$H+}
@@ -250,6 +250,22 @@ procedure terminal_put_ext(X, Y, dX, dY: Integer; Code: Integer);
 
 procedure terminal_put_ext(X, Y, dX, dY: Integer; Code: UnicodeChar);
 
+// Pick
+function terminal_pick(X, Y, Index: Integer): Integer;
+  cdecl; external 'BearLibTerminal' name 'terminal_pick';
+
+function terminal_pick(X, Y: Integer): Integer;
+
+// PickColor
+function terminal_pick_color(X, Y, Index: Integer): Color;
+  cdecl; external 'BearLibTerminal' name 'terminal_pick_color';
+
+function terminal_pick_color(X, Y: Integer): Color;
+
+// PickBkColor
+function terminal_pick_bkcolor(X, Y: Integer): Color;
+  cdecl; external 'BearLibTerminal' name 'terminal_pick_bkcolor';
+
 // Print
 function terminal_print(X, Y: Integer; const S: String): Cardinal;
 
@@ -274,6 +290,14 @@ function terminal_check(Code: Integer): Boolean;
 // Read
 function terminal_read(): Integer;
   cdecl; external 'BearLibTerminal' name 'terminal_read';
+  
+// Peek
+function terminal_peek(): Integer;
+  cdecl; external 'BearLibTerminal' name 'terminal_peek';
+
+// Delay
+procedure terminal_delay(Period: Integer);
+  cdecl; external 'BearLibTerminal' name 'terminal_delay';
 
 // ColorFromName
 function color_from_name(const Name: String): Color;
@@ -343,6 +367,16 @@ end;
 procedure terminal_put_ext(X, Y, dX, dY: Integer; Code: UnicodeChar);
 begin
 	terminal_put_ext(X, Y, dX, dY, ord(Code), PColor(0));
+end;
+
+function terminal_pick(X, Y: Integer): Integer;
+begin
+	terminal_pick := terminal_pick(X, Y, 0);
+end;
+
+function terminal_pick_color(X, Y: Integer): Color;
+begin;
+	terminal_pick_color := terminal_pick_color(X, Y, 0);
 end;
 
 function terminal_print_ansi(X, Y: Integer; const S: PChar): Cardinal;

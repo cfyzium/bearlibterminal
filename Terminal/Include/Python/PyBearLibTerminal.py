@@ -19,7 +19,7 @@
 # IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #
-# Release date: 2014-08-13
+# Release date: 2014-11-10
 
 import sys, ctypes, numbers
 
@@ -126,6 +126,14 @@ def put_ext(x, y, dx, dy, c, corners=None):
 		_library.terminal_put_ext(x, y, dx, dy, c, ctypes.cast(put_ext.corners, ctypes.POINTER(ctypes.c_uint)))
 put_ext.corners = (ctypes.c_uint32 * 4)()
 
+def pick(x, y, z = 0):
+	return _library.terminal_pick(x, y, z);
+
+def pick_color(x, y, z = 0):
+	return _library.terminal_pick_color(x, y, z);
+
+pick_bkcolor = _library.terminal_pick_bkcolor
+
 def print_(x, y, s):
 	if _version3 or isinstance(s, unicode):
 		return _wprint(x, y, s)
@@ -154,6 +162,8 @@ def check(state):
 
 read = _library.terminal_read
 
+peek = _library.terminal_peek
+
 def read_str(x, y, s, max):
 	if _version3 or isinstance(s, unicode):
 		p = ctypes.create_unicode_buffer(s, max+1)
@@ -163,6 +173,8 @@ def read_str(x, y, s, max):
 		p = ctypes.create_string_buffer(s, max+1)
 		rc = _library.terminal_read_str8(x, y, p, max)
 		return rc, p.value
+
+delay = _library.terminal_delay
 
 def color_from_argb(a, r, g, b):
 	result = a
