@@ -41,7 +41,9 @@ set(SOURCE_FILES ./Source/Main.cpp
                  ./Source/Keyboard.cpp
                  ./Source/Mouse.cpp
                  ./Source/TextInput.cpp
-                 ./Source/WindowResize.cpp)
+                 ./Source/InputFiltering.cpp
+                 ./Source/WindowResize.cpp
+                 ./Source/Pick.cpp)
 
 include_directories(${CMAKE_SOURCE_DIR}/Terminal/Include/C)
 add_executable(SampleOmni ${SOURCE_FILES})

@@ -50,7 +50,9 @@ int main()
 		{"Input 1: keyboard", TestKeyboard},
 		{"Input 2: mouse", TestMouse},
 		{"Input 3: text input", TestTextInput},
-		{"Window resizing", TestWindowResize}
+		{"Input 4: filtering", TestInputFiltering},
+		{"Window resizing", TestWindowResize},
+		{"Examining cell contents", TestPick}
 	};
 
 	reset();
