@@ -1128,7 +1128,7 @@ namespace BearLibTerminal
 
 			return TRUE;
 		}
-		else if (uMsg == WM_EXITSIZEMOVE)
+		else if (uMsg == WM_EXITSIZEMOVE && m_resizeable)
 		{
 			RECT rect;
 			GetClientRect(m_handle, &rect);

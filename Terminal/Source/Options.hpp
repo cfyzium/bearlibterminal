@@ -25,6 +25,7 @@ namespace BearLibTerminal
 		// Window
 		Size window_size;
 		Size window_cellsize;
+		Size window_client_size;
 		std::wstring window_title;
 		std::wstring window_icon;
 		bool window_resizeable;

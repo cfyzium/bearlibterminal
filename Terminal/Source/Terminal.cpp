@@ -348,6 +348,7 @@ namespace BearLibTerminal
 
 		// Apply on per-option basis
 		bool viewport_size_changed = false;
+		bool cell_size_changed = false;
 
 		if (updated.window_title != m_options.window_title)
 		{
@@ -362,6 +363,13 @@ namespace BearLibTerminal
 		if (updated.window_resizeable != m_options.window_resizeable)
 		{
 			m_window->SetResizeable(updated.window_resizeable);
+
+			if (updated.window_resizeable)
+			{
+				// User resize cancels client-size
+				// This one handles client-size set before resizeable
+				updated.window_client_size = Size();
+			}
 		}
 
 		if (updated.window_resizeable && m_scale_step != kScaleDefault)
@@ -374,6 +382,8 @@ namespace BearLibTerminal
 		// If the size of cell has changed -OR- new basic tileset has been specified
 		if (updated.window_cellsize != m_options.window_cellsize || new_tilesets.count(0))
 		{
+			cell_size_changed = true;
+
 			// Refresh stage.state.cellsize
 			m_world.state.cellsize = updated.window_cellsize;
 
@@ -404,6 +414,27 @@ namespace BearLibTerminal
 			LOG(Debug, L"SetOptions: new cell size is " << m_world.state.cellsize);
 		}
 
+		// Manual size modification cancels client-size
+		if (updated.window_size != m_options.window_size)
+		{
+			updated.window_client_size = Size();
+		}
+
+		if (updated.window_client_size != m_options.window_client_size ||
+		   (m_options.window_client_size.Area() > 0 && cell_size_changed)) // cellsize changed when client-size is already set
+		{
+			if (updated.window_client_size.Area() > 0)
+			{
+				auto sizef = updated.window_client_size/m_world.state.cellsize.As<float>();
+				updated.window_size = std::floor(sizef).As<int>();
+				if (updated.window_size.Area() <= 0)
+					updated.window_size = Size(1, 1);
+			}
+
+			m_options.window_client_size = updated.window_client_size;
+			viewport_size_changed = true;
+		}
+
 		if (updated.window_size != m_options.window_size)
 		{
 			// Update window size: resize the stage
@@ -423,7 +454,9 @@ namespace BearLibTerminal
 		{
 			// Resize window object
 			float scale_factor = kScaleSteps[m_scale_step];
-			Size viewport_size = m_world.stage.size * m_world.state.cellsize * scale_factor;
+			Size viewport_size = m_options.window_client_size.Area() > 0? // client-size overrides viewport dimensions
+				m_options.window_client_size:
+				m_world.stage.size * m_world.state.cellsize * scale_factor;
 			m_vars[TK_CLIENT_WIDTH] = viewport_size.width;
 			m_vars[TK_CLIENT_HEIGHT] = viewport_size.height;
 			m_window->SetSizeHints(m_world.state.cellsize*scale_factor, updated.window_minimum_size);
@@ -499,6 +532,23 @@ namespace BearLibTerminal
 			options.window_cellsize = value;
 		}
 
+		if (group.attributes.count(L"client-size"))
+		{
+			Size value;
+
+			if (group.attributes[L"client-size"] != L"auto" && !try_parse(group.attributes[L"client-size"], value))
+			{
+				throw std::runtime_error("window.client-size value cannot be parsed");
+			}
+
+			if (value.width < 0 || value.height < 0)
+			{
+				throw std::runtime_error("window.client-size value is out of range");
+			}
+
+			options.window_client_size = value;
+		}
+
 		if (group.attributes.count(L"title"))
 		{
 			options.window_title = group.attributes[L"title"];
@@ -559,16 +609,6 @@ namespace BearLibTerminal
 			throw std::runtime_error("input.sticky-close cannot be parsed");
 		}
 
-		//if (group.attributes.count(L"keyboard") && !try_parse(group.attributes[L"keyboard"], options.input_keyboard))
-		//{
-		//	throw std::runtime_error("input.keyboard cannot be parsed");
-		//}
-
-		//if (group.attributes.count(L"mouse") && !try_parse(group.attributes[L"mouse"], options.input_mouse))
-		//{
-		//	throw std::runtime_error("input.mouse cannot be parsed");
-		//}
-
 		if (group.attributes.count(L"filter") && !ParseInputFilter(group.attributes[L"filter"], options.input_filter))
 		{
 			throw std::runtime_error("input.filter cannot be parsed");
@@ -597,8 +637,6 @@ namespace BearLibTerminal
 		// s: list of case-insensitive input event names separated by a comma.
 		// macro names: keyboard, mouse
 
-		LOG(Error, L"filer: s = [" << s << L"]");
-
 		std::set<int> result;
 
 		auto add = [&result](int code, bool release_too)
@@ -624,8 +662,6 @@ namespace BearLibTerminal
 					release_too = true;
 					name.resize(name.length()-1);
 				}
-
-				LOG(Error, L"filer: name = [" << name << L"], release_too = " << release_too);
 
 				if (!name.empty())
 				{
@@ -2133,7 +2169,8 @@ namespace BearLibTerminal
 		{
 			// Alt+G: toggle grid
 			m_show_grid = !m_show_grid;
-			Redraw(true);
+			if (Redraw(true) != -1)
+				m_window->SwapBuffers();
 			return 0;
 		}
 		else if (event.code == TK_RETURN && alt)
@@ -2189,6 +2226,10 @@ namespace BearLibTerminal
 				// Stage size changed, must reallocate and reconstruct scene
 				m_options.window_size = Size(event[TK_WIDTH], event[TK_HEIGHT]);
 				m_world.stage.Resize(m_options.window_size);
+
+				// User resize cancels client-size
+				// This one handles client-size set after resizeable.
+				m_options.window_client_size = Size();
 
 				// Client size changed, must redraw
 				m_viewport_modified = true;
