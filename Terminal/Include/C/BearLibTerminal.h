@@ -458,6 +458,16 @@ TERMINAL_INLINE color_t color_from_name(const wchar_t* name)
 	return color_from_wname(name);
 }
 
+TERMINAL_INLINE int terminal_pick(int x, int y)
+{
+	return terminal_pick(x, y, 0);
+}
+
+TERMINAL_INLINE color_t terminal_pick_color(int x, int y)
+{
+	return terminal_pick_color(x, y, 0);
+}
+
 #endif /* __cplusplus */
 
 /*

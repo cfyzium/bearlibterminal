@@ -364,13 +364,21 @@ int luaterminal_put_ext(lua_State* L)
 
 int luaterminal_pick(lua_State* L)
 {
-	lua_pushnumber(L, terminal_pick(lua_tointeger(L, 1), lua_tointeger(L, 2), lua_tointeger(L, 3)));
+	int nargs = lua_gettop(L);
+	int x = lua_tointeger(L, 1);
+	int y = lua_tointeger(L, 2);
+	int z = nargs > 2? lua_tointeger(L, 3): 0;
+	lua_pushnumber(L, terminal_pick(x, y, z));
 	return 1;
 }
 
 int luaterminal_pick_color(lua_State* L)
 {
-	lua_pushnumber(L, terminal_pick_color(lua_tointeger(L, 1), lua_tointeger(L, 2), lua_tointeger(L, 3)));
+	int nargs = lua_gettop(L);
+	int x = lua_tointeger(L, 1);
+	int y = lua_tointeger(L, 2);
+	int z = nargs > 2? lua_tointeger(L, 3): 0;
+	lua_pushnumber(L, terminal_pick_color(x, y, z));
 	return 1;
 }
 
