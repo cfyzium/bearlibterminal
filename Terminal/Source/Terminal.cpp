@@ -1005,7 +1005,6 @@ namespace BearLibTerminal
 		auto& cell = m_world.stage.backbuffer.layers[m_world.state.layer].cells[cell_index];
 		wchar_t code = (index >= 0 && index < (int)cell.leafs.size())? (int)cell.leafs[index].code: 0;
 
-		return (int)code;
 		// Must take into account possible terminal.encoding codepage.
 		int translated = m_encoding->Convert(code);
 		return translated >= 0? translated: (int)code;
