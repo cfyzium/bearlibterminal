@@ -655,8 +655,9 @@ namespace BearLibTerminal
 			if (end > start)
 			{
 				std::wstring name = trim(s.substr(start, end-start));
-				bool release_too = false;
+				for (auto& c: name) if (c == L'_') c = L'-';
 
+				bool release_too = false;
 				if (!name.empty() && name.back() == L'+')
 				{
 					release_too = true;
@@ -665,9 +666,28 @@ namespace BearLibTerminal
 
 				if (!name.empty())
 				{
-					if (name == L"keyboard")
+					if (name == L"false")
+					{
+						result.clear();
+					}
+					else if (name == L"system")
+					{
+						add(TK_CLOSE, release_too);
+						add(TK_RESIZED, release_too);
+					}
+					else if (name == L"keyboard")
 					{
 						for (int i = TK_A; i <= TK_CONTROL; i++)
+							add(i, release_too);
+					}
+					else if (name == L"arrows")
+					{
+						for (int i = TK_RIGHT; i <= TK_UP; i++)
+							add(i, release_too);
+					}
+					else if (name == L"keypad")
+					{
+						for (int i = TK_KP_DIVIDE; i <= TK_KP_PERIOD; i++)
 							add(i, release_too);
 					}
 					else if (name == L"mouse")
