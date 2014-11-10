@@ -1003,8 +1003,9 @@ namespace BearLibTerminal
 
 		int cell_index = y * m_world.stage.size.width + x;
 		auto& cell = m_world.stage.backbuffer.layers[m_world.state.layer].cells[cell_index];
-		wchar_t code = (index >= 0 || index < (int)cell.leafs.size())? (int)cell.leafs[index].code: 0;
+		wchar_t code = (index >= 0 && index < (int)cell.leafs.size())? (int)cell.leafs[index].code: 0;
 
+		return (int)code;
 		// Must take into account possible terminal.encoding codepage.
 		int translated = m_encoding->Convert(code);
 		return translated >= 0? translated: (int)code;
@@ -1016,7 +1017,7 @@ namespace BearLibTerminal
 
 		int cell_index = y * m_world.stage.size.width + x;
 		auto& cell = m_world.stage.backbuffer.layers[m_world.state.layer].cells[cell_index];
-		return (index >= 0 || index < (int)cell.leafs.size())? cell.leafs[index].color[0]: Color();
+		return (index >= 0 && index < (int)cell.leafs.size())? cell.leafs[index].color[0]: Color();
 	}
 
 	Color Terminal::PickBackColor(int x, int y)
