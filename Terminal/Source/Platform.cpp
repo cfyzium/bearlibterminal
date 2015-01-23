@@ -24,6 +24,7 @@
 #include "Encoding.hpp"
 #include "Log.hpp"
 #include <vector>
+#include <fstream>
 
 #if defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN
@@ -169,5 +170,26 @@ namespace BearLibTerminal
 		}
 #endif
 		return Module();
+	}
+
+	std::unique_ptr<std::istream> OpenFile(std::wstring name)
+	{
+#if defined(_WIN32)
+		// Windows version: change slashes to backslashes
+		for (auto& c: name) if (c == L'/') c = L'\\';
+#endif
+		std::unique_ptr<std::istream> result;
+#if defined(_MSC_VER)
+		result.reset(new std::ifstream(name, std::ios_base::in|std::ios_base::binary));
+#else
+		std::string name_u8 = UTF8Encoding().Convert(name);
+		result.reset(new std::ifstream(name_u8, std::ios_base::in|std::ios_base::binary));
+#endif
+		if (result->fail())
+		{
+			throw std::runtime_error("file \"" + UTF8Encoding().Convert(name) + "\" cannot be opened");
+		}
+
+		return result;
 	}
 }

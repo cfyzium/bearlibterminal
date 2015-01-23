@@ -1,6 +1,6 @@
 /*
 * BearLibTerminal
-* Copyright (C) 2014 Cfyz
+* Copyright (C) 2015 Cfyz
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -20,38 +20,50 @@
 * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#ifndef BEARLIBTERMINAL_PLATFORM_HPP
-#define BEARLIBTERMINAL_PLATFORM_HPP
+#ifndef BEARLIBTERMINAL_CONFIGURATION_HPP
+#define BEARLIBTERMINAL_CONFIGURATION_HPP
 
+#include <map>
 #include <string>
-#include <memory>
+#include <mutex>
 
 namespace BearLibTerminal
 {
-	class Module
+	class Config
 	{
 	public:
-		typedef void* Handle;
-		Module();
-		Module(std::wstring name);
-		Module(Module&& from);
-		explicit Module(Handle handle);
-		~Module();
-		Handle GetHandle() const;
-		Module& operator=(Module&& from);
-		void* operator[](std::string name) const;
-		explicit operator bool() const;
-		void* Probe(std::string name) const;
-		static Module GetProviding(std::string name);
+		bool TryGet(std::wstring name, std::wstring& out);
+		void Set(std::wstring name, std::wstring value);
+		void Remove(std::wstring name);
+		void Dispose();
+
+	public:
+		static Config& Instance();
 
 	private:
-		Module(const Module&);
-		Module& operator=(const Module&);
-		Handle m_handle;
-		bool m_owner;
-	};
+		Config();
+		void Init();
+		void Load(std::wstring filename);
 
-	std::unique_ptr<std::istream> OpenFile(std::wstring name);
+	private:
+		struct Property
+		{
+			std::wstring m_case_sensitive_name;
+			std::wstring m_value;
+		};
+
+		struct Section
+		{
+			std::wstring m_case_sensitive_name;
+			std::map<std::wstring, Property> m_properties;
+		};
+
+	private:
+		std::mutex m_lock;
+		bool m_initialized;
+		std::wstring m_filename;
+		std::map<std::wstring, Section> m_sections;
+	};
 }
 
-#endif // BEARLIBTERMINAL_PLATFORM_HPP
+#endif // BEARLIBTERMINAL_CONFIGURATION_HPP

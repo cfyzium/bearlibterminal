@@ -75,6 +75,24 @@ namespace BearLibTerminal
 	};
 
 	static const uint16_t kUnicodeReplacementCharacter = 0xFFFD;
+
+	template<typename T> struct Encodings
+	{ };
+
+	template<> struct Encodings<char>
+	{
+		typedef UTF8Encoding type;
+	};
+
+	template<> struct Encodings<char16_t>
+	{
+		typedef UCS2Encoding type;
+	};
+
+	template<> struct Encodings<char32_t>
+	{
+		typedef UCS4Encoding type;
+	};
 }
 
 #endif // BEARLIBTERMINAL_ENCODING_HPP

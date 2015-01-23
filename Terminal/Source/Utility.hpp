@@ -64,6 +64,11 @@ namespace BearLibTerminal
 		return stream.str();
 	}
 
+	template<typename char_t> bool starts_with(const std::basic_string<char_t>& what, const std::basic_string<char_t>& with)
+	{
+		return what.find(with) == 0;
+	}
+
 	template<typename char_t> bool ends_with(const std::basic_string<char_t>& what, const std::basic_string<char_t>& with)
 	{
 		return what.rfind(with) == what.length() - with.length();

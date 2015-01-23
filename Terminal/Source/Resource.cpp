@@ -7,6 +7,7 @@
 
 #include "Resource.hpp"
 #include "Encoding.hpp"
+#include "Platform.hpp"
 #include "Base64.hpp"
 #include "Log.hpp"
 #include <sstream>
@@ -60,6 +61,7 @@ namespace BearLibTerminal
 		}
 		else
 		{
+			/*
 			// Search on filesystem
 #if defined(_WIN32)
 			// Windows version: change slashes to backslashes
@@ -75,9 +77,12 @@ namespace BearLibTerminal
 			if (result->fail())
 			{
 				throw std::runtime_error("resource \"" + UTF8Encoding().Convert(name) + "\" cannot be opened");
-				result.reset();
 			}
+
 			return result;
+			/*/
+			return OpenFile(name);
+			//*/
 		}
 	}
 }

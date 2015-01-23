@@ -477,18 +477,8 @@ int luaterminal_check(lua_State* L)
 int luaterminal_read(lua_State* L)
 {
 	int code = terminal_read();
-	/*
-	int released = (code & TK_KEY_RELEASED) > 0;
-	code = code & 0xFF;
-
-	lua_pushnumber(L, code);
-	lua_pushboolean(L, released);
-
-	return 2;
-	/*/
 	lua_pushnumber(L, code);
 	return 1;
-	//*/
 }
 
 int luaterminal_read_str(lua_State* L)
@@ -521,6 +511,17 @@ int luaterminal_delay(lua_State* L)
 {
 	terminal_delay(lua_tointeger(L, 1));
 	return 0;
+}
+
+int luaterminal_get(lua_State* L)
+{
+	// str = terminal.get(key, [default])
+	int nargs = lua_gettop(L); // 1 or 2 arguments
+	const char* key = lua_tostring(L, 1);
+	const char* default_ = nargs > 1? lua_tostring(L, 2): nullptr;
+	const char* result = (const char*)terminal_get8((const int8_t*)key, (const int8_t*)default_);
+	lua_pushstring(L, result);
+	return 1;
 }
 
 int luaterminal_color_from_name(lua_State* L)
@@ -569,6 +570,7 @@ static const luaL_Reg luaterminal_lib[] =
 	{"read_str", luaterminal_read_str},
 	{"peek", luaterminal_peek},
 	{"delay",  luaterminal_delay},
+	{"get", luaterminal_get},
 	{"color_from_name", luaterminal_color_from_name},
 	{"color_from_argb", luaterminal_color_from_argb},
 	{NULL, NULL}

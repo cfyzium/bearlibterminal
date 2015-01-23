@@ -22,15 +22,66 @@
 
 #define BEARLIBTERMINAL_BUILDING_LIBRARY
 #include "BearLibTerminal.h"
+#include "Config.hpp"
 #include "Terminal.hpp"
 #include "Palette.hpp"
 #include "Log.hpp"
+#include <map>
 #include <memory>
+#include <string>
 #include <string.h>
+#include <iostream>
 
 namespace
 {
 	static std::unique_ptr<BearLibTerminal::Terminal> g_instance;
+
+	// --------------------------------
+
+	struct cached_setting_t
+	{
+		cached_setting_t();
+		cached_setting_t(std::wstring s);
+		cached_setting_t& operator=(std::wstring s);
+		template<typename T> const T* get();
+
+		std::string s8;
+		std::u16string s16;
+		std::u32string s32;
+	};
+
+	cached_setting_t::cached_setting_t()
+	{ }
+
+	cached_setting_t::cached_setting_t(std::wstring s)
+	{
+		this->operator=(s);
+	}
+
+	cached_setting_t& cached_setting_t::operator=(std::wstring s)
+	{
+		s8 = BearLibTerminal::UTF8Encoding().Convert(s);
+		s16 = BearLibTerminal::UCS2Encoding().Convert(s);
+		s32 = BearLibTerminal::UCS4Encoding().Convert(s);
+		return *this;
+	}
+
+	template<> const char* cached_setting_t::get<char>()
+	{
+		return s8.c_str();
+	}
+
+	template<> const char16_t* cached_setting_t::get<char16_t>()
+	{
+		return s16.c_str();
+	}
+
+	template<> const char32_t* cached_setting_t::get<char32_t>()
+	{
+		return s32.c_str();
+	}
+
+	std::map<std::wstring, cached_setting_t> g_cached_settings;
 }
 
 int terminal_open()
@@ -44,6 +95,7 @@ int terminal_open()
 	}
 	catch (std::exception& e)
 	{
+		std::cerr << "terminal_open: " << e.what() << std::endl;
 		return 0;
 	}
 }
@@ -248,6 +300,35 @@ void terminal_delay(int period)
 {
 	if (!g_instance) return;
 	g_instance->Delay(period);
+}
+
+template<typename outer, typename inner> const outer* terminal_get(const outer* key, const outer* default_)
+{
+	typename BearLibTerminal::Encodings<inner>::type encoding;
+	std::wstring wkey = encoding.Convert(std::basic_string<inner>((const inner*)key));
+	std::wstring wout;
+	if (!BearLibTerminal::Config::Instance().TryGet(wkey, wout))
+	{
+		wout = default_ == nullptr? std::wstring(L""): encoding.Convert(std::basic_string<inner>((const inner*)default_));
+	}
+	auto& cached_setting = g_cached_settings[wkey];
+	cached_setting = wout;
+	return (const outer*)cached_setting.get<inner>();
+}
+
+const int8_t* terminal_get8(const int8_t* key, const int8_t* default_)
+{
+	return terminal_get<int8_t, char>(key, default_);
+}
+
+const int16_t* terminal_get16(const int16_t* key, const int16_t* default_)
+{
+	return terminal_get<int16_t, char16_t>(key, default_);
+}
+
+const int32_t* terminal_get32(const int32_t* key, const int32_t* default_)
+{
+	return terminal_get<int32_t, char32_t>(key, default_);
 }
 
 color_t color_from_name8(const int8_t* name)

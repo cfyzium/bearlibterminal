@@ -7,10 +7,14 @@
 
 #include "Log.hpp"
 #include "Encoding.hpp"
+#include "Utility.hpp"
 
 #include <fstream>
 #include <time.h>
 #include <chrono>
+
+#include <iostream>
+#include "Config.hpp"
 
 namespace BearLibTerminal
 {
@@ -44,16 +48,64 @@ namespace BearLibTerminal
 		return buffer;
 	}
 
+	Log& Log::Instance()
+	{
+		static Log instance;
+		return instance;
+	}
+
 	Log::Log():
+		m_initialized(false),
 		m_level(Level::Error),
 		m_mode(Mode::Truncate),
 		m_filename(L"bearlibterminal.log"),
 		m_truncated(false)
-	{ }
+	{
+		Init();
+	}
+
+	void Log::Init()
+	{
+		std::cout << "Log::Init()\n";
+
+		std::wstring temp;
+
+		if (Config::Instance().TryGet(L"ini.bearlibterminal.log.file", temp))
+		{
+			m_filename = temp; // FIXME: backslashes?
+			m_truncated = false;
+		}
+
+		if (Config::Instance().TryGet(L"ini.bearlibterminal.log.level", temp))
+		{
+			m_level = parse<Level>(temp);
+		}
+
+		if (Config::Instance().TryGet(L"ini.bearlibterminal.log.mode", temp))
+		{
+			m_mode = parse<Mode>(temp);
+		}
+
+		m_initialized = true;
+	}
+
+	void Log::Dispose()
+	{
+		std::lock_guard<std::mutex> guard(m_lock);
+		m_filename = L"bearlibterminal.log";
+		m_level = Level::Error;
+		m_mode = Mode::Truncate;
+		m_truncated = false;
+		m_initialized = false;
+	}
 
 	void Log::Write(Level level, const std::wstring& what)
 	{
 		std::lock_guard<std::mutex> guard(m_lock);
+
+		if (!m_initialized)
+			Init();
+
 		std::ofstream stream;
 		std::ios_base::openmode flags = std::ios_base::out;
 		if (m_mode == Mode::Truncate && !m_truncated)
@@ -121,33 +173,8 @@ namespace BearLibTerminal
 
 	std::wostream& operator<< (std::wostream& s, const Log::Level& value)
 	{
-		switch (value)
-		{
-		case Log::Level::None:
-			s << L"None";
-			break;
-		case Log::Level::Fatal:
-			s << L"Fatal";
-			break;
-		case Log::Level::Error:
-			s << L"Error";
-			break;
-		case Log::Level::Warning:
-			s << L"Warning";
-			break;
-		case Log::Level::Info:
-			s << L"Info";
-			break;
-		case Log::Level::Debug:
-			s << L"Debug";
-			break;
-		case Log::Level::Trace:
-			s << L"Trace";
-			break;
-		default:
-			s << L"n/a";
-			break;
-		}
+		const wchar_t* map[] = {L"none", L"fatal", L"error", L"warning", L"info", L"debug", L"trace"};
+		s << map[(int)value];
 		return s;
 	}
 
@@ -157,55 +184,29 @@ namespace BearLibTerminal
 		s >> temp;
 
 		if (temp == L"trace")
-		{
 			value = Log::Level::Trace;
-		}
 		else if (temp == L"debug")
-		{
 			value = Log::Level::Debug;
-		}
 		else if (temp == L"info")
-		{
 			value = Log::Level::Info;
-		}
 		else if (temp == L"warning")
-		{
 			value = Log::Level::Warning;
-		}
 		else if (temp == L"error")
-		{
 			value = Log::Level::Error;
-		}
 		else if (temp == L"fatal")
-		{
 			value = Log::Level::Fatal;
-		}
 		else if (temp == L"none")
-		{
 			value = Log::Level::None;
-		}
 		else
-		{
 			s.setstate(std::wistream::badbit);
-		}
 
 		return s;
 	}
 
 	std::wostream& operator<< (std::wostream& s, const Log::Mode& value)
 	{
-		switch (value)
-		{
-		case Log::Mode::Truncate:
-			s << L"truncate";
-			break;
-		case Log::Mode::Append:
-			s << L"append";
-			break;
-		default:
-			s << L"n/a";
-			break;
-		}
+		const wchar_t* map[] = {L"truncate", L"append"};
+		s << map[(int)value];
 		return s;
 	}
 
@@ -215,17 +216,11 @@ namespace BearLibTerminal
 		s >> temp;
 
 		if (temp == L"append")
-		{
 			value = Log::Mode::Append;
-		}
 		else if (temp == L"truncate")
-		{
 			value = Log::Mode::Truncate;
-		}
 		else
-		{
 			s.setstate(std::wistream::badbit);
-		}
 
 		return s;
 	}
