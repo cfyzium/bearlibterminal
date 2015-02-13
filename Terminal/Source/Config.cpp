@@ -26,10 +26,20 @@
 #include "OptionGroup.hpp"
 
 #include <iostream>
+#include <fstream>
 #include "Config.hpp"
 
 namespace BearLibTerminal
 {
+	namespace // anonymous
+	{
+		struct property_line
+		{
+			size_t offset;
+			size_t length;
+		};
+	}
+
 	Config::Config():
 		m_initialized(false)
 	{
@@ -95,7 +105,7 @@ namespace BearLibTerminal
 				if (line[pos] == ':')
 				{
 					// Grouped property
-					for (auto& group: ParseOptions(UTF8Encoding().Convert(line)))
+					for (auto group: ParseOptions(UTF8Encoding().Convert(line)))
 					{
 						for (auto& attribute: group.attributes)
 						{
@@ -255,6 +265,194 @@ namespace BearLibTerminal
 		{
 			// Immediately update the file
 			// FIXME: NYI
+
+			// 1. Open the file
+			// 2. Find the line this property is at.
+			// 3. Replace the property value in the line, trying to keep comments intact
+			// -or-
+			// 2. Find the line the section ends.
+			// 3. Add the property to the end of the section.
+			// -or-
+			// 3. Add the section with such property to the end of file.
+			//
+			// !!!
+			// Several subnames must be grouped to one:
+			// foo.bar=1, foo.baz=2 --> foo: bar=1, baz=2
+			//
+			// do.se.name.x=10;
+			// adding do.se.name.y=20 --> [se]name: x=10, y=20
+			//
+			// [section]
+			// foo.bar=1
+			// foo.baz=2
+			//
+
+			std::string name8 = UTF8Encoding().Convert(property_cs);
+			std::string value8 = UTF8Encoding().Convert(value);
+			std::string section8 = UTF8Encoding().Convert(section_cs);
+
+			std::map<std::string, std::string> pieces;
+
+			std::string subname = "";
+			size_t period_pos = name8.find(".");
+			if (period_pos != std::string::npos)
+			{
+				std::string subname = name8.substr(period_pos+1);
+				name8 = name8.substr(0, period_pos);
+			}
+			pieces[subname] = value8;
+
+
+
+			std::ifstream file(UTF8Encoding().Convert(m_filename).c_str(), std::ios_base::in); // XXX: linux version
+			if (!file.is_open())
+			{
+				std::cerr << "Failed to open \"" + UTF8Encoding().Convert(m_filename) + "\"\n";
+				return;
+			}
+
+			std::list<std::string> lines;
+			auto si = lines.end();
+			auto pi = lines.end();
+
+			std::string current_section;
+
+			std::string line;
+			while(std::getline(file, line))
+			{
+				lines.push_back(line);
+
+				if (line.empty() || line[0] == ' ' || line == '\t')
+				{
+					// Must not be counted as belonging to the section
+				}
+				else if (line[0] == ';' || line[0] == '#')
+				{
+					// Comment line
+				}
+				else if (line[0] == '[')
+				{
+					// Section header
+					size_t rbracket_pos = line.find(']');
+					if (rbracket_pos != std::string::npos)
+					{
+						// Looks okay
+						current_section = line.substr(1, rbracket_pos-1);
+					}
+					else
+						continue; // ?
+				}
+				else
+				{
+					// Must be a property
+					size_t pos = line.find_first_of("=.:");
+					if (pos != std::string::npos)
+					{
+						// Name legible
+						std::string name = line.substr(0, pos); // trim?
+						if (strcasecmp(name8.c_str(), name.c_str()) == 0)
+						{
+							// That's what we're looking for
+							if (line[pos] != '=')
+							{
+								// Grouped property
+								line[pos] = ':';
+								for (auto group: ParseOptions(UTF8Encoding().Convert(line))) // TODO: ParseValues
+								{
+									for (auto i: group.attributes)
+									{
+										pieces[UTF8Encoding().Convert(i.first)] = UTF8Encoding().Convert(i.second);
+									}
+								}
+							}
+
+							if (pi == lines.end())
+							{
+								// Remember first location.
+								pi = (--lines.end());
+							}
+							else
+							{
+								// Remove duplicates
+								lines.pop_back();
+							}
+						}
+					}
+				}
+
+				if (strcasecmp(section8.c_str(), current_section.c_str()) == 0)
+				{
+					si = (--lines.end());
+				}
+			}
+
+			// Overwrite property value
+			pieces[subname] = value8;
+
+			if (pi != lines.empty())
+			{
+				// Property has been found, overwrite it.
+				if (pieces.size() == 1 && pieces.begin()->first.empty()) // TODO: lambda-construct property line
+				{
+					// Regular property: foo=bar
+				}
+				else
+				{
+					// Grouped property: foo: bar, baz=doge
+				}
+			}
+			else if (si != lines.empty())
+			{
+				// Only section was found, append.
+			}
+			else
+			{
+				// Brand new entry
+			}
+
+			/*
+			std::list<property_line> property_lines;
+			std::string line;
+			size_t line_offset = 0;
+			size_t section_end = std::string::npos;
+			std::wstring current_section;
+
+			for (; std::getline(file, line); line_offset = file.tellg())
+			{
+				auto trimmed_line = trim(line);
+
+				if (trimmed_line.empty())
+				{
+					continue; // Well, empty line
+				}
+				else if (trimmed_line[0] == ';' || trimmed_line[0] == '#')
+				{
+					continue; // Comment
+				}
+				else if (trimmed_line[0] == '[')
+				{
+					// Section header: "[name]"
+					size_t rbracket = line.find(']');
+					if (rbracket == std::string::npos || rbracket == 1)
+					{
+						current_section = L"";
+						continue; // Malformed section header
+					}
+
+					// Keep
+					current_section = to_lower(UTF8Encoding().Convert(line.substr(1, rbracket-1)));
+					if (current_section == section)
+					{
+						section_end = file.tellg();
+					}
+				}
+				else if (current_section == section)
+				{
+					// Property line
+
+				}
+			}
+			//*/
 		}
 	}
 

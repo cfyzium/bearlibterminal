@@ -352,6 +352,164 @@ namespace BearLibTerminal
 		return false;
 	}
 
+	const char box_lines[][25] =
+	{
+		{0,0,0,0,0, 0,0,0,0,0, 1,1,1,1,1, 0,0,0,0,0, 0,0,0,0,0}, // 2500
+		{0,0,0,0,0, 1,1,1,1,1, 1,1,1,1,1, 1,1,1,1,1, 0,0,0,0,0}, // 2501
+		{0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0}, // 2502
+		{0,1,1,1,0, 0,1,1,1,0, 0,1,1,1,0, 0,1,1,1,0, 0,1,1,1,0}, // 2503
+		{0}, // 2504
+		{0}, // 2505
+		{0}, // 2506
+		{0}, // 2507
+		{0}, // 2508
+		{0}, // 2509
+		{0}, // 250A
+		{0}, // 250B
+		{0,0,0,0,0, 0,0,0,0,0, 0,0,1,1,1, 0,0,1,0,0, 0,0,1,0,0}, // 250C: Single right and bottom
+		{0,0,0,0,0, 0,0,1,1,1, 0,0,1,1,1, 0,0,1,1,1, 0,0,1,0,0}, // 250D: Wide right and single bottom
+		{0,0,0,0,0, 0,0,0,0,0, 0,0,1,1,1, 0,1,1,1,0, 0,1,1,1,0}, // 250E: Single right and wide bottom
+		{0,0,0,0,0, 0,1,1,1,1, 0,1,1,1,1, 0,1,1,1,1, 0,1,1,1,0}, // 250F: Wide right and bottom
+		{0,0,0,0,0, 0,0,0,0,0, 1,1,1,0,0, 0,0,1,0,0, 0,0,1,0,0}, // 2510: Single left and bottom
+		{0,0,0,0,0, 1,1,1,0,0, 1,1,1,0,0, 1,1,1,0,0, 0,0,1,0,0}, // 2511: Wide left and single bottom
+		{0,0,0,0,0, 0,0,0,0,0, 1,1,1,1,0, 0,1,1,1,0, 0,1,1,1,0}, // 2512: Single left and wide bottom
+		{0,0,0,0,0, 1,1,1,1,0, 1,1,1,1,0, 1,1,1,1,0, 0,1,1,1,0}, // 2513: Wide left and bottom
+		{0,0,1,0,0, 0,0,1,0,0, 0,0,1,1,1, 0,0,0,0,0, 0,0,0,0,0}, // 2514: Single top and right
+		{0,0,1,0,0, 0,0,1,1,1, 0,0,1,1,1, 0,0,1,1,1, 0,0,0,0,0}, // 2515: Single top and wide right
+		{0,1,1,1,0, 0,1,1,1,0, 0,1,1,1,1, 0,0,0,0,0, 0,0,0,0,0}, // 2516: Wide top and single right
+		{0,1,1,1,0, 0,1,1,1,1, 0,1,1,1,1, 0,1,1,1,1, 0,0,0,0,0}, // 2517: Wide top and right
+		{0,0,1,0,0, 0,0,1,0,0, 1,1,1,0,0, 0,0,0,0,0, 0,0,0,0,0}, // 2518: Single left and top
+		{0,0,1,0,0, 1,1,1,0,0, 1,1,1,0,0, 1,1,1,0,0, 0,0,0,0,0}, // 2519: Wide left and single top
+		{0,1,1,1,0, 0,1,1,1,0, 1,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0}, // 251A: Single left and wide top
+		{0,1,1,1,0, 1,1,1,1,0, 1,1,1,1,0, 1,1,1,1,0, 0,0,0,0,0}, // 251B: Wide left and top
+		{0,0,1,0,0, 0,0,1,0,0, 0,0,1,1,1, 0,0,1,0,0, 0,0,1,0,0}, // 251C: Single top, right and bottom
+		{0,0,1,0,0, 0,0,1,1,1, 0,0,1,1,1, 0,0,1,1,1, 0,0,1,0,0}, // 251D: Single top and bottom, wide right
+		{0,1,1,1,0, 0,1,1,1,0, 0,1,1,1,1, 0,0,1,0,0, 0,0,1,0,0}, // 251E: Wide top, single right and bottom
+		{0,0,1,0,0, 0,0,1,0,0, 0,1,1,1,1, 0,1,1,1,0, 0,1,1,1,0}, // 251F: Single top and right, wide bottom
+		{0,1,1,1,0, 0,1,1,1,0, 0,1,1,1,1, 0,1,1,1,0, 0,1,1,1,0}, // 2520: Wide top and bottom, single right
+		{0,1,1,1,0, 0,1,1,1,1, 0,1,1,1,1, 0,1,1,1,1, 0,0,1,0,0}, // 2521: Wide top and right, single bottom
+		{0,0,1,0,0, 0,1,1,1,1, 0,1,1,1,1, 0,1,1,1,1, 0,1,1,1,0}, // 2522: Single top, wide right and bottom
+		{0,1,1,1,0, 0,1,1,1,1, 0,1,1,1,1, 0,1,1,1,1, 0,0,0,0,0}, // 2523: Wide top, right and bottom
+		{0,0,1,0,0, 0,0,1,0,0, 1,1,1,0,0, 0,0,1,0,0, 0,0,1,0,0}, // 2524: Single left, top and bottom
+		{0,0,1,0,0, 1,1,1,0,0, 1,1,1,0,0, 1,1,1,0,0, 0,0,1,0,0}, // 2525: Wide left, single top and bottom
+		{0,1,1,1,0, 0,1,1,1,0, 1,1,1,1,0, 0,0,1,0,0, 0,0,1,0,0}, // 2526: Single left and bottom, wide top
+		{0,0,1,0,0, 0,0,1,0,0, 1,1,1,1,0, 0,1,1,1,0, 0,1,1,1,0}, // 2527: Single left and top, wide bottom
+		{0,1,1,1,0, 0,1,1,1,0, 1,1,1,1,0, 0,1,1,1,0, 0,1,1,1,0}, // 2528: Single left, wide top and bottom
+		{0,1,1,1,0, 1,1,1,1,0, 1,1,1,1,0, 1,1,1,1,0, 0,0,1,0,0}, // 2529: Wide left and top, single bottom
+		{0,0,1,0,0, 1,1,1,1,0, 1,1,1,1,0, 1,1,1,1,0, 0,1,1,1,0}, // 252A: Wide left and bottom, single top
+		{0,1,1,1,0, 1,1,1,1,0, 1,1,1,1,0, 1,1,1,1,0, 0,1,1,1,0}, // 252B: Wide left, top and bottom
+		{0,0,0,0,0, 0,0,0,0,0, 1,1,1,1,1, 0,0,1,0,0, 0,0,1,0,0}, // 252C: Single left, right and bottom
+		{0,0,0,0,0, 1,1,1,0,0, 1,1,1,1,1, 1,1,1,0,0, 0,0,1,0,0}, // 252D: Wide left, single right and bottom
+		{0,0,0,0,0, 0,0,1,1,1, 1,1,1,1,1, 0,0,1,1,1, 0,0,1,0,0}, // 252E: Single left and bottom, wide right
+		{0,0,0,0,0, 1,1,1,1,1, 1,1,1,1,1, 1,1,1,1,1, 0,1,1,1,0}, // 252F: Wide left and right, signle bottom
+		{0,0,0,0,0, 0,0,0,0,0, 1,1,1,1,1, 0,1,1,1,0, 0,1,1,1,0}, // 2530: Single left and right, wide bottom
+		{0,0,0,0,0, 1,1,1,1,0, 1,1,1,1,1, 1,1,1,1,0, 0,1,1,1,0}, // 2531: Wide left and bottom, single right
+		{0,0,0,0,0, 0,1,1,1,1, 1,1,1,1,1, 0,1,1,1,1, 0,1,1,1,0}, // 2532: Single left, wide right and bottom
+		{0,0,0,0,0, 1,1,1,1,1, 1,1,1,1,1, 1,1,1,1,1, 0,1,1,1,0}, // 2533: Wide left, right and bottom
+		{0,0,1,0,0, 0,0,1,0,0, 1,1,1,1,1, 0,0,0,0,0, 0,0,0,0,0}, // 2534: Single left, top and right
+		{0,0,1,0,0, 1,1,1,0,0, 1,1,1,1,1, 1,1,1,0,0, 0,0,0,0,0}, // 2535: Wide left, single top and right
+		{0,0,1,0,0, 0,0,1,1,1, 1,1,1,1,1, 0,0,1,1,1, 0,0,0,0,0}, // 2536: Single left and top, wide right
+		{0,0,1,0,0, 1,1,1,1,1, 1,1,1,1,1, 1,1,1,1,1, 0,0,0,0,0}, // 2537: Wide left and right, single top
+		{0,1,1,1,0, 0,1,1,1,0, 1,1,1,1,1, 0,0,0,0,0, 0,0,0,0,0}, // 2538: Single left and right, wide top
+		{0,1,1,1,0, 1,1,1,1,0, 1,1,1,1,1, 1,1,1,1,0, 0,0,0,0,0}, // 2539: Wide left and top, single right
+		{0,1,1,1,0, 0,1,1,1,0, 0,1,1,1,1, 0,1,1,1,0, 0,1,1,1,0}, // 253A: Wide top and bottom, single right
+		{0,1,1,1,0, 1,1,1,1,0, 1,1,1,1,0, 1,1,1,1,0, 0,1,1,1,0}, // 253B: Wide left, top and bottom
+		{0,0,1,0,0, 0,0,1,0,0, 1,1,1,1,1, 0,0,1,0,0, 0,0,1,0,0}, // 253C: Single left, top, right and bottom
+		{0,0,1,0,0, 1,1,1,0,0, 1,1,1,1,1, 1,1,1,0,0, 0,0,1,0,0}, // 253D: Wide left, single top, right and bottom
+		{0,0,1,0,0, 0,0,1,1,1, 1,1,1,1,1, 0,0,1,1,1, 0,0,1,0,0}, // 253E: Single left, top and bottom, wide right
+		{0,0,1,0,0, 1,1,1,1,1, 1,1,1,1,1, 1,1,1,1,1, 0,0,1,0,0}, // 253F: Wide left and right, single top and bottom
+		{0,1,1,1,0, 0,1,1,1,0, 1,1,1,1,1, 0,0,1,0,0, 0,0,1,0,0}, // 2540: Single left, right and bottom, wide top
+		{0,0,1,0,0, 0,0,1,0,0, 1,1,1,1,1, 0,1,1,1,0, 0,1,1,1,0}, // 2541: Single left, top and right, wide bottom
+		{0,1,1,1,0, 0,1,1,1,0, 1,1,1,1,1, 0,1,1,1,0, 0,1,1,1,0}, // 2542: Single left and right, wide top and bottom
+		{0,1,1,1,0, 1,1,1,1,0, 1,1,1,1,1, 1,1,1,1,0, 0,0,1,0,0}, // 2543: Wide left and top, single right and bottom
+		{0,1,1,1,0, 0,1,1,1,1, 1,1,1,1,1, 0,1,1,1,1, 0,0,1,0,0}, // 2544: Single left and bottom, wide top and right
+		{0,0,1,0,0, 1,1,1,1,0, 1,1,1,1,1, 1,1,1,1,0, 0,1,1,1,0}, // 2545: Wide left and bottom, single top and right
+		{0,0,1,0,0, 0,0,1,1,1, 1,1,1,1,1, 0,1,1,1,1, 0,1,1,1,0}, // 2546: Single left and top, wide right and bottom
+		{0,1,1,1,0, 1,1,1,1,1, 1,1,1,1,1, 1,1,1,1,1, 0,0,1,0,0}, // 2547: Wide left, top and right, single bottom
+		{0,0,1,0,0, 1,1,1,1,1, 1,1,1,1,1, 1,1,1,1,1, 0,1,1,1,0}, // 2548: Wide left, right and bottom, single top
+		{0,1,1,1,0, 1,1,1,1,0, 1,1,1,1,1, 1,1,1,1,0, 0,1,1,1,0}, // 2549: Wide left, top and bottom, single right
+		{0,1,1,1,0, 0,1,1,1,1, 1,1,1,1,1, 0,1,1,1,1, 0,1,1,1,0}, // 254A: Single left, wide top, right and bottom
+		{0,1,1,1,0, 1,1,1,1,1, 1,1,1,1,1, 1,1,1,1,1, 0,1,1,1,0}, // 254B: Wide left, top, right and bottom
+		{0}, // 254C
+		{0}, // 254D
+		{0}, // 254E
+		{0}, // 254F
+		{0,0,0,0,0, 1,1,1,1,1, 0,0,0,0,0, 1,1,1,1,1, 0,0,0,0,0}, // 2550: Horisontal double
+		{0,1,0,1,0, 0,1,0,1,0, 0,1,0,1,0, 0,1,0,1,0, 0,1,0,1,0}, // 2551: Vertical double
+		{0,0,0,0,0, 0,0,1,1,1, 0,0,1,0,0, 0,0,1,1,1, 0,0,1,0,0}, // 2552: Double right, single bottom
+		{0,0,0,0,0, 0,0,0,0,0, 0,1,1,1,1, 0,1,0,1,0, 0,1,0,1,0}, // 2553: Single right, double bottom
+		{0,0,0,0,0, 0,1,1,1,1, 0,1,0,0,0, 0,1,0,1,1, 0,1,0,1,0}, // 2554: Double right and bottom
+		{0,0,0,0,0, 1,1,1,0,0, 0,0,1,0,0, 1,1,1,0,0, 0,0,1,0,0}, // 2555: Double left and single bottom
+		{0,0,0,0,0, 0,0,0,0,0, 1,1,1,1,0, 0,1,0,1,0, 0,1,0,1,0}, // 2556: Single left and double bottom
+		{0,0,0,0,0, 1,1,1,1,0, 0,0,0,1,0, 1,1,0,1,0, 0,1,0,1,0}, // 2557: Double left and bottom
+		{0,0,1,0,0, 0,0,1,1,1, 0,0,1,0,0, 0,0,1,1,1, 0,0,0,0,0}, // 2558: Single top and double right
+		{0,1,0,1,0, 0,1,0,1,0, 0,1,1,1,1, 0,0,0,0,0, 0,0,0,0,0}, // 2559: Double top and single right
+		{0,1,0,1,0, 0,1,0,1,1, 0,1,0,0,0, 0,1,1,1,1, 0,0,0,0,0}, // 255A: Double top and right
+		{0,0,1,0,0, 1,1,1,0,0, 0,0,1,0,0, 1,1,1,0,0, 0,0,0,0,0}, // 255B: Double left, single up
+		{0,1,0,1,0, 0,1,0,1,0, 1,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0}, // 255C: Single left and double top
+		{0,1,0,1,0, 1,1,0,1,0, 0,0,0,1,0, 1,1,1,1,0, 0,0,0,0,0}, // 255D: Double left and top
+		{0,0,1,0,0, 0,0,1,1,1, 0,0,1,0,0, 0,0,1,1,1, 0,0,1,0,0}, // 255E: Single top and bottom, double right
+		{0,1,0,1,0, 0,1,0,1,0, 0,1,0,1,1, 0,1,0,1,0, 0,1,0,1,0}, // 255F: Double top and bottom, single right
+		{0,1,0,1,0, 0,1,0,1,1, 0,1,0,0,0, 0,1,0,1,1, 0,1,0,1,0}, // 2560: Double top, right and bottom
+		{0,0,1,0,0, 1,1,1,0,0, 0,0,1,0,0, 1,1,1,0,0, 0,0,1,0,0}, // 2561: Double left, single top and bottom
+		{0,1,0,1,0, 0,1,0,1,0, 1,1,0,1,0, 0,1,0,1,0, 0,1,0,1,0}, // 2562: Single left, double top and bottom
+		{0,1,0,1,0, 1,1,0,1,0, 0,0,0,1,0, 1,1,0,1,0, 0,1,0,1,0}, // 2563: Double left, top bottom
+		{0,0,0,0,0, 1,1,1,1,1, 0,0,0,0,0, 1,1,1,1,1, 0,0,1,0,0}, // 2564: Double left and right, single bottom
+		{0,0,0,0,0, 0,0,0,0,0, 1,1,1,1,1, 0,1,0,1,0, 0,1,0,1,0}, // 2565: Single left and right, double bottom
+		{0,0,0,0,0, 1,1,1,1,1, 0,0,0,0,0, 1,1,0,1,1, 0,1,0,1,0}, // 2566: Double left, right and bottom
+		{0,0,1,0,0, 1,1,1,1,1, 0,0,0,0,0, 1,1,1,1,1, 0,0,0,0,0}, // 2567: Double left and right, single top
+		{0,1,0,1,0, 0,1,0,1,0, 1,1,1,1,1, 0,0,0,0,0, 0,0,0,0,0}, // 2568: Single left and right, double top
+		{0,1,0,1,0, 1,1,0,1,1, 0,0,0,0,0, 1,1,1,1,1, 0,0,0,0,0}, // 2569: Double left, top and right
+		{0,0,1,0,0, 1,1,1,1,1, 0,0,0,0,0, 1,1,1,1,1, 0,0,1,0,0}, // 256A: Double left and right, single top and bottom
+		{0,1,0,1,0, 0,1,0,1,0, 1,1,0,1,1, 0,1,0,1,0, 0,1,0,1,0}, // 256B: Single left and right, double top and bottom
+		{0,1,0,1,0, 1,1,0,1,1, 0,0,0,0,0, 1,1,0,1,1, 0,1,0,1,0}, // 256C: Double horisontal and vertical
+		{0}, // 256D
+		{0}, // 256E
+		{0}, // 256F
+		{0}, // 2570
+		{0}, // 2571
+		{0}, // 2572
+		{0}, // 2573
+		{0,0,0,0,0, 0,0,0,0,0, 1,1,1,0,0, 0,0,0,0,0, 0,0,0,0,0}, // 2574: Single left
+		{0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,0,0,0, 0,0,0,0,0}, // 2575: Single up
+		{0,0,0,0,0, 0,0,0,0,0, 0,0,1,1,1, 0,0,0,0,0, 0,0,0,0,0}, // 2576: Single right
+		{0,0,0,0,0, 0,0,0,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0}, // 2577: Single down
+		{0,0,0,0,0, 1,1,1,0,0, 1,1,1,0,0, 1,1,1,0,0, 0,0,0,0,0}, // 2578: Wide left
+		{0,1,1,1,0, 0,1,1,1,0, 0,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0}, // 2579: Wide up
+		{0,0,0,0,0, 0,0,1,1,1, 0,0,1,1,1, 0,0,1,1,1, 0,0,0,0,0}, // 257A: Wide right
+		{0,0,0,0,0, 0,0,0,0,0, 0,1,1,1,0, 0,1,1,1,0, 0,1,1,1,0}, // 257B: Wide down
+		{0,0,0,0,0, 0,0,1,1,1, 1,1,1,1,1, 0,0,1,1,1, 0,0,0,0,0}, // 257C: Single left and wide right
+		{0,0,1,0,0, 0,0,1,0,0, 0,1,1,1,0, 0,1,1,1,0, 0,1,1,1,0}, // 257D: Single up and wide down
+		{0,0,0,0,0, 1,1,1,0,0, 1,1,1,1,1, 1,1,1,0,0, 0,0,0,0,0}, // 257E: Wide left and single right
+		{0,1,1,1,0, 0,1,1,1,0, 0,1,1,1,0, 0,0,1,0,0, 0,0,1,0,0}, // 257F: Wide up and single down
+	};
+
+	const float splits[][3] =
+	{
+		{0, 0.0f, 0.5f},          // 2580: ▀ UPPER HALF BLOCK
+		{0, 1.0f-0.125f, 1.0f},   // 2581: ▁ LOWER ONE EIGHTH BLOCK
+		{0, 0.75f, 1.0f},         // 2582: ▂ LOWER ONE QUARTER BLOCK
+		{0, 1.0f-3*0.125f, 1.0f}, // 2583: ▃ LOWER THREE EIGHTHS BLOCK
+		{0, 0.5f, 1.0f},          // 2584: ▄ LOWER HALF BLOCK
+		{0, 1.0f-5*0.125f, 1.0f}, // 2585: ▅ LOWER FIVE EIGHTHS BLOCK
+		{0, 0.25f, 1.0f},         // 2586: ▆ LOWER THREE QUARTERS BLOCK
+		{0, 0.125f, 1.0f},        // 2587: ▇ LOWER SEVEN EIGHTHS BLOCK
+		{0, 0.0f, 1.0f},          // 2588: █ FULL BLOCK
+		{1, 0.0f, 7*0.125f},      // 2589: ▉ LEFT SEVEN EIGHTHS BLOCK
+		{1, 0.0f, 0.75f},         // 258A: ▊ LEFT THREE QUARTERS BLOCK
+		{1, 0.0f, 5*0.125f},      // 258B: ▋ LEFT FIVE EIGHTHS BLOCK
+		{1, 0.0f, 0.5f},          // 258C: ▌ LEFT HALF BLOCK
+		{1, 0.0f, 3*0.125f},      // 258D: ▍ LEFT THREE EIGHTHS BLOCK
+		{1, 0.0f, 0.25f},         // 258E: ▎ LEFT ONE QUARTER BLOCK
+		{1, 0.0f, 0.125f},        // 258F: ▏ LEFT ONE EIGHTH BLOCK
+		{1, 0.5f, 1.0f},          // 2590: ▐ RIGHT HALF BLOCK
+		{0}, // 2591
+		{0}, // 2592,
+		{0}, // 2593
+		{0, 0.0f, 0.125f},         // 2594: ▔ UPPER ONE EIGHTH BLOCK
+		{1, 1.0f-0.125f, 1.0f}     // 2595:▕ RIGHT ONE EIGHTH BLOCK
+	};
+
 	void DynamicTileset::Prepare(uint16_t code)
 	{
 		if (!Provides(code))
@@ -366,9 +524,30 @@ namespace BearLibTerminal
 
 		Bitmap tile;
 
+		if ((code >= 0x2500 && code <= 0x2503) ||
+			(code >= 0x250C && code <= 0x254B) ||
+			(code >= 0x2550 && code <= 0x256C) ||
+			(code >= 0x2574 && code <= 0x257F))
+		{
+			std::vector<int> tmp;
+			for (int i=0; i<25; i++)
+				tmp.push_back(box_lines[code-0x2500][i]);
+			tile = MakeBoxLines(m_tile_size, tmp);//box_lines[code-0x2500]);
+		}
+		else if ((code >= 0x2580 && code <= 0x2590) || (code >= 0x2594 && code <= 0x2595))
+		{
+			int i = code-0x2580;
+			if (splits[i][0] > 0)
+				tile = MakeHorisontalSplit(m_tile_size, splits[i][1], splits[i][2]);
+			else
+				tile = MakeVerticalSplit(m_tile_size, splits[i][1], splits[i][2]);
+		}
+		else
+
 		switch (code)
 		{
 		// Light and heavy solid lines
+		/*
 		case 0x2500:
 			tile = MakeBoxLines(m_tile_size, {0,0,0,0,0, 0,0,0,0,0, 1,1,1,1,1, 0,0,0,0,0, 0,0,0,0,0}); // Single horisontal
 			break;
@@ -381,6 +560,7 @@ namespace BearLibTerminal
 		case 0x2503:
 			tile = MakeBoxLines(m_tile_size, {0,1,1,1,0, 0,1,1,1,0, 0,1,1,1,0, 0,1,1,1,0, 0,1,1,1,0}); // Wide vertical
 			break;
+		//*/
 		// Light and heavy dashed lines
 		case 0x2504:
 			tile = MakeDashLines(m_tile_size, false, false, 3); // Single triple horisontal dash
@@ -406,6 +586,7 @@ namespace BearLibTerminal
 		case 0x250B:
 			tile = MakeDashLines(m_tile_size, true, true, 4); // Wide quadruple vertical dash
 			break;
+		/*
 		// Light and heavy line box components
 		case 0x250C:
 			tile = MakeBoxLines(m_tile_size, {0,0,0,0,0, 0,0,0,0,0, 0,0,1,1,1, 0,0,1,0,0, 0,0,1,0,0}); // Single right and bottom
@@ -599,6 +780,7 @@ namespace BearLibTerminal
 		case 0x254B:
 			tile = MakeBoxLines(m_tile_size, {0,1,1,1,0, 1,1,1,1,1, 1,1,1,1,1, 1,1,1,1,1, 0,1,1,1,0}); // Wide left, top, right and bottom
 			break;
+		//*/
 		// Light and heavy dashed lines
 		case 0x254C:
 			tile = MakeDashLines(m_tile_size, false, false, 2); // BOX DRAWINGS LIGHT DOUBLE DASH HORIZONTAL
@@ -612,6 +794,7 @@ namespace BearLibTerminal
 		case 0x254F:
 			tile = MakeDashLines(m_tile_size, true, true, 2); // BOX DRAWINGS HEAVY DOUBLE DASH VERTICAL
 			break;
+		/*
 		// Double lines
 		case 0x2550:
 			tile = MakeBoxLines(m_tile_size, {0,0,0,0,0, 1,1,1,1,1, 0,0,0,0,0, 1,1,1,1,1, 0,0,0,0,0}); // Horisontal double
@@ -739,6 +922,8 @@ namespace BearLibTerminal
 		case 0x257F:
 			tile = MakeBoxLines(m_tile_size, {0,1,1,1,0, 0,1,1,1,0, 0,1,1,1,0, 0,0,1,0,0, 0,0,1,0,0}); // Wide up and single down
 			break;
+		//*/
+		/*
 		// Block elements
 		case 0x2580:
 			tile = MakeVerticalSplit(m_tile_size, 0.0f, 0.5f); // ▀ UPPER HALF BLOCK
@@ -791,6 +976,7 @@ namespace BearLibTerminal
 		case 0x2590:
 			tile = MakeHorisontalSplit(m_tile_size, 0.5f, 1.0f); // ▐ RIGHT HALF BLOCK
 			break;
+		//*/
 		// Shade characters
 		case 0x2591:
 			tile = Bitmap(m_tile_size, Color(64, 255, 255, 255)); // ░ LIGHT SHADE
@@ -801,6 +987,7 @@ namespace BearLibTerminal
 		case 0x2593:
 			tile = Bitmap(m_tile_size, Color(192, 255, 255, 255)); // ▓ DARK SHADE
 			break;
+		/*
 		// Block elements
 		case 0x2594:
 			tile = MakeVerticalSplit(m_tile_size, 0.0f, 0.125f); // ▔ UPPER ONE EIGHTH BLOCK
@@ -808,6 +995,7 @@ namespace BearLibTerminal
 		case 0x2595:
 			tile = MakeHorisontalSplit(m_tile_size, 1.0f-0.125f, 1.0f); // ▕ RIGHT ONE EIGHTH BLOCK
 			break;
+		//*/
 		// Terminal graphic characters
 		case 0x2596:
 			tile = MakeQuadrandTile(m_tile_size, false, false, true, false); // ▖ QUADRANT LOWER LEFT

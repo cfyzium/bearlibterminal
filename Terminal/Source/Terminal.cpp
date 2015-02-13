@@ -1300,7 +1300,7 @@ namespace BearLibTerminal
 				{
 					tag = [&]{m_world.state.color = original_fore;};
 				}
-				if ((name == L"bkcolor" || name == L"b") && !params.empty())
+				else if ((name == L"bkcolor" || name == L"b") && !params.empty())
 				{
 					color_t color = Palette::Instance[params];
 					tag = [&, color]{m_world.state.bkcolor = color;};
