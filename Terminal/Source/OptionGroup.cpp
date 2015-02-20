@@ -176,4 +176,114 @@ namespace BearLibTerminal
 
 		return result;
 	}
+
+	std::list<OptionGroup> ParseOptions2(const std::wstring& s)
+	{
+		//std::list<OptionGroup> result;
+		//std::map<std::wstring, decltype(result)::iterator> lookup;
+
+		//auto save_pair = [&](std::wstring& name, std::wstring& value)
+		//{
+		//	auto i = lookup.find(name);
+		//	if (i == lookup.end())
+		//	{
+		//		OptionGroup
+		//	}
+		//};
+
+		std::map<std::wstring, std::wstring> properties;
+
+		const wchar_t* p = s.c_str();
+
+		auto read_group_name = [&]
+		{
+			std::wstring name;
+			while (*p != L'\0' && *p != L'=' && *p != L':')
+				name += *p++;
+			return name; // TODO: trim
+		};
+
+		auto skip_whitespace = [&]
+		{
+			while (*p == L' ' || *p == L'\t')
+				p++;
+		};
+
+		auto read_until = [&](wchar_t c) -> std::wstring
+		{
+			std::wstring value;
+			while (*p != L'\0' && *p != c)
+				value += *p++; // FIXME: escaped characters
+			return value;
+		};
+
+		auto read_quoted = [&](wchar_t c) -> std::wstring
+		{
+			wchar_t e = (c == L'[')? L']': c;
+			return read_until(e);
+		};
+
+		auto read_regular = [&](std::wstring& name)
+		{
+			p++; // Skip '='
+
+			skip_whitespace();
+
+			if (*p == L'\0')
+			{
+				// EOS
+				return;
+			}
+			else if (*p == L'\'' || *p == L'"' || *p == L'[')
+			{
+				// Quoted string
+				properties[name] = read_quoted(*p);
+			}
+			else
+			{
+				// Raw string
+				properties[name] = read_until(L';');
+			}
+		};
+
+		auto read_pair = [&]() -> std::pair<std::wstring, std::wstring>
+		{
+
+		};
+
+		auto read_grouped = [&](std::wstring& name)
+		{
+			p++; // Skip ':'
+
+			skip_whitespace();
+
+			//if (*p == L'\0')
+		};
+
+		while (*p != L'\0')
+		{
+			if (!std::isalpha(*p))
+			{
+				p++;
+				continue;
+			}
+
+			std::wstring name = read_group_name(); // It will stop on either '\0', '=' or ':'
+
+			if (*p == L'=')
+			{
+				// Regular name=value pair.
+				read_regular(name);
+			}
+			else if (*p == L':')
+			{
+				// Grouped list of name=value pairs.
+			}
+			else
+			{
+				// Whatever.
+				break;
+			}
+		}
+	}
 }
