@@ -1821,7 +1821,7 @@ namespace BearLibTerminal
 			// Box Drawing (2500–257F) and Block Elements (2580–259F) are searched in different order
 			bool is_dynamic = (code >= 0x2500 && code <= 0x257F) || (code >= 0x2580 && code <= 0x259F);
 
-			for (auto i=m_world.tilesets.rbegin(); i != m_world.tilesets.rend(); i++)
+			for (auto i = m_world.tilesets.rbegin(); i != m_world.tilesets.rend(); i++)
 			{
 				if (is_dynamic)
 				{
@@ -1833,9 +1833,11 @@ namespace BearLibTerminal
 						(i->first == kUnicodeReplacementCharacter) ||
 						((i->first == 0x0000 && i->second->GetType() == Tileset::Type::TrueType));
 
-					if (unsuitable) continue;
+					if (unsuitable)
+						continue;
 				}
-				else if (i->second->Provides(code))
+
+				if (i->second->Provides(code))
 				{
 					i->second->Prepare(code);
 					provided = true;
