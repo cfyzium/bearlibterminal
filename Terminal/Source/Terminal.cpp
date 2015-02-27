@@ -273,7 +273,7 @@ namespace BearLibTerminal
 	{
 		std::lock_guard<std::mutex> guard(m_lock);
 
-		auto groups = ParseOptions(value);
+		auto groups = ParseOptions2(value);
 		Options updated = m_options;
 		std::map<uint16_t, std::unique_ptr<Tileset>> new_tilesets;
 
@@ -305,6 +305,14 @@ namespace BearLibTerminal
 			else if (group.name == L"log")
 			{
 				ValidateLoggingOptions(group, updated);
+			}
+			else if (starts_with(group.name, std::wstring(L"ini.")))
+			{
+				for (auto& i: group.attributes)
+				{
+					// XXX: Just use section-property-value
+					Config::Instance().Set(group.name + L"." + i.first, i.second);
+				}
 			}
 			else
 			{

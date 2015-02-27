@@ -7,6 +7,10 @@
 
 #include "OptionGroup.hpp"
 
+#include "Encoding.hpp"
+#include "Utility.hpp"
+#include <iostream>
+
 namespace BearLibTerminal
 {
 	enum class HighState
@@ -179,105 +183,124 @@ namespace BearLibTerminal
 
 	std::list<OptionGroup> ParseOptions2(const std::wstring& s)
 	{
-		//std::list<OptionGroup> result;
-		//std::map<std::wstring, decltype(result)::iterator> lookup;
-
-		//auto save_pair = [&](std::wstring& name, std::wstring& value)
-		//{
-		//	auto i = lookup.find(name);
-		//	if (i == lookup.end())
-		//	{
-		//		OptionGroup
-		//	}
-		//};
-
-		std::map<std::wstring, std::wstring> properties;
+		std::list<OptionGroup> result;
+		std::map<std::wstring, decltype(result.begin())> lookup;
 
 		const wchar_t* p = s.c_str();
 
-		auto read_group_name = [&]
-		{
-			std::wstring name;
-			while (*p != L'\0' && *p != L'=' && *p != L':')
-				name += *p++;
-			return name; // TODO: trim
-		};
-
-		auto skip_whitespace = [&]
-		{
-			while (*p == L' ' || *p == L'\t')
-				p++;
-		};
-
-		auto read_until = [&](wchar_t c) -> std::wstring
+		auto read_until2 = [&](std::wstring s) -> std::wstring
 		{
 			std::wstring value;
-			while (*p != L'\0' && *p != c)
-				value += *p++; // FIXME: escaped characters
+			wchar_t closing_quote = 0;
+
+			while (*p != L'\0' && (closing_quote || s.find(*p) == std::wstring::npos))
+			{
+				if (*p == closing_quote)
+				{
+					// End of quoted string.
+					closing_quote = 0;
+					p++;
+					continue;
+				}
+				else if (*p == L'\'' || *p == L'"' || *p == L'[')
+				{
+					// Start of quoted string.
+					closing_quote = (*p == L'['? L']': *p);
+					p++;
+					continue;
+				}
+				else
+				{
+					// Handle escaped characters.
+					if (*p == L'\\' && *(++p) == L'\0')
+						break;
+
+					value += *p++;
+				}
+			}
+
 			return value;
 		};
 
-		auto read_quoted = [&](wchar_t c) -> std::wstring
+		auto keep_property2 = [&](std::wstring name, std::wstring value)
 		{
-			wchar_t e = (c == L'[')? L']': c;
-			return read_until(e);
-		};
-
-		auto read_regular = [&](std::wstring& name)
-		{
-			p++; // Skip '='
-
-			skip_whitespace();
-
-			if (*p == L'\0')
+			if ((name = trim(name)).empty() || (value = trim(value)).empty())
 			{
-				// EOS
+				// Ignore empty ones.
 				return;
 			}
-			else if (*p == L'\'' || *p == L'"' || *p == L'[')
+
+			//std::cout << "*** '" << UTF8Encoding().Convert(name) << "' = '" << UTF8Encoding().Convert(value) << "'\n";
+
+			// a       --> invalid?
+			// a.b     --> [a] b        window.title
+			// a.b.c   --> [a.b] c      ini.custom.property
+			// a.b.c.d --> [a.b] c.d    ini.bearlibterminal.window.title
+
+			size_t first_period_pos = name.find(L'.');
+			if (first_period_pos == std::wstring::npos)
 			{
-				// Quoted string
-				properties[name] = read_quoted(*p);
+				// Consider it invalid for now.
+				return;
 			}
-			else
+
+			size_t second_period_pos = name.find(L'.', first_period_pos+1);
+			size_t section_end = (second_period_pos == std::wstring::npos)? first_period_pos: second_period_pos;
+
+			if (section_end == 0 || section_end == name.length()-1)
 			{
-				// Raw string
-				properties[name] = read_until(L';');
+				// Surely invalid.
+				return;
 			}
-		};
 
-		auto read_pair = [&]() -> std::pair<std::wstring, std::wstring>
-		{
+			std::wstring section_name = name.substr(0, section_end);
+			name = name.substr(section_end+1);
 
-		};
-
-		auto read_grouped = [&](std::wstring& name)
-		{
-			p++; // Skip ':'
-
-			skip_whitespace();
-
-			//if (*p == L'\0')
+			auto i = lookup.find(section_name);
+			if (i == lookup.end())
+			{
+				result.emplace_back();
+				i = lookup.insert({section_name, (--result.end())}).first;
+				i->second->name = section_name;
+			}
+			i->second->attributes[name] = value;
 		};
 
 		while (*p != L'\0')
 		{
-			if (!std::isalpha(*p))
-			{
-				p++;
-				continue;
-			}
-
-			std::wstring name = read_group_name(); // It will stop on either '\0', '=' or ':'
+			// Next property name.
+			auto name = read_until2(L":=;");
 
 			if (*p == L'=')
 			{
-				// Regular name=value pair.
-				read_regular(name);
+				// Regular property.
+				p++;
+				keep_property2(name, read_until2(L";"));
 			}
 			else if (*p == L':')
 			{
-				// Grouped list of name=value pairs.
+				// Grouped property.
+				while (*p != L'\0' && *p != L';')
+				{
+					p++;
+					auto subname = trim(read_until2(L"=,;"));
+					if (*p == L'=')
+					{
+						// Regular subproperty.
+						p++;
+						keep_property2(name + L"." + subname, read_until2(L",;"));
+					}
+					else if (*p == L',' || *p == L';' || *p == L'\0')
+					{
+						// Nameless subproperty (both continued or finale).
+						keep_property2(name + L".name", subname);
+					}
+				}
+			}
+			else if (*p == L';')
+			{
+				// Discard.
+				p++;
 			}
 			else
 			{
@@ -285,5 +308,7 @@ namespace BearLibTerminal
 				break;
 			}
 		}
+
+		return result;
 	}
 }

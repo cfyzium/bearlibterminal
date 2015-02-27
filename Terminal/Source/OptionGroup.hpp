@@ -21,6 +21,7 @@ namespace BearLibTerminal
 	};
 
 	std::list<OptionGroup> ParseOptions(const std::wstring& s);
+	std::list<OptionGroup> ParseOptions2(const std::wstring& s);
 }
 
 #endif /* OPTIONGROUP_HPP_ */
