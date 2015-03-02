@@ -190,12 +190,17 @@ namespace BearLibTerminal
 
 		auto read_until2 = [&](std::wstring s) -> std::wstring
 		{
-			std::wstring value;
+			std::wstring value, space;
 			wchar_t closing_quote = 0;
 
 			while (*p != L'\0' && (closing_quote || s.find(*p) == std::wstring::npos))
 			{
-				if (*p == closing_quote)
+				if (std::isspace(*p) && !closing_quote)
+				{
+					// Accumulate space.
+					space += *p++;
+				}
+				else if (*p == closing_quote)
 				{
 					// End of quoted string.
 					closing_quote = 0;
@@ -206,6 +211,7 @@ namespace BearLibTerminal
 				{
 					// Start of quoted string.
 					closing_quote = (*p == L'['? L']': *p);
+					space.clear();
 					p++;
 					continue;
 				}
@@ -215,6 +221,12 @@ namespace BearLibTerminal
 					if (*p == L'\\' && *(++p) == L'\0')
 						break;
 
+					// Release accumulated space.
+					if (!value.empty())
+						value += space;
+					space.clear();
+
+					// Append current symbol.
 					value += *p++;
 				}
 			}
@@ -224,7 +236,7 @@ namespace BearLibTerminal
 
 		auto keep_property2 = [&](std::wstring name, std::wstring value)
 		{
-			if ((name = trim(name)).empty() || (value = trim(value)).empty())
+			if (name.empty() || value.empty())
 			{
 				// Ignore empty ones.
 				return;
@@ -283,7 +295,7 @@ namespace BearLibTerminal
 				while (*p != L'\0' && *p != L';')
 				{
 					p++;
-					auto subname = trim(read_until2(L"=,;"));
+					auto subname = read_until2(L"=,;");
 					if (*p == L'=')
 					{
 						// Regular subproperty.
