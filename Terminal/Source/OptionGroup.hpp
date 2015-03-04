@@ -20,7 +20,6 @@ namespace BearLibTerminal
 		std::map<std::wstring, std::wstring> attributes;
 	};
 
-	std::list<OptionGroup> ParseOptions(const std::wstring& s);
 	std::list<OptionGroup> ParseOptions2(const std::wstring& s);
 }
 

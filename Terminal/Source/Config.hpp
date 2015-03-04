@@ -26,26 +26,47 @@
 #include <map>
 #include <string>
 #include <mutex>
+#include <algorithm>
 
 namespace BearLibTerminal
 {
+	template<typename char_t> struct ci_less: // FIXME: --> Utility
+		std::binary_function<std::basic_string<char_t>, std::basic_string<char_t>, bool>
+	{
+		struct nocase_compare:
+			public std::binary_function<char_t, char_t, bool>
+		{
+			bool operator()(const char_t& c1, const char_t& c2) const
+			{
+				return std::tolower(c1) < std::tolower(c2);
+			}
+		};
+
+		bool operator()(const std::basic_string<char_t>& s1, const std::basic_string<char_t>& s2) const
+		{
+			return std::lexicographical_compare // XXX: simple strcasecmp?
+				(
+					s1.begin(), s1.end(),
+					s2.begin(), s2.end(),
+					nocase_compare()
+				);
+		}
+	};
+
 	class Config
 	{
 	public:
 		bool TryGet(std::wstring name, std::wstring& out);
 		void Set(std::wstring name, std::wstring value);
-		void Remove(std::wstring name);
 		void Dispose();
-
-	public:
 		static Config& Instance();
 
 	private:
 		Config();
 		void Init();
 		void Load(std::wstring filename);
+		void Update(std::wstring section, std::wstring property, std::wstring value);
 
-	private:
 		struct Property
 		{
 			std::wstring m_case_sensitive_name;
@@ -55,14 +76,13 @@ namespace BearLibTerminal
 		struct Section
 		{
 			std::wstring m_case_sensitive_name;
-			std::map<std::wstring, Property> m_properties;
+			std::map<std::wstring, Property, ci_less<wchar_t>> m_properties;
 		};
 
-	private:
 		std::mutex m_lock;
 		bool m_initialized;
 		std::wstring m_filename;
-		std::map<std::wstring, Section> m_sections;
+		std::map<std::wstring, Section, ci_less<wchar_t>> m_sections;
 	};
 }
 

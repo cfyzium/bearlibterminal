@@ -32,15 +32,6 @@
 
 namespace BearLibTerminal
 {
-	namespace // anonymous
-	{
-		struct property_line
-		{
-			size_t offset;
-			size_t length;
-		};
-	}
-
 	Config::Config():
 		m_initialized(false)
 	{
@@ -106,7 +97,7 @@ namespace BearLibTerminal
 				if (line[pos] == ':')
 				{
 					// Grouped property
-					for (auto group: ParseOptions(UTF8Encoding().Convert(line)))
+					for (auto group: ParseOptions2(UTF8Encoding().Convert(line)))
 					{
 						for (auto& attribute: group.attributes)
 						{
@@ -181,8 +172,6 @@ namespace BearLibTerminal
 		std::wstring section = to_lower(name.substr(0, section_end_pos));
 		std::wstring property = to_lower(name.substr(section_end_pos+1));
 
-		//auto config = g_Configuration.Instance();
-
 		auto i = m_sections.find(section);
 		if (i == m_sections.end())
 		{
@@ -242,180 +231,199 @@ namespace BearLibTerminal
 			return; // Malformed property name.
 		}
 
-		std::wstring section_cs = name.substr(domain_name_length, section_end_pos-domain_name_length);
-		std::wstring section = to_lower(section_cs);
-		std::wstring property_cs = name.substr(section_end_pos+1);
-		std::wstring property = to_lower(property_cs);
+		std::wstring section = name.substr(domain_name_length, section_end_pos-domain_name_length);
+		std::wstring property = name.substr(section_end_pos+1);
 
 		// Keep it in memory anyway
 		auto i = m_sections.find(section);
 		if (i == m_sections.end())
 		{
 			i = m_sections.insert({section, Section()}).first;
-			i->second.m_case_sensitive_name = section_cs;
+			i->second.m_case_sensitive_name = section;
 		}
 		auto j = i->second.m_properties.find(property);
 		if (j == i->second.m_properties.end())
 		{
 			j = i->second.m_properties.insert({property, Property()}).first;
-			j->second.m_case_sensitive_name = property_cs;
+			j->second.m_case_sensitive_name = property;
 		}
 		j->second.m_value = value;
 
 		if (ini_domain)
 		{
-			// Immediately update the file
+			// Immediately update the file.
+			Update(section, property, value);
+		}
 
-			// Convert to UTF-8
-			std::string section_name = UTF8Encoding().Convert(section_cs);
-			std::string property_name = UTF8Encoding().Convert(property_cs);
-			std::string piece_value = UTF8Encoding().Convert(value);
+	}
 
-			// Prepare property value for merging
-			std::map<std::string, std::string> pieces;
+	void Config::Update(std::wstring section, std::wstring property, std::wstring value)
+	{
+		// Convert to UTF-8
+		std::string section_name = UTF8Encoding().Convert(section);
+		std::string property_name = UTF8Encoding().Convert(property);
+		std::string piece_value = UTF8Encoding().Convert(value);
 
-			std::string piece_name;
+		// Prepare property value for merging
+		std::map<std::string, std::string> pieces;
+		std::string piece_name;
+		{
+			size_t period_pos = property_name.find(".");
+			if (period_pos != std::string::npos)
 			{
-				size_t period_pos = property_name.find(".");
-				if (period_pos != std::string::npos)
+				piece_name = property_name.substr(period_pos+1);
+				property_name = property_name.substr(0, period_pos);
+			}
+		}
+
+		std::fstream file(UTF8Encoding().Convert(m_filename).c_str(), std::ios_base::in); // XXX: linux version
+		if (!file.is_open())
+		{
+			std::cerr << "Failed to open \"" + UTF8Encoding().Convert(m_filename) + "\"\n";
+			return;
+		}
+		// TODO: BOM matching.
+
+		std::list<std::string> lines;
+		auto si = lines.end(); // Iterator to last line in matching section
+		auto pi = lines.end(); // Iterator to the found property line
+
+		std::string line;
+		bool target_section = false;
+
+		while(std::getline(file, line))
+		{
+			lines.push_back(line);
+
+			if (line.empty() || line[0] == ' ' || line[0] == '\t')
+			{
+				// Empty line or one starting with whitespace.
+				continue;
+			}
+			else if (line[0] == ';' || line[0] == '#')
+			{
+				// Comment line.
+				continue;
+			}
+			else if (line[0] == '[')
+			{
+				// Section header
+				size_t rbracket_pos = line.find(']');
+				if (rbracket_pos != std::string::npos)
 				{
-					piece_name = property_name.substr(period_pos+1);
-					property_name = property_name.substr(0, period_pos);
+					std::string name = line.substr(1, rbracket_pos-1);
+					target_section = strcasecmp(name.c_str(), section_name.c_str()) == 0;
+					if (target_section && si == lines.end())
+					{
+						// Keep section position in mind, even it is only a header.
+						si = (--lines.end());
+					}
 				}
+
+				continue;
 			}
 
-			std::fstream file(UTF8Encoding().Convert(m_filename).c_str(), std::ios_base::in); // XXX: linux version
-			if (!file.is_open())
+			// Now it looks like a property line
+			if (target_section)
 			{
-				std::cerr << "Failed to open \"" + UTF8Encoding().Convert(m_filename) + "\"\n";
-				return;
-			}
+				// It's okay to keep iterator to this line despite the fact it may be removed
+				// from the list later. Only matching property duplicates are removed and by
+				// that time property line iterator (pi) is already set.
+				si = (--lines.end());
 
-			std::list<std::string> lines;
-			auto si = lines.end(); // Iterator to last line in matching section
-			auto pi = lines.end(); // Iterator to the found property line
-
-			std::string line;
-			bool target_section = false;
-
-			while(std::getline(file, line))
-			{
-				lines.push_back(line);
-
-				if (line.empty() || line[0] == ' ' || line[0] == '\t')
+				size_t pos = line.find_first_of("=.:"); // Regular property, subname or grouped
+				if (pos == std::string::npos || pos == 0)
 				{
-					// Empty line or one starting with whitespace.
-					continue;
-				}
-				else if (line[0] == ';' || line[0] == '#')
-				{
-					// Comment line.
-					continue;
-				}
-				else if (line[0] == '[')
-				{
-					// Section header
-					size_t rbracket_pos = line.find(']');
-					if (rbracket_pos != std::string::npos)
-					{
-						std::string name = line.substr(1, rbracket_pos-1);
-						target_section = strcasecmp(name.c_str(), section_name.c_str()) == 0;
-						if (target_section && si == lines.end())
-						{
-							// Keep section position in mind, even it is only a header.
-							si = (--lines.end());
-						}
-					}
-
+					// Malformed property line, ignore.
 					continue;
 				}
 
-				// Now it looks like a property line
-				if (target_section)
+				std::string name = trim(line.substr(0, pos));
+				if (strcasecmp(name.c_str(), property_name.c_str()) != 0)
 				{
-					// It's okay to keep iterator to this line despite the fact it may be removed
-					// from the list later. Only matching property duplicates are removed and by
-					// that time property line iterator (pi) is already set.
-					si = (--lines.end());
-
-					size_t pos = line.find_first_of("=.:"); // Regular property, subname or grouped
-					if (pos == std::string::npos || pos == 0)
-					{
-						// Malformed property line, ignore.
-						continue;
-					}
-
-					std::string name = trim(line.substr(0, pos));
-					if (strcasecmp(name.c_str(), property_name.c_str()) != 0)
-					{
-						// Not the property we are searching for.
-						continue;
-					}
-
-					if (pi == lines.end())
-					{
-						// If the first section.property match.
-						pi = (--lines.end());
-
-						// Try to preserve original casing.
-						property_name = name;
-					}
-					else
-					{
-						// Remove duplicates.
-						lines.pop_back();
-					}
-
-					line[pos] = ':';
-
-					// TODO: lightweight parse version
-					// TODO: utf8-friendly
-					for (const auto& group: ParseOptions2(UTF8Encoding().Convert(line)))
-					{
-						for (auto& i: group.attributes)
-						{
-							std::string subname = UTF8Encoding().Convert(i.first);
-							std::string subvalue = UTF8Encoding().Convert(i.second);
-
-							if (subname == "name")
-								subname = ""; // FIXME: use empty attribute name consistently
-
-							pieces[subname] = subvalue;
-						}
-					}
+					// Not the property we are searching for.
+					continue;
 				}
-			}
 
-			// Done reading
-			file.close();
-
-			// Overwrite
-			pieces[piece_name] = piece_value;
-
-			auto construct_line = [&]() -> std::string
-			{
-				if (pieces.size() == 1 && pieces.begin()->first.empty())
+				if (pi == lines.end())
 				{
-					// One entry and its subname is empty --> "foo=bar"
-					return property_name + "=" + pieces.begin()->second; // TODO: escape values
+					// If the first section.property match.
+					pi = (--lines.end());
+
+					// Try to preserve original casing.
+					property_name = name;
 				}
 				else
 				{
-					// Miltiple-entry property --> "foo: bar, baz=doge"
-					std::ostringstream ss;
-					ss << property_name;
-					for (auto i = pieces.begin(); i != pieces.end(); i++)
-					{
-						ss << (i == pieces.begin()? ": ": ", ");
-						if (i->first.empty())
-							ss << i->second;
-						else
-							ss << i->first << "=" << i->second; // TODO: escape values
-					}
-					return ss.str();
+					// Remove duplicates.
+					lines.pop_back();
 				}
-			};
 
+				line[pos] = ':';
+
+				// TODO: lightweight parse version
+				// TODO: utf8-friendly
+				for (const auto& group: ParseOptions2(UTF8Encoding().Convert(line)))
+				{
+					for (auto& i: group.attributes)
+					{
+						std::string subname = UTF8Encoding().Convert(i.first);
+						std::string subvalue = UTF8Encoding().Convert(i.second);
+
+						if (subname == "name")
+							subname = ""; // FIXME: use empty attribute name consistently
+
+						pieces[subname] = subvalue;
+					}
+				}
+			}
+		}
+
+		// Done reading
+		file.close();
+
+		// Overwrite
+		pieces[piece_name] = piece_value;
+
+		// Sanitize
+		for (auto i = pieces.begin(); i != pieces.end();)
+		{
+			i->second.empty()? pieces.erase(i++): i++;
+		}
+
+		auto construct_line = [&]() -> std::string
+		{
+			if (pieces.size() == 1 && pieces.begin()->first.empty())
+			{
+				// One entry and its subname is empty --> "foo=bar"
+				return property_name + "=" + pieces.begin()->second; // TODO: escape values
+			}
+			else
+			{
+				// Miltiple-entry property --> "foo: bar, baz=doge"
+				std::ostringstream ss;
+				ss << property_name;
+				for (auto i = pieces.begin(); i != pieces.end(); i++)
+				{
+					ss << (i == pieces.begin()? ": ": ", ");
+					if (i->first.empty())
+						ss << i->second;
+					else
+						ss << i->first << "=" << i->second; // TODO: escape values
+				}
+				return ss.str();
+			}
+		};
+
+		if (pieces.empty())
+		{
+			// Remove whole property line, if found. If not found there is nothing to remove.
+			if (pi != lines.end())
+				lines.erase(pi);
+		}
+		else
+		{
+			// Replace exising or add new property line. We do know it is not empty.
 			if (pi != lines.end())
 			{
 				// Exact property line.
@@ -428,40 +436,33 @@ namespace BearLibTerminal
 			}
 			else
 			{
-				// Add to the end of file
+				// Add new section to the end of file.
 				if (!lines.empty() && !trim(lines.back()).empty())
 					lines.emplace_back();
 				lines.emplace_back("[" + section_name + "]");
 				lines.emplace_back(construct_line());
 			}
-
-			// Look at the first line to determine line endings used.
-			bool uses_crlf = (!lines.front().empty() && lines.front().back() == '\r');
-
-			// Now, write back to file
-			file.open(UTF8Encoding().Convert(m_filename).c_str(), std::ios_base::out); // XXX: linux version
-			if (!file.is_open())
-			{
-				std::cerr << "Failed to open \"" + UTF8Encoding().Convert(m_filename) + "\"\n";
-				return;
-			}
-
-			for (auto& line: lines)
-			{
-				file << line;
-				if (uses_crlf && (line.empty() || line.back() != '\r'))
-					file << '\r';
-				file << '\n';
-			}
-
 		}
 
-	}
+		// Look at the first line to determine line endings used.
+		// std::getline removes '\n' but leaves '\r'.
+		bool uses_crlf = (!lines.front().empty() && lines.front().back() == '\r');
 
-	void Config::Remove(std::wstring name)
-	{
-		// If ini domain, immediately remove the property or a section from file
-		// FIXME: NYI
+		// Now, write back to file
+		file.open(UTF8Encoding().Convert(m_filename).c_str(), std::ios_base::out); // XXX: linux version
+		if (!file.is_open())
+		{
+			std::cerr << "Failed to open \"" + UTF8Encoding().Convert(m_filename) + "\"\n";
+			return;
+		}
+
+		for (auto& line: lines)
+		{
+			file << line;
+			if (uses_crlf && (line.empty() || line.back() != '\r'))
+				file << '\r';
+			file << '\n';
+		}
 	}
 
 	void Config::Dispose()
