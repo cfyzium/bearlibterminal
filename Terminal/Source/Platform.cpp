@@ -25,12 +25,15 @@
 #include "Log.hpp"
 #include <vector>
 #include <fstream>
+#include <iostream>
 
 #if defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 #else
 #include <dlfcn.h>
+#include <dirent.h>
+#include <sys/stat.h>
 #endif
 
 namespace BearLibTerminal
@@ -190,6 +193,81 @@ namespace BearLibTerminal
 			throw std::runtime_error("file \"" + UTF8Encoding().Convert(name) + "\" cannot be opened");
 		}
 
+		return result;
+	}
+
+	static std::wstring GetEnvironmentVariable(const std::wstring& name)
+	{
+#if defined(_WIN32)
+		// FIXME: NYI
+		// GetEnvironmentVariable
+		return L"";
+#else
+		const char* p = ::getenv(UTF8Encoding().Convert(name).c_str());
+		return p? UTF8Encoding().Convert(p): std::wstring();
+#endif
+	}
+
+	std::wstring GetAppName()
+	{
+		std::wstring result;
+
+		if (!(result = GetEnvironmentVariable(L"BEARLIB_APPNAME")).empty())
+			return result;
+
+		// Guess from running process information.
+
+#if defined(_WIN32)
+		// FIXME: NYI
+		// GetModuleFileName, strip off extension
+		return L"";
+#else
+		// Linux version using /proc/self/stat file with the information about
+		// currently cunning process.
+
+		std::ifstream stat("/proc/self/stat");
+		if (!stat.good())
+			return L"";
+
+		int pid;          // The process ID
+		std::string comm; // The filename of the executable, in parentheses.
+
+		stat >> pid >> comm;
+		if (comm.length() < 3)
+			return L"";
+
+		return UTF8Encoding().Convert(comm.substr(1, comm.length()-2));
+#endif
+	}
+
+	std::list<std::wstring> EnumerateFiles(std::wstring path)
+	{
+		std::list<std::wstring> result;
+
+#if defined(_WIN32)
+		// FIXME: NYI
+		// FindFirstFile, FindNextFile and FindClose
+#else
+		DIR* dir;
+
+		std::string u8path = UTF8Encoding().Convert(path);
+		if (u8path.empty() || u8path.back() != '/')
+			u8path += '/';
+
+		if ((dir = ::opendir(u8path.c_str())) != nullptr)
+		{
+			struct dirent ent, *pent = &ent;
+			while (::readdir_r(dir, pent, &pent) == 0 && pent != nullptr)
+			{
+				struct stat st;
+				if (::stat((u8path + pent->d_name).c_str(), &st) == 0 && (st.st_mode & S_IFREG))
+				{
+					result.push_back(UTF8Encoding().Convert(pent->d_name));
+				}
+			}
+			::closedir(dir);
+		}
+#endif
 		return result;
 	}
 }

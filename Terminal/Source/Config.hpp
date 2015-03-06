@@ -64,6 +64,7 @@ namespace BearLibTerminal
 	private:
 		Config();
 		void Init();
+		void GuessConfigFilename();
 		void Load(std::wstring filename);
 		void Update(std::wstring section, std::wstring property, std::wstring value);
 

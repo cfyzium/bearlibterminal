@@ -25,6 +25,7 @@
 
 #include <string>
 #include <memory>
+#include <list>
 
 namespace BearLibTerminal
 {
@@ -52,6 +53,10 @@ namespace BearLibTerminal
 	};
 
 	std::unique_ptr<std::istream> OpenFile(std::wstring name);
+
+	std::wstring GetAppName();
+
+	std::list<std::wstring> EnumerateFiles(std::wstring path);
 }
 
 #endif // BEARLIBTERMINAL_PLATFORM_HPP

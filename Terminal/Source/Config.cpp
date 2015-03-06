@@ -42,6 +42,17 @@ namespace BearLibTerminal
 	{
 		Load(L"./bearlibterminal.ini");
 		m_initialized = true;
+
+		EnumerateFiles(L"./");
+	}
+
+	void Config::GuessConfigFilename()
+	{
+		std::wstring appname = GetAppName();
+		if (appname.empty())
+			appname = L"BearLibTerminal";
+
+
 	}
 
 	void Config::Load(std::wstring filename)
