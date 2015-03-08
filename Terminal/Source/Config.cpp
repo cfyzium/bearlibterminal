@@ -24,11 +24,9 @@
 #include "Utility.hpp"
 #include "Encoding.hpp"
 #include "OptionGroup.hpp"
-
+#include "Config.hpp"
 #include <iostream>
 #include <fstream>
-#include "Config.hpp"
-#include <string.h>
 
 namespace BearLibTerminal
 {
@@ -40,29 +38,79 @@ namespace BearLibTerminal
 
 	void Config::Init()
 	{
-		Load(L"./bearlibterminal.ini");
+		m_filename = GuessConfigFilename();
+		Load();
 		m_initialized = true;
-
-		EnumerateFiles(L"./");
 	}
 
-	void Config::GuessConfigFilename()
+	std::wstring Config::GuessConfigFilename()
 	{
-		std::wstring appname = GetAppName();
-		if (appname.empty())
-			appname = L"BearLibTerminal";
+		std::wstring preferred_name = GetEnvironmentVariable(L"BEARLIB_INIFILE");
+		// TODO: check if this is a fully qualified file name.
 
+		// File name matching application name.
+		std::wstring appconfig_name = GetAppName() + L".ini";
 
+		int best_priority = 0;
+		std::wstring best_filename;
+
+		auto search_v2 = [&](std::wstring path, int priority_factor)
+		{
+			for (auto& file: EnumerateFiles(path))
+			{
+				int priority = 0;
+
+				if (ci_compare(file, preferred_name))
+				{
+					priority = 3;
+				}
+				if (ci_compare(file, appconfig_name))
+				{
+					priority = 2;
+				}
+				else if (ends_with<wchar_t>(file, L".ini"))
+				{
+					priority = 1;
+				}
+				else
+				{
+					continue;
+				}
+
+				priority *= priority_factor;
+
+				if (priority > best_priority)
+				{
+					best_filename = path + file;
+					best_priority = priority;
+				}
+			}
+		};
+
+		search_v2(GetCurrentDirectory(), 2);
+		search_v2(GetAppDirectory(), 1);
+
+		if (best_filename.empty())
+			best_filename = preferred_name.empty()? appconfig_name: preferred_name;
+
+		return best_filename;
 	}
 
-	void Config::Load(std::wstring filename)
+	void Config::Load()
 	{
 		std::cout << "ConfigFile::Init()\n";
 
-		// TODO: choose filename from available files: (bearlibterminal|appname|config).(ini|cfg|conf)
-		m_filename = filename;
-
-		auto stream = OpenFile(m_filename);
+		std::unique_ptr<std::istream> stream;
+		try
+		{
+			stream = OpenFileReading(m_filename);
+		}
+		catch (...)
+		{
+			// Cannot read the file. It may not exists.
+			// TODO: logging.
+			return;
+		}
 
 		// A name of the current section.
 		std::wstring current_section;
@@ -287,10 +335,14 @@ namespace BearLibTerminal
 			}
 		}
 
-		std::fstream file(UTF8Encoding().Convert(m_filename).c_str(), std::ios_base::in); // XXX: linux version
-		if (!file.is_open())
+		std::unique_ptr<std::istream> infile;
+		try
 		{
-			std::cerr << "Failed to open \"" + UTF8Encoding().Convert(m_filename) + "\"\n";
+			infile = OpenFileReading(m_filename);
+		}
+		catch (std::exception& e)
+		{
+			// TODO: Log
 			return;
 		}
 		// TODO: BOM matching.
@@ -302,7 +354,7 @@ namespace BearLibTerminal
 		std::string line;
 		bool target_section = false;
 
-		while(std::getline(file, line))
+		while(std::getline(*infile, line))
 		{
 			lines.push_back(line);
 
@@ -323,7 +375,7 @@ namespace BearLibTerminal
 				if (rbracket_pos != std::string::npos)
 				{
 					std::string name = line.substr(1, rbracket_pos-1);
-					target_section = strcasecmp(name.c_str(), section_name.c_str()) == 0;
+					target_section = ci_compare(name, section_name);
 					if (target_section && si == lines.end())
 					{
 						// Keep section position in mind, even it is only a header.
@@ -350,7 +402,7 @@ namespace BearLibTerminal
 				}
 
 				std::string name = trim(line.substr(0, pos));
-				if (strcasecmp(name.c_str(), property_name.c_str()) != 0)
+				if (ci_compare(name, property_name))
 				{
 					// Not the property we are searching for.
 					continue;
@@ -391,7 +443,7 @@ namespace BearLibTerminal
 		}
 
 		// Done reading
-		file.close();
+		infile.reset();
 
 		// Overwrite
 		pieces[piece_name] = piece_value;
@@ -460,19 +512,23 @@ namespace BearLibTerminal
 		bool uses_crlf = (!lines.front().empty() && lines.front().back() == '\r');
 
 		// Now, write back to file
-		file.open(UTF8Encoding().Convert(m_filename).c_str(), std::ios_base::out); // XXX: linux version
-		if (!file.is_open())
+		std::unique_ptr<std::ostream> outfile;
+		try
 		{
-			std::cerr << "Failed to open \"" + UTF8Encoding().Convert(m_filename) + "\"\n";
+			outfile = OpenFileWriting(m_filename);
+		}
+		catch (std::exception& e)
+		{
+			// TODO: Log
 			return;
 		}
 
 		for (auto& line: lines)
 		{
-			file << line;
+			*outfile << line;
 			if (uses_crlf && (line.empty() || line.back() != '\r'))
-				file << '\r';
-			file << '\n';
+				*outfile << '\r';
+			*outfile << '\n';
 		}
 	}
 

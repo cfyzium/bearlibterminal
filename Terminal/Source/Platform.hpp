@@ -52,9 +52,19 @@ namespace BearLibTerminal
 		bool m_owner;
 	};
 
-	std::unique_ptr<std::istream> OpenFile(std::wstring name);
+	std::unique_ptr<std::istream> OpenFileReading(std::wstring name);
+
+	std::unique_ptr<std::ostream> OpenFileWriting(std::wstring name);
+
+	std::wstring GetEnvironmentVariable(const std::wstring& name);
+
+	bool FileExists(std::wstring name);
 
 	std::wstring GetAppName();
+
+	std::wstring GetAppDirectory();
+
+	std::wstring GetCurrentDirectory();
 
 	std::list<std::wstring> EnumerateFiles(std::wstring path);
 }

@@ -99,6 +99,12 @@ namespace BearLibTerminal
 		return s;
 	}
 
+	// Because strcasecmp/wcscasecmp support is not uniform across platforms.
+	template<typename char_t> bool ci_compare(const std::basic_string<char_t>& s1, const std::basic_string<char_t>& s2)
+	{
+		return to_lower(s1) == to_lower(s2);
+	}
+
 	template<typename char_t> std::basic_string<char_t> trim(const std::basic_string<char_t>& s)
 	{
 		int start = 0, end = s.length()-1;
