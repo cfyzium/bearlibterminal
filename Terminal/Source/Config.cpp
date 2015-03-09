@@ -193,7 +193,7 @@ namespace BearLibTerminal
 
 	bool Config::TryGet(std::wstring name, std::wstring& out)
 	{
-		std::lock_guard<std::mutex> gurad(m_lock);
+		std::lock_guard<std::mutex> guard(m_lock);
 
 		if (!m_initialized)
 			Init();

@@ -25,6 +25,8 @@
 
 #include <string>
 #include <memory>
+#include <istream>
+#include <ostream>
 #include <list>
 
 namespace BearLibTerminal
