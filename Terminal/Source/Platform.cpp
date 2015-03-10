@@ -251,7 +251,7 @@ namespace BearLibTerminal
 #endif
 	}
 
-	std::wstring GetEnvironmentVariable(const std::wstring& name)
+	std::wstring GetEnvironmentVariable(const std::wstring& name, const std::wstring& default_)
 	{
 #if defined(_WIN32)
 		const DWORD buffer_size = 256;
@@ -262,7 +262,7 @@ namespace BearLibTerminal
 			// * The buffer is too small? (result is the size required);
 			// * Variable not found (GetLastError will be ERROR_ENVVAR_NOT_FOUND);
 			// * Or any other reason.
-			return L"";
+			return default_;
 		}
 		else
 		{
@@ -270,7 +270,7 @@ namespace BearLibTerminal
 		}
 #else
 		const char* p = ::getenv(UTF8Encoding().Convert(name).c_str());
-		return p? UTF8Encoding().Convert(p): std::wstring();
+		return p? UTF8Encoding().Convert(p): default_;
 #endif
 	}
 

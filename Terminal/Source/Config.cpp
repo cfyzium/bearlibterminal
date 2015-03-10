@@ -25,6 +25,7 @@
 #include "Encoding.hpp"
 #include "OptionGroup.hpp"
 #include "Config.hpp"
+#include "Log.hpp"
 #include <iostream>
 #include <fstream>
 
@@ -96,9 +97,14 @@ namespace BearLibTerminal
 		return best_filename;
 	}
 
-	void Config::Load()
+	void Config::Load() // FIXME: does not parse the same way Update() does.
 	{
-		std::cout << "ConfigFile::Init()\n";
+		if (!FileExists(m_filename))
+		{
+			// No use trying to open nonexistent file.
+			LOG(Info, L"Config::Load: file '" << m_filename << L"' does not exists, assuming empty config");
+			return;
+		}
 
 		std::unique_ptr<std::istream> stream;
 		try
@@ -107,8 +113,8 @@ namespace BearLibTerminal
 		}
 		catch (...)
 		{
-			// Cannot read the file. It may not exists.
-			// TODO: logging.
+			// Cannot read the file, though it does exist.
+			LOG(Error, L"Config::Load: cannot open file '" << m_filename << L"'");
 			return;
 		}
 
@@ -342,7 +348,7 @@ namespace BearLibTerminal
 		}
 		catch (std::exception& e)
 		{
-			// TODO: Log
+			LOG(Error, L"Config::Update: cannot open file '" << m_filename << L"' for reading");
 			return;
 		}
 		// TODO: BOM matching.
@@ -519,7 +525,7 @@ namespace BearLibTerminal
 		}
 		catch (std::exception& e)
 		{
-			// TODO: Log
+			LOG(Error, L"Config::Update: cannot open file '" << m_filename << "' for writing");
 			return;
 		}
 

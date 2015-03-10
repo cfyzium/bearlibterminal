@@ -58,7 +58,7 @@ namespace BearLibTerminal
 
 	std::unique_ptr<std::ostream> OpenFileWriting(std::wstring name);
 
-	std::wstring GetEnvironmentVariable(const std::wstring& name);
+	std::wstring GetEnvironmentVariable(const std::wstring& name, const std::wstring& default_ = std::wstring());
 
 	bool FileExists(std::wstring name);
 

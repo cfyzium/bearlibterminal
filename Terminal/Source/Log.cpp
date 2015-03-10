@@ -8,6 +8,7 @@
 #include "Log.hpp"
 #include "Encoding.hpp"
 #include "Utility.hpp"
+#include "Platform.hpp"
 
 #include <fstream>
 #include <time.h>
@@ -18,8 +19,6 @@
 
 namespace BearLibTerminal
 {
-	Log* g_logger = nullptr;
-
 	static std::string FormatTime()
 	{
 		auto now = std::chrono::system_clock::now();
@@ -58,7 +57,7 @@ namespace BearLibTerminal
 		m_initialized(false),
 		m_level(Level::Error),
 		m_mode(Mode::Truncate),
-		m_filename(L"bearlibterminal.log"),
+		m_filename(),
 		m_truncated(false)
 	{
 		Init();
@@ -66,25 +65,17 @@ namespace BearLibTerminal
 
 	void Log::Init()
 	{
-		std::cout << "Log::Init()\n";
+		std::wstring s;
+		if (!(s = GetEnvironmentVariable(L"BEARLIB_LOGFILE")).empty())
+			m_filename = s;
 
-		std::wstring temp;
+		Level level;
+		if (try_parse(GetEnvironmentVariable(L"BEARLIB_LOGLEVEL"), level))
+			m_level = level;
 
-		if (Config::Instance().TryGet(L"ini.bearlibterminal.log.file", temp))
-		{
-			m_filename = temp; // FIXME: backslashes?
-			m_truncated = false;
-		}
-
-		if (Config::Instance().TryGet(L"ini.bearlibterminal.log.level", temp))
-		{
-			m_level = parse<Level>(temp);
-		}
-
-		if (Config::Instance().TryGet(L"ini.bearlibterminal.log.mode", temp))
-		{
-			m_mode = parse<Mode>(temp);
-		}
+		Mode mode;
+		if (try_parse(GetEnvironmentVariable(L"BEARLIB_LOGMODE"), mode))
+			m_mode = mode;
 
 		m_initialized = true;
 	}
@@ -92,7 +83,7 @@ namespace BearLibTerminal
 	void Log::Dispose()
 	{
 		std::lock_guard<std::mutex> guard(m_lock);
-		m_filename = L"bearlibterminal.log";
+		m_filename = L"";
 		m_level = Level::Error;
 		m_mode = Mode::Truncate;
 		m_truncated = false;
@@ -103,31 +94,36 @@ namespace BearLibTerminal
 	{
 		std::lock_guard<std::mutex> guard(m_lock);
 
-		if (!m_initialized)
-			Init();
+		std::wostringstream ss;
+		ss << FormatTime().c_str() << " [" << level << "] " << what;
 
-		std::ofstream stream;
-		std::ios_base::openmode flags = std::ios_base::out;
-		if (m_mode == Mode::Truncate && !m_truncated)
+		if (m_filename.empty())
 		{
-			flags |= std::ios_base::trunc;
-			m_truncated = true;
+			std::cerr << UTF8Encoding().Convert(ss.str()) << std::endl;
 		}
 		else
 		{
-			flags |= std::ios_base::app;
+			std::ofstream stream;
+			std::ios_base::openmode flags = std::ios_base::out;
+			if (m_mode == Mode::Truncate && !m_truncated)
+			{
+				flags |= std::ios_base::trunc;
+				m_truncated = true;
+			}
+			else
+			{
+				flags |= std::ios_base::app;
+			}
+	#if defined(_MSC_VER)
+			// MSVC has wchar_t open overload and does not work well with UTF-8
+			stream.open(m_filename.c_str(), flags);
+	#else
+			// GCC on the other hand opens UTF-8 paths properly but has no wchar_t overload
+			// (as well it shouldn't, there is no such overload in standard)
+			stream.open(UTF8Encoding().Convert(m_filename), flags);
+	#endif
+			stream << UTF8Encoding().Convert(ss.str()) << std::endl;
 		}
-#if defined(_MSC_VER)
-		// MSVC has wchar_t open overload and does not work well with UTF-8
-		stream.open(m_filename.c_str(), flags);
-#else
-		// GCC on the other hand opens UTF-8 paths properly but has no wchar_t overload
-		// (as well it shouldn't, there is no such overload in standard)
-		stream.open(UTF8Encoding().Convert(m_filename), flags);
-#endif
-		std::wostringstream ss;
-		ss << FormatTime().c_str() << " [" << level << "] " << what;
-		stream << UTF8Encoding().Convert(ss.str()) << "\n";
 	}
 
 	void Log::SetLevel(Level level)

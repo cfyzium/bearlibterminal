@@ -25,7 +25,9 @@
 #include "Config.hpp"
 #include "Terminal.hpp"
 #include "Palette.hpp"
+#include "Config.hpp"
 #include "Log.hpp"
+#include "Utility.hpp"
 #include <map>
 #include <memory>
 #include <string>
@@ -86,7 +88,28 @@ namespace
 
 int terminal_open()
 {
-	if (g_instance) return 0;
+	using namespace BearLibTerminal;
+
+	if (g_instance)
+	{
+		LOG(Error, "terminal_open: BearLibTerminal instance already initialized");
+		return 0;
+	}
+
+	// Try to setup Log
+	{
+		std::wstring s;
+		if (Config::Instance().TryGet(L"ini.bearlibterminal.log.file", s))
+			Log::Instance().SetFile(s);
+
+		Log::Level level;
+		if (Config::Instance().TryGet(L"ini.bearlibterminal.log.level", s) && try_parse(s, level))
+			Log::Instance().SetLevel(level);
+
+		Log::Mode mode;
+		if (Config::Instance().TryGet(L"ini.bearlibterminal.log.mode", s) && try_parse(s, mode))
+			Log::Instance().SetMode(mode);
+	}
 
 	try
 	{
@@ -95,14 +118,18 @@ int terminal_open()
 	}
 	catch (std::exception& e)
 	{
-		std::cerr << "terminal_open: " << e.what() << std::endl;
+		LOG(Fatal, "terminal_open: " << e.what());
 		return 0;
 	}
 }
 
 void terminal_close()
 {
-	if (g_instance) g_instance.reset();
+	if (g_instance)
+	{
+		g_instance.reset();
+		BearLibTerminal::Log::Instance().Dispose();
+	}
 }
 
 int terminal_set8(const int8_t* value)
