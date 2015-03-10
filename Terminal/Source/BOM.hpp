@@ -24,6 +24,7 @@
 #define BOM_HPP_
 
 #include <istream>
+#include <ostream>
 
 namespace BearLibTerminal
 {
@@ -45,7 +46,11 @@ namespace BearLibTerminal
 
 	BOM DetectBOM(std::istream& stream);
 
+	void PlaceBOM(std::ostream& stream, BOM bom);
+
 	size_t GetBOMSize(BOM bom);
+
+	std::wostream& operator<<(std::wostream& stream, BOM bom);
 }
 
 #endif /* BOM_HPP_ */

@@ -283,7 +283,7 @@ namespace BearLibTerminal
 		return rc > 0? std::wstring(): std::wstring{buffer};
 #else
 		// FIXME: NYI
-		// Retrieve the executable name by following /proc/self/exe symlink.
+		return L"."; // FIXME: Retrieve the executable name by following /proc/self/exe symlink.
 #endif
 	}
 

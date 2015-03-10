@@ -65,21 +65,21 @@ namespace BearLibTerminal
 
 		if (mark_size == 4) // May be UTF-32 (four byte BOM)
 		{
-			if (::memcmp(mark, BOM_Bytes[BOM::UTF32LE], 4) == 0)
+			if (::memcmp(mark, BOM_Bytes[(int)BOM::UTF32LE], 4) == 0)
 				return BOM::UTF32LE;
-			else if (::memcmp(mark, BOM_Bytes[BOM::UTF32BE], 4) == 0)
+			else if (::memcmp(mark, BOM_Bytes[(int)BOM::UTF32BE], 4) == 0)
 				return BOM::UTF32BE;
 		}
 		else if (mark_size >= 3) // May be UTF-8 (three byte BOM)
 		{
-			if (::memcmp(mark, BOM_Bytes[BOM::UTF8], 3) == 0)
+			if (::memcmp(mark, BOM_Bytes[(int)BOM::UTF8], 3) == 0)
 				return BOM::UTF8;
 		}
 		else if (mark_size >= 2) // May be UTF-16 (two byte BOM)
 		{
-			if (::memcmp(mark, BOM_Bytes[BOM::UTF16LE], 2) == 0)
+			if (::memcmp(mark, BOM_Bytes[(int)BOM::UTF16LE], 2) == 0)
 				return BOM::UTF16LE;
-			else if (::memcmp(mark, BOM_Bytes[BOM::UTF16BE], 2) == 0)
+			else if (::memcmp(mark, BOM_Bytes[(int)BOM::UTF16BE], 2) == 0)
 				return BOM::UTF16BE;
 		}
 
@@ -106,5 +106,41 @@ namespace BearLibTerminal
 		}
 
 		return BOM::None;
+	}
+
+	void PlaceBOM(std::ostream& stream, BOM bom)
+	{
+		switch (bom)
+		{
+		case BOM::UTF8:
+		case BOM::UTF16LE:
+		case BOM::UTF16BE:
+		case BOM::UTF32LE:
+		case BOM::UTF32BE:
+			stream.write((const char*)BOM_Bytes[(int)bom], GetBOMSize(bom));
+			break;
+		default:
+			break;
+		}
+	}
+
+	std::wostream& operator<<(std::wostream& stream, BOM bom)
+	{
+		switch (bom)
+		{
+		case BOM::None:          stream << L"None";            break;
+		case BOM::UTF8:          stream << L"UTF-8";           break;
+		case BOM::UTF16LE:       stream << L"UTF-16 LE";       break;
+		case BOM::UTF16BE:       stream << L"UTF-16 BE";       break;
+		case BOM::UTF32LE:       stream << L"UTF-32 LE";       break;
+		case BOM::UTF32BE:       stream << L"UTF-32 BE";       break;
+		case BOM::ASCII_UTF8:    stream << L"ASCII UTF-8";     break;
+		case BOM::ASCII_UTF16LE: stream << L"ASCII UTF-16 LE"; break;
+		case BOM::ASCII_UTF16BE: stream << L"ASCII UTF-16 BE"; break;
+		case BOM::ASCII_UTF32LE: stream << L"ASCII UTF-32 LE"; break;
+		case BOM::ASCII_UTF32BE: stream << L"ASCII UTF-32 BE"; break;
+		};
+
+		return stream;
 	}
 }

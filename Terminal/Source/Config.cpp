@@ -26,6 +26,7 @@
 #include "OptionGroup.hpp"
 #include "Config.hpp"
 #include "Log.hpp"
+#include "BOM.hpp"
 #include <iostream>
 #include <fstream>
 
@@ -40,6 +41,8 @@ namespace BearLibTerminal
 	void Config::Init()
 	{
 		m_filename = GuessConfigFilename();
+		LOG(Info, "Config::Init: using file '" << m_filename << "'");
+
 		Load();
 		m_initialized = true;
 	}
@@ -110,6 +113,23 @@ namespace BearLibTerminal
 		try
 		{
 			stream = OpenFileReading(m_filename);
+
+			auto infile_bom = DetectBOM(*stream);
+			LOG(Debug, "Config::Update: file encoding detected to be '" << infile_bom << "'");
+
+			switch (infile_bom)
+			{
+			case BOM::None:
+			case BOM::UTF8:
+			case BOM::ASCII_UTF8:
+				// Supported ones.
+				break;
+			default:
+				// It will be no good to break user configuration file
+				// by overwriting it in supported encoding.
+				LOG(Error, "Config::Update: unsupported file encoding '" << infile_bom << "'");
+				return;
+			}
 		}
 		catch (...)
 		{
@@ -341,26 +361,50 @@ namespace BearLibTerminal
 			}
 		}
 
-		std::unique_ptr<std::istream> infile;
-		try
+		BOM infile_bom = BOM::None;
+		std::list<std::string> infile_lines;
+
+		if (FileExists(m_filename))
 		{
-			infile = OpenFileReading(m_filename);
+			try
+			{
+				auto infile = OpenFileReading(m_filename);
+
+				infile_bom = DetectBOM(*infile);
+				LOG(Debug, "Config::Update: file encoding detected to be '" << infile_bom << "'");
+
+				switch (infile_bom)
+				{
+				case BOM::None:
+				case BOM::UTF8:
+				case BOM::ASCII_UTF8:
+					// Supported ones.
+					break;
+				default:
+					// It will be no good to break user configuration file
+					// by overwriting it in supported encoding.
+					LOG(Error, "Config::Update: unsupported file encoding '" << infile_bom << "'");
+					return;
+				}
+
+				// Read entire file line-by-line.
+				std::string line;
+				while(std::getline(*infile, line))
+					infile_lines.push_back(line);
+			}
+			catch (std::exception& e)
+			{
+				LOG(Error, L"Config::Update: cannot open file '" << m_filename << L"' for reading");
+				return;
+			}
 		}
-		catch (std::exception& e)
-		{
-			LOG(Error, L"Config::Update: cannot open file '" << m_filename << L"' for reading");
-			return;
-		}
-		// TODO: BOM matching.
 
 		std::list<std::string> lines;
 		auto si = lines.end(); // Iterator to last line in matching section
 		auto pi = lines.end(); // Iterator to the found property line
-
-		std::string line;
 		bool target_section = false;
 
-		while(std::getline(*infile, line))
+		for (auto& line: infile_lines)
 		{
 			lines.push_back(line);
 
@@ -448,9 +492,6 @@ namespace BearLibTerminal
 			}
 		}
 
-		// Done reading
-		infile.reset();
-
 		// Overwrite
 		pieces[piece_name] = piece_value;
 
@@ -522,6 +563,9 @@ namespace BearLibTerminal
 		try
 		{
 			outfile = OpenFileWriting(m_filename);
+
+			// Only compatible ASCII/UTF-8 encodings are used.
+			PlaceBOM(*outfile, infile_bom);
 		}
 		catch (std::exception& e)
 		{
