@@ -171,9 +171,21 @@ namespace BearLibTerminal
 		m_window = Window::Create();
 		m_window->SetEventHandler(std::bind(&Terminal::OnWindowEvent, this, std::placeholders::_1));
 
-		// TODO: load preconfigured options (ini.bearlibterminal.* -> m_options)
 		// Default parameters
 		SetOptionsInternal(L"window: size=80x25, icon=default; font: default; terminal.encoding=utf8");
+
+		// Apply parameters from configuration file:
+		std::wostringstream ss;
+		for (auto& pair: Config::Instance().List(L"ini.bearlibterminal"))
+		{
+			ss << pair.first;
+			if (pair.first.find(L".") == std::wstring::npos) // FIXME: Seriously, just fix this already.
+				ss << L".name";
+			ss << L"=" << pair.second << L";";
+		}
+		auto ext_options = ss.str();
+		LOG(Debug, L"Terminal options from configuration file: " << ext_options);
+		SetOptionsInternal(ext_options);
 	}
 
 	Terminal::~Terminal()
@@ -490,8 +502,8 @@ namespace BearLibTerminal
 		m_options = updated;
 
 		// Synchronize options struct with configuration cache (sys.group.option).
-		auto bool_to_wstring = [](bool flag) -> std::wstring {return flag? L"true": L"false";};
-		auto size_to_wstring = [](Size size) -> std::wstring {return size.Area()? to_string<wchar_t>(size): std::wstring(L"auto");};
+		auto bool_to_wstring = [](bool flag) {return flag? L"true": L"false";};
+		auto size_to_wstring = [](Size size) {return size.Area()? to_string<wchar_t>(size): std::wstring(L"auto");};
 		auto& C = Config::Instance();
 		// terminal
 		C.Set(L"terminal.encoding", m_options.terminal_encoding);

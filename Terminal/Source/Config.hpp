@@ -57,6 +57,7 @@ namespace BearLibTerminal
 	{
 	public:
 		bool TryGet(std::wstring name, std::wstring& out);
+		std::map<std::wstring, std::wstring> List(const std::wstring& section);
 		void Set(std::wstring name, std::wstring value);
 		void Dispose();
 		static Config& Instance();

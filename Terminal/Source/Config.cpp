@@ -260,6 +260,19 @@ namespace BearLibTerminal
 		return true;
 	}
 
+	std::map<std::wstring, std::wstring> Config::List(const std::wstring& section)
+	{
+		std::map<std::wstring, std::wstring> result;
+		std::lock_guard<std::mutex> guard(m_lock);
+		auto i = m_sections.find(section);
+		if (i != m_sections.end())
+		{
+			for (auto j: i->second.m_properties)
+				result[j.first] = j.second.m_value;
+		}
+		return result;
+	}
+
 	void Config::Set(std::wstring name, std::wstring value)
 	{
 		LOG(Trace, L"Trying to set '" << name << L"' to '" << value << L"'");
