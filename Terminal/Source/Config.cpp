@@ -27,7 +27,6 @@
 #include "Config.hpp"
 #include "Log.hpp"
 #include "BOM.hpp"
-#include <iostream>
 #include <fstream>
 
 namespace BearLibTerminal
@@ -100,7 +99,7 @@ namespace BearLibTerminal
 		return best_filename;
 	}
 
-	void Config::Load() // FIXME: does not parse the same way Update() does.
+	void Config::Load()
 	{
 		if (!FileExists(m_filename))
 		{
@@ -109,13 +108,14 @@ namespace BearLibTerminal
 			return;
 		}
 
-		std::unique_ptr<std::istream> stream;
+		std::list<std::wstring> infile_lines;
+
 		try
 		{
-			stream = OpenFileReading(m_filename);
+			auto infile = OpenFileReading(m_filename);
 
-			auto infile_bom = DetectBOM(*stream);
-			LOG(Debug, "Config::Update: file encoding detected to be '" << infile_bom << "'");
+			auto infile_bom = DetectBOM(*infile);
+			LOG(Debug, "Config::Load: file encoding detected to be '" << infile_bom << "'");
 
 			switch (infile_bom)
 			{
@@ -127,9 +127,13 @@ namespace BearLibTerminal
 			default:
 				// It will be no good to break user configuration file
 				// by overwriting it in supported encoding.
-				LOG(Error, "Config::Update: unsupported file encoding '" << infile_bom << "'");
+				LOG(Error, "Config::Load: unsupported file encoding '" << infile_bom << "'");
 				return;
 			}
+
+			std::string line;
+			while (std::getline(*infile, line))
+				infile_lines.push_back(UTF8Encoding().Convert(line));
 		}
 		catch (...)
 		{
@@ -141,14 +145,12 @@ namespace BearLibTerminal
 		// A name of the current section.
 		std::wstring current_section;
 
-		std::string line;
-		while (std::getline(*stream, line))
+		LOG(Trace, L"Config::Load: configuration file contents:");
+		for (auto& line: infile_lines)
 		{
-			line = trim(line);
-
-			if (line.empty())
+			if (line.empty() || std::isspace(line[0]))
 			{
-				continue; // Well, empty line
+				continue; // Еmpty line or one staring with space.
 			}
 			else if (line[0] == ';' || line[0] == '#')
 			{
@@ -158,60 +160,49 @@ namespace BearLibTerminal
 			{
 				// Section header: "[name]"
 				size_t rbracket = line.find(']');
-				if (rbracket == std::string::npos || rbracket == 1)
+				if (rbracket != std::wstring::npos)
 				{
-					current_section = L"";
-					continue; // Malformed section header
-				}
-
-				// Save
-				std::wstring section_name = UTF8Encoding().Convert(line.substr(1, rbracket-1));
-				current_section = L"ini." + to_lower(section_name);
-				Section& section = m_sections[current_section];
-				section.m_case_sensitive_name = section_name;
-				std::cout << "Got a new section: \"" << UTF8Encoding().Convert(current_section) << "\" (\"" << UTF8Encoding().Convert(section_name) << "\")\n";
-				continue;
-			}
-			else if (!current_section.empty())
-			{
-				size_t pos = line.find_first_of("=:");
-				if (pos == std::string::npos)
-					continue; // Malformed property line: no equals or colon sign
-
-				Section& section = m_sections[current_section];
-				if (line[pos] == ':')
-				{
-					// Grouped property
-					for (auto group: ParseOptions2(UTF8Encoding().Convert(line)))
-					{
-						for (auto& attribute: group.attributes)
-						{
-							std::wstring key = group.name + L"." + attribute.first;
-							std::wstring case_insensitive_key = to_lower(key);
-							Property& property = section.m_properties[case_insensitive_key];
-							property.m_case_sensitive_name = key;
-							property.m_value = attribute.second;
-							std::cout << "Got a new property: \"" << UTF8Encoding().Convert(case_insensitive_key) << "\" (\"" << UTF8Encoding().Convert(key) << "\") = \"" << UTF8Encoding().Convert(attribute.second) << "\"\n";
-						}
-					}
+					// Save
+					std::wstring name = line.substr(1, rbracket-1);
+					LOG(Trace, L"[" << name << L"]");
+					Section& section = m_sections[(current_section = L"ini." + name)];
 				}
 				else
 				{
-					// Regular property
-					if (pos == line.length()-1)
-						continue; // Malformed property line
+					// Reset
+					current_section = L"";
+				}
+			}
+			else if (!current_section.empty())
+			{
+				// Regular property, subname or grouped
+				size_t pos = line.find_first_of(L"=.:");
+				if (pos == std::wstring::npos || pos == 0)
+				{
+					// Malformed property line, ignore.
+					continue;
+				}
 
-					std::wstring key = UTF8Encoding().Convert(trim(line.substr(0, pos)));
-					std::wstring value = UTF8Encoding().Convert(trim(line.substr(pos+1)));
+				Section& section = m_sections[current_section];
 
-					if (key.empty() || value.empty())
-						continue; // Malformed property line
+				std::wstring name = trim(line.substr(0, pos));
+				line[pos] = L':';
 
-					std::wstring case_insensitive_key = to_lower(key);
-					Property& property = section.m_properties[case_insensitive_key];
-					property.m_case_sensitive_name = key;
-					property.m_value = value;
-					std::cout << "Got a new property: \"" << UTF8Encoding().Convert(case_insensitive_key) << "\" (\"" << UTF8Encoding().Convert(key) << "\") = \"" << UTF8Encoding().Convert(value) << "\"\n";
+				for (const auto& group: ParseOptions2(line))
+				{
+					for (auto& i: group.attributes)
+					{
+						std::wstring key = i.first;
+						std::wstring value = i.second;
+
+						// FIXME: use empty attribute name consistently
+						key = (key == L"name")? name: (name + L"." + key);
+
+						Property& property = section.m_properties[key];
+						property.m_value = value;
+
+						LOG(Trace, L"Config::Load: property '" << key << L"' = '" << value << L"'");
+					}
 				}
 			}
 		}
@@ -219,125 +210,101 @@ namespace BearLibTerminal
 
 	bool Config::TryGet(std::wstring name, std::wstring& out)
 	{
+		LOG(Trace, L"Trying to get '" << name << L"'");
+
 		std::lock_guard<std::mutex> guard(m_lock);
 
 		if (!m_initialized)
 			Init();
 
-		std::cout << "Trying to get \"" << UTF8Encoding().Convert(name) << "\"\n";
+		if (name.empty())
+			return false;
+
+		if (!starts_with<wchar_t>(name, L"sys.") && !starts_with<wchar_t>(name, L"ini."))
+			name = L"sys." + name;
 
 		const size_t domain_name_length = 4;
-
-		if (name.empty())
-		{
-			return false;
-		}
-
-		if (!starts_with(name, std::wstring(L"sys.")) && !starts_with(name, std::wstring(L"ini.")))
-		{
-			name = L"sys." + name;
-		}
-
 		size_t section_end_pos = name.find(L'.', domain_name_length+1);
 		if (section_end_pos == std::wstring::npos)
 		{
-			return false; // Querying section value is not supported.
+			// The name is in form 'ini.section'.
+			// Querying section value is not supported.
+			return false;
 		}
 
-		if (section_end_pos == domain_name_length+1)
+		std::wstring section_name = name.substr(0, section_end_pos);
+		std::wstring property_name = name.substr(section_end_pos+1);
+
+		if (section_name.empty() || property_name.empty())
 		{
-			return false; // Malformed section name.
+			// Malformed name
+			return false;
 		}
 
-		if (section_end_pos == name.length()-1)
-		{
-			return false; // Malformed property name.
-		}
-
-		std::wstring section = to_lower(name.substr(0, section_end_pos));
-		std::wstring property = to_lower(name.substr(section_end_pos+1));
-
-		auto i = m_sections.find(section);
+		auto i = m_sections.find(section_name);
 		if (i == m_sections.end())
 		{
-			return false; // No such section.
+			// No such section.
+			return false;
 		}
 
-		auto j = i->second.m_properties.find(property);
+		auto j = i->second.m_properties.find(property_name);
 		if (j == i->second.m_properties.end())
 		{
-			return false; // No such property.
+			// No such property.
+			return false;
 		}
 
 		out = j->second.m_value;
-		std::cout << "Got \"" << UTF8Encoding().Convert(out) << "\" for \"" << UTF8Encoding().Convert(name) << "\"\n";
+		LOG(Trace, L"Got '" << out << L"' for '" << name << "'");
 		return true;
 	}
 
 	void Config::Set(std::wstring name, std::wstring value)
 	{
+		LOG(Trace, L"Trying to set '" << name << L"' to '" << value << L"'");
+
 		std::lock_guard<std::mutex> gurad(m_lock);
 
 		if (!m_initialized)
 			Init();
 
-		std::cout << "Trying to set \"" << UTF8Encoding().Convert(name) << "\" to \"" << UTF8Encoding().Convert(value) << "\"\n";
-
 		if (name.empty())
-		{
 			return;
-		}
+
+		bool ini_domain = starts_with<wchar_t>(name, L"ini.");
+
+		// If this property does not belong to configuration, it is a system property.
+		if (!ini_domain && !starts_with<wchar_t>(name, L"sys."))
+			name = L"sys." + name;
 
 		const size_t domain_name_length = 4;
-		bool ini_domain = false; // TODO: enum ftw
-
-		if (starts_with(name, std::wstring(L"ini.")))
-		{
-			ini_domain = true;
-		}
-		else if (!starts_with(name, std::wstring(L"sys.")))
-		{
-			name = L"sys." + name;
-		}
-
 		size_t section_end_pos = name.find(L'.', domain_name_length+1);
 		if (section_end_pos == std::wstring::npos)
 		{
-			return; // Querying section value is not supported.
+			// The name is in form 'ini.section'.
+			// Querying section value is not supported.
+			return;
 		}
 
-		if (section_end_pos == domain_name_length+1)
+		std::wstring section_name = name.substr(domain_name_length, section_end_pos-domain_name_length);
+		std::wstring property_name = name.substr(section_end_pos+1);
+
+		if (section_name.empty() || property_name.empty())
 		{
-			return; // Malformed section name.
+			// Malformed name.
+			return;
 		}
 
-		if (section_end_pos == name.length()-1)
-		{
-			return; // Malformed property name.
-		}
-
-		std::wstring section = name.substr(domain_name_length, section_end_pos-domain_name_length);
-		std::wstring property = name.substr(section_end_pos+1);
-
-		// Keep it in memory anyway
-		auto i = m_sections.find(section);
-		if (i == m_sections.end())
-		{
-			i = m_sections.insert({section, Section()}).first;
-			i->second.m_case_sensitive_name = section;
-		}
-		auto j = i->second.m_properties.find(property);
-		if (j == i->second.m_properties.end())
-		{
-			j = i->second.m_properties.insert({property, Property()}).first;
-			j->second.m_case_sensitive_name = property;
-		}
-		j->second.m_value = value;
+		// Keep it in memory in any case.
+		Section& section = m_sections[section_name];
+		Property& property = section.m_properties[property_name];
+		property.m_value = value;
 
 		if (ini_domain)
 		{
 			// Immediately update the file.
-			Update(section, property, value);
+			Update(section_name, property_name, value);
 		}
 
 	}
@@ -408,7 +375,7 @@ namespace BearLibTerminal
 		{
 			lines.push_back(line);
 
-			if (line.empty() || line[0] == ' ' || line[0] == '\t')
+			if (line.empty() || std::isspace(line[0]))
 			{
 				// Empty line or one starting with whitespace.
 				continue;
@@ -452,7 +419,7 @@ namespace BearLibTerminal
 				}
 
 				std::string name = trim(line.substr(0, pos));
-				if (ci_compare(name, property_name))
+				if (!ci_compare(name, property_name))
 				{
 					// Not the property we are searching for.
 					continue;
@@ -472,10 +439,10 @@ namespace BearLibTerminal
 					lines.pop_back();
 				}
 
+				// Overwriting name separator will make the line suitable for
+				// universal parsing by ParseOptions function.
 				line[pos] = ':';
 
-				// TODO: lightweight parse version
-				// TODO: utf8-friendly
 				for (const auto& group: ParseOptions2(UTF8Encoding().Convert(line)))
 				{
 					for (auto& i: group.attributes)
@@ -501,28 +468,59 @@ namespace BearLibTerminal
 			i->second.empty()? pieces.erase(i++): i++;
 		}
 
+		auto append_escaped = [](std::ostringstream& stream, const std::string& value)
+		{
+			// Several characters should no appear outside of string values.
+			// Especially separators like ':' which otherwise will break the
+			// parser when read back from configuration file later.
+			static const char* must_be_escaped = " ,;:'\"\t\r\n";
+
+			if (value.find_first_of(must_be_escaped) != std::string::npos || value.empty())
+			{
+				const char quote_mark = '\'';
+				stream << quote_mark;
+				for (auto c: value)
+				{
+					if (c == quote_mark)
+						stream << "\\";
+					stream << c;
+				}
+				stream << quote_mark;
+			}
+			else
+			{
+				stream << value;
+			}
+		};
+
 		auto construct_line = [&]() -> std::string
 		{
+			std::ostringstream ss;
+			ss << property_name;
 			if (pieces.size() == 1 && pieces.begin()->first.empty())
 			{
 				// One entry and its subname is empty --> "foo=bar"
-				return property_name + "=" + pieces.begin()->second; // TODO: escape values
+				ss << "=";
+				append_escaped(ss, pieces.begin()->second);
 			}
 			else
 			{
 				// Miltiple-entry property --> "foo: bar, baz=doge"
-				std::ostringstream ss;
-				ss << property_name;
 				for (auto i = pieces.begin(); i != pieces.end(); i++)
 				{
 					ss << (i == pieces.begin()? ": ": ", ");
 					if (i->first.empty())
-						ss << i->second;
+					{
+						append_escaped(ss, i->second);
+					}
 					else
-						ss << i->first << "=" << i->second; // TODO: escape values
+					{
+						ss << i->first << "=";
+						append_escaped(ss, i->second);
+					}
 				}
-				return ss.str();
 			}
+			return ss.str();
 		};
 
 		if (pieces.empty())
@@ -559,26 +557,25 @@ namespace BearLibTerminal
 		bool uses_crlf = (!lines.front().empty() && lines.front().back() == '\r');
 
 		// Now, write back to file
-		std::unique_ptr<std::ostream> outfile;
 		try
 		{
-			outfile = OpenFileWriting(m_filename);
+			auto outfile = OpenFileWriting(m_filename);
 
 			// Only compatible ASCII/UTF-8 encodings are used.
 			PlaceBOM(*outfile, infile_bom);
+
+			for (auto& line: lines)
+			{
+				*outfile << line;
+				if (uses_crlf && (line.empty() || line.back() != '\r'))
+					*outfile << '\r';
+				*outfile << '\n';
+			}
 		}
 		catch (std::exception& e)
 		{
 			LOG(Error, L"Config::Update: cannot open file '" << m_filename << "' for writing");
 			return;
-		}
-
-		for (auto& line: lines)
-		{
-			*outfile << line;
-			if (uses_crlf && (line.empty() || line.back() != '\r'))
-				*outfile << '\r';
-			*outfile << '\n';
 		}
 	}
 

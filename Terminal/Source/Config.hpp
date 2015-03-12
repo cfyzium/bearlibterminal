@@ -70,13 +70,11 @@ namespace BearLibTerminal
 
 		struct Property
 		{
-			std::wstring m_case_sensitive_name;
 			std::wstring m_value;
 		};
 
 		struct Section
 		{
-			std::wstring m_case_sensitive_name;
 			std::map<std::wstring, Property, ci_less<wchar_t>> m_properties;
 		};
 
