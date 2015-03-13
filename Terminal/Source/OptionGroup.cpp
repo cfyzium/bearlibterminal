@@ -39,7 +39,7 @@ namespace BearLibTerminal
 					p++;
 					continue;
 				}
-				else if (*p == L'\'' || *p == L'"' || *p == L'[')
+				else if ((*p == L'\'' || *p == L'"' || *p == L'[') && !closing_quote)
 				{
 					// Start of quoted string.
 					closing_quote = (*p == L'['? L']': *p);
