@@ -201,7 +201,7 @@ namespace BearLibTerminal
 						Property& property = section.m_properties[key];
 						property.m_value = value;
 
-						LOG(Trace, L"Config::Load: property '" << key << L"' = '" << value << L"'");
+						LOG(Trace, L"'" << key << L"' = '" << value << L"'");
 					}
 				}
 			}
@@ -210,8 +210,6 @@ namespace BearLibTerminal
 
 	bool Config::TryGet(std::wstring name, std::wstring& out)
 	{
-		LOG(Trace, L"Trying to get '" << name << L"'");
-
 		std::lock_guard<std::mutex> guard(m_lock);
 
 		if (!m_initialized)
@@ -256,7 +254,6 @@ namespace BearLibTerminal
 		}
 
 		out = j->second.m_value;
-		LOG(Trace, L"Got '" << out << L"' for '" << name << "'");
 		return true;
 	}
 
@@ -275,8 +272,6 @@ namespace BearLibTerminal
 
 	void Config::Set(std::wstring name, std::wstring value)
 	{
-		LOG(Trace, L"Trying to set '" << name << L"' to '" << value << L"'");
-
 		std::lock_guard<std::mutex> gurad(m_lock);
 
 		if (!m_initialized)
@@ -351,7 +346,7 @@ namespace BearLibTerminal
 				auto infile = OpenFileReading(m_filename);
 
 				infile_bom = DetectBOM(*infile);
-				LOG(Debug, "Config::Update: file encoding detected to be '" << infile_bom << "'");
+				LOG(Debug, "Configuration file encoding detected to be '" << infile_bom << "'");
 
 				switch (infile_bom)
 				{
@@ -363,7 +358,7 @@ namespace BearLibTerminal
 				default:
 					// It will be no good to break user configuration file
 					// by overwriting it in supported encoding.
-					LOG(Error, "Config::Update: unsupported file encoding '" << infile_bom << "'");
+					LOG(Error, "Unsupported configuration file encoding '" << infile_bom << "'");
 					return;
 				}
 
@@ -374,7 +369,7 @@ namespace BearLibTerminal
 			}
 			catch (std::exception& e)
 			{
-				LOG(Error, L"Config::Update: cannot open file '" << m_filename << L"' for reading");
+				LOG(Error, L"Cannot open configuration file '" << m_filename << L"' for reading");
 				return;
 			}
 		}
@@ -587,7 +582,7 @@ namespace BearLibTerminal
 		}
 		catch (std::exception& e)
 		{
-			LOG(Error, L"Config::Update: cannot open file '" << m_filename << "' for writing");
+			LOG(Error, L"Cannot open configuration file '" << m_filename << "' for writing");
 			return;
 		}
 	}

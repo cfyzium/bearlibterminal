@@ -175,17 +175,20 @@ namespace BearLibTerminal
 		SetOptionsInternal(L"window: size=80x25, icon=default; font: default; terminal.encoding=utf8");
 
 		// Apply parameters from configuration file:
-		std::wostringstream ss;
+		// Each group (line) is applied separately to allow some error resilience.
+		LOG(Info, "Applying options from configuration file, if any");
+		std::map<std::wstring, std::wstring> groups;
 		for (auto& pair: Config::Instance().List(L"ini.bearlibterminal"))
 		{
-			ss << pair.first;
-			if (pair.first.find(L".") == std::wstring::npos) // FIXME: Seriously, just fix this already.
-				ss << L".name";
-			ss << L"=" << pair.second << L";";
+			// TODO: use some more readable "split" function
+			std::wstring group = pair.first.substr(0, pair.first.find(L'.'));
+			std::wstring property = group.length() >= pair.first.length()-1?
+				L"name": pair.first.substr(group.length()+1);
+			groups[group] += group + L"." + property + L"=" + pair.second + L";";
 		}
-		auto ext_options = ss.str();
-		LOG(Debug, L"Terminal options from configuration file: " << ext_options);
-		SetOptionsInternal(ext_options);
+		for (auto& pair: groups)
+			SetOptions(pair.second);
+		LOG(Info, "Terminal initialization complete");
 	}
 
 	Terminal::~Terminal()
