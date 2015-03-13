@@ -308,7 +308,7 @@ namespace BearLibTerminal
 		}
 
 		// Keep it in memory in any case.
-		Section& section = m_sections[section_name];
+		Section& section = m_sections[name.substr(0, domain_name_length)+section_name];
 		Property& property = section.m_properties[property_name];
 		property.m_value = value;
 
