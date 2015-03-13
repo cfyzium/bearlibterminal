@@ -9,6 +9,7 @@
 #include "Resource.hpp"
 #include "Utility.hpp"
 #include "Log.hpp"
+#include "BOM.hpp"
 #include <unordered_map>
 #include <stdint.h>
 #include <istream>
@@ -45,6 +46,23 @@ namespace BearLibTerminal
 	CustomCodepage::CustomCodepage(const std::wstring& name, std::istream& stream):
 		m_name(name)
 	{
+		auto bom = DetectBOM(stream);
+		LOG(Debug, "Custom codepage file encoding detected to be " << bom);
+
+		switch (bom)
+		{
+		case BOM::None:
+		case BOM::UTF8:
+		case BOM::ASCII_UTF8:
+			// Supported ones.
+			break;
+		default:
+			throw std::runtime_error("Unsupported custom codepage file encoding " + UTF8Encoding().Convert(to_string<wchar_t>(bom)));
+		}
+
+		// Consume BOM
+		stream.ignore(GetBOMSize(bom));
+
 		int base = 0;
 
 		auto add_code = [&](int base, wchar_t code)

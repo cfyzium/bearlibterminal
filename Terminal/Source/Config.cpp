@@ -40,7 +40,7 @@ namespace BearLibTerminal
 	void Config::Init()
 	{
 		m_filename = GuessConfigFilename();
-		LOG(Info, "Config::Init: using file '" << m_filename << "'");
+		LOG(Info, "Using configuration file '" << m_filename << "'");
 
 		Load();
 		m_initialized = true;
@@ -104,7 +104,7 @@ namespace BearLibTerminal
 		if (!FileExists(m_filename))
 		{
 			// No use trying to open nonexistent file.
-			LOG(Info, L"Config::Load: file '" << m_filename << L"' does not exists, assuming empty config");
+			LOG(Info, L"Configuration file '" << m_filename << L"' does not exists, assuming empty config");
 			return;
 		}
 
@@ -115,7 +115,7 @@ namespace BearLibTerminal
 			auto infile = OpenFileReading(m_filename);
 
 			auto infile_bom = DetectBOM(*infile);
-			LOG(Debug, "Config::Load: file encoding detected to be '" << infile_bom << "'");
+			LOG(Debug, "Configuration file encoding detected to be " << infile_bom);
 
 			switch (infile_bom)
 			{
@@ -127,9 +127,12 @@ namespace BearLibTerminal
 			default:
 				// It will be no good to break user configuration file
 				// by overwriting it in supported encoding.
-				LOG(Error, "Config::Load: unsupported file encoding '" << infile_bom << "'");
+				LOG(Error, "Unsupported configuration file encoding " << infile_bom);
 				return;
 			}
+
+			// Consume BOM
+			infile->ignore(GetBOMSize(infile_bom));
 
 			std::string line;
 			while (std::getline(*infile, line))
@@ -138,14 +141,14 @@ namespace BearLibTerminal
 		catch (...)
 		{
 			// Cannot read the file, though it does exist.
-			LOG(Error, L"Config::Load: cannot open file '" << m_filename << L"'");
+			LOG(Error, L"Cannot open configuration file '" << m_filename << L"'");
 			return;
 		}
 
 		// A name of the current section.
 		std::wstring current_section;
 
-		LOG(Trace, L"Config::Load: configuration file contents:");
+		LOG(Trace, L"Configuration file contents:");
 		for (auto& line: infile_lines)
 		{
 			if (line.empty() || std::isspace(line[0]))
@@ -361,6 +364,9 @@ namespace BearLibTerminal
 					LOG(Error, "Unsupported configuration file encoding '" << infile_bom << "'");
 					return;
 				}
+
+				// Consume BOM
+				infile->ignore(GetBOMSize(infile_bom));
 
 				// Read entire file line-by-line.
 				std::string line;
