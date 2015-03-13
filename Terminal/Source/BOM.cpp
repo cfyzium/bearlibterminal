@@ -70,12 +70,14 @@ namespace BearLibTerminal
 			else if (::memcmp(mark, BOM_Bytes[(int)BOM::UTF32BE], 4) == 0)
 				return BOM::UTF32BE;
 		}
-		else if (mark_size >= 3) // May be UTF-8 (three byte BOM)
+
+		if (mark_size >= 3) // May be UTF-8 (three byte BOM)
 		{
 			if (::memcmp(mark, BOM_Bytes[(int)BOM::UTF8], 3) == 0)
 				return BOM::UTF8;
 		}
-		else if (mark_size >= 2) // May be UTF-16 (two byte BOM)
+
+		if (mark_size >= 2) // May be UTF-16 (two byte BOM)
 		{
 			if (::memcmp(mark, BOM_Bytes[(int)BOM::UTF16LE], 2) == 0)
 				return BOM::UTF16LE;
