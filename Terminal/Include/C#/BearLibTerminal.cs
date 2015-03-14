@@ -365,6 +365,46 @@ namespace BearLib
         [DllImport("BearLibTerminal.dll", EntryPoint = "terminal_delay", CallingConvention = CallingConvention.Cdecl)]
         public static extern void Delay(int period);
 
+        [DllImport("BearLibTerminal.dll", CharSet = CharSet.Unicode, EntryPoint = "terminal_get16", CallingConvention = CallingConvention.Cdecl)]
+        private static extern IntPtr GetImpl(string key, string default_value);
+
+        public static string Get(string name, string default_value = "")
+        {
+            return Marshal.PtrToStringUni(GetImpl(name, default_value));
+        }
+
+        public static T Get<T>(string name, T default_value = default(T))
+        {
+            string result_str = Get(name);
+            if (result_str.Length == 0)
+            {
+                return default_value;
+            }
+            else
+            {
+                try
+                {
+                    Type type = typeof(T);
+                    if (type.IsPrimitive)
+                    {
+                        return (T)Convert.ChangeType(result_str, typeof(T));
+                    }
+                    else if (type.IsEnum)
+                    {
+                        return (T)System.Enum.Parse(type, result_str);
+                    }
+                    else
+                    {
+                        return (T)System.Activator.CreateInstance(type, result_str);
+                    }
+                }
+                catch
+                {
+                    return default_value;
+                }
+            }
+        }
+
         [DllImport("BearLibTerminal.dll", CharSet = CharSet.Unicode, EntryPoint = "color_from_name16", CallingConvention=CallingConvention.Cdecl)]
         private static extern int ColorFromNameImpl(string name);
 
