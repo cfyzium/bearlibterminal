@@ -13,58 +13,70 @@
 
 namespace BearLibTerminal
 {
+	std::wstring read_until3(const wchar_t*& p, const std::wstring& until)
+	{
+		std::wstring value, space;
+		wchar_t closing_quote = 0;
+
+		while (*p != L'\0' && (closing_quote || until.find(*p) == std::wstring::npos))
+		{
+			if (std::isspace(*p) && !closing_quote)
+			{
+				if (*p != L'\n' && *p != L'\r')
+				{
+					// Accumulate space.
+					space += *p;
+				}
+
+				// Skip
+				p++;
+			}
+			else if (*p == closing_quote)
+			{
+				if (*(p+1) == closing_quote)
+				{
+					// Escaped quote
+					value += *p++;
+				}
+				else
+				{
+					// End of quoted string.
+					closing_quote = 0;
+				}
+
+				// Skip
+				p++;
+			}
+			else if ((*p == L'\'' || *p == L'"' || *p == L'[') && !closing_quote)
+			{
+				// Start of quoted string.
+				closing_quote = (*p == L'['? L']': *p);
+				space.clear();
+
+				// Skip
+				p++;
+			}
+			else
+			{
+				// Release accumulated space.
+				if (!value.empty())
+					value += space;
+				space.clear();
+
+				// Append current symbol.
+				value += *p++;
+			}
+		}
+
+		return value;
+	};
+
 	std::list<OptionGroup> ParseOptions2(const std::wstring& s)
 	{
 		std::list<OptionGroup> result;
 		std::map<std::wstring, decltype(result.begin())> lookup;
 
 		const wchar_t* p = s.c_str();
-
-		auto read_until2 = [&](std::wstring s) -> std::wstring
-		{
-			std::wstring value, space;
-			wchar_t closing_quote = 0;
-
-			while (*p != L'\0' && (closing_quote || s.find(*p) == std::wstring::npos))
-			{
-				if (std::isspace(*p) && !closing_quote)
-				{
-					// Accumulate space.
-					space += *p++;
-				}
-				else if (*p == closing_quote)
-				{
-					// End of quoted string.
-					closing_quote = 0;
-					p++;
-					continue;
-				}
-				else if ((*p == L'\'' || *p == L'"' || *p == L'[') && !closing_quote)
-				{
-					// Start of quoted string.
-					closing_quote = (*p == L'['? L']': *p);
-					space.clear();
-					p++;
-					continue;
-				}
-				else
-				{
-					// Handle escaped characters.
-					if (*p == L'\\' && *(++p) == L'\0')
-						break;
-
-					// Release accumulated space.
-					if (!value.empty())
-						value += space;
-					space.clear();
-
-					// Append current symbol.
-					value += *p++;
-				}
-			}
-
-			return value;
-		};
 
 		auto keep_property2 = [&](std::wstring name, std::wstring value)
 		{
@@ -116,13 +128,13 @@ namespace BearLibTerminal
 		while (*p != L'\0')
 		{
 			// Next property name.
-			auto name = read_until2(L":=;");
+			auto name = read_until3(p, L":=;");
 
 			if (*p == L'=')
 			{
 				// Regular property.
 				p++;
-				keep_property2(name, read_until2(L";"));
+				keep_property2(name, read_until3(p, L";"));
 			}
 			else if (*p == L':')
 			{
@@ -130,12 +142,12 @@ namespace BearLibTerminal
 				while (*p != L'\0' && *p != L';')
 				{
 					p++;
-					auto subname = read_until2(L"=,;");
+					auto subname = read_until3(p, L"=,;");
 					if (*p == L'=')
 					{
 						// Regular subproperty.
 						p++;
-						keep_property2(name + L"." + subname, read_until2(L",;"));
+						keep_property2(name + L"." + subname, read_until3(p, L",;"));
 					}
 					else if (*p == L',' || *p == L';' || *p == L'\0')
 					{

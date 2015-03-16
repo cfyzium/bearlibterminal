@@ -10,6 +10,7 @@
 #include "Utility.hpp"
 #include "Log.hpp"
 #include "BOM.hpp"
+#include "OptionGroup.hpp"
 #include <unordered_map>
 #include <stdint.h>
 #include <istream>
@@ -71,77 +72,76 @@ namespace BearLibTerminal
 			m_backward[code] = base;
 		};
 
-		auto parse_code = [](std::string s) -> int
+		auto parse_point = [](const std::wstring& s) -> int
 		{
-			if (s.empty()) return -1;
-
-			size_t left = s.find_first_not_of(" \t");
-			size_t right = s.find_last_not_of(" \t\r");
-			if (right == std::string::npos) return -1;
-
-			s = s.substr(left, right-left+1);
-			uint16_t result = 0;
-
-			if (s.length() == 6 && (((s[0] == 'U' || s[0] == 'u') && s[1] == '+') || (s[0] == '0' && s[1] == 'x')))
+			if (s.length() == 1)
 			{
-				// Unicode codepoint: U+XXXX
-				std::istringstream ss(s.substr(2));
-				ss >> std::hex;
-				ss >> result;
-				return result; // TODO: wchar_t try_parse specialization
+				// Single character notation
+				return (int)s[0];
 			}
-			else if (s.length() > 0 && try_parse(s, result))
-			{
-				// Decimal codepaoint
-				return result;
-			}
-			else
-			{
-				return -1;
-			}
-		};
 
-		auto parse_codes = [&](std::string s)
-		{
-			// codes ::= <single> | <range>
-			// range ::= <single> "-" <single>
-			// single ::= <decimal> | <unicode>
-			// decimal ::= N
-			// unicode ::= U+XXXX
-
-			if (s.empty()) return;
-			size_t n = s.find("-");
-
-			if (n == std::string::npos) // Not present in string
+			if (s.length() > 2)
 			{
-				// Single
-				int code = parse_code(s);
-				if (code >= 0) add_code(base++, (wchar_t)code);
-			}
-			else if (n < s.length()-1) // Not a last character of string
-			{
-				// Range
-				int from = parse_code(s.substr(0, n));
-				int to = parse_code(s.substr(n+1, s.length()-n));
-				if (from >= 0 && to > from)
+				// Hexadecimal notation
+				if (((s[0] == L'u' || s[0] == L'U') && s[1] == '+') || // U+1234
+				    ((s[0] == L'0' && (s[1] == L'x'))))                // 0x1234
 				{
-					for (wchar_t code=from; code <= to; code++)
-					{
-						add_code(base++, code);
-					}
+					int result = 0;
+					std::wistringstream ss(s.substr(2));
+					ss >> std::hex;
+					ss >> result;
+					return ss? result: -2;
 				}
 			}
+
+			return -1;
 		};
 
-		for (std::string line; std::getline(stream, line);)
+		auto save_single = [&](const std::wstring& point)
 		{
-			size_t i = 0, j = std::string::npos;
-			while (i < line.length() && (j=line.find(",", i)) != std::string::npos)
+			int code = parse_point(point);
+
+			if (code < 0)
 			{
-				parse_codes(line.substr(i, j-i));
-				i = j+1;
+				LOG(Warning, L"CustomCodepage: invalid codepoint \"" << point << L"\"");
+				return;
 			}
-			if (i < line.length()) parse_codes(line.substr(i));
+
+			add_code(base++, (wchar_t)code);
+		};
+
+		auto save_range = [&](const std::wstring& left, const std::wstring& right)
+		{
+			int left_code = parse_point(left);
+			int right_code = parse_point(right);
+
+			if (left_code < 0 || right_code <= left_code)
+			{
+				LOG(Warning, L"CustomCodepage: invalid range \"" << left << L"\" - \"" << right << L"\"");
+				return;
+			}
+
+			for (int i = left_code; i <= right_code; i++)
+				add_code(base++, (wchar_t)i);
+		};
+
+		auto read_set = [&](const wchar_t*& p)
+		{
+			auto left = read_until3(p, L"-,");
+			if (*p == L'-')
+				save_range(left, read_until3(++p, L","));
+			else
+				save_single(left);
+		};
+
+		for (std::string line_u8; std::getline(stream, line_u8);)
+		{
+			std::wstring line = UTF8Encoding().Convert(line_u8);
+			for (const wchar_t* p = line.c_str(); ; p++)
+			{
+				if (read_set(p), *p == L'\0')
+				break;
+			}
 		}
 	}
 
