@@ -20,16 +20,14 @@ namespace BearLibTerminal
 
 		while (*p != L'\0' && (closing_quote || until.find(*p) == std::wstring::npos))
 		{
-			if (std::isspace(*p) && !closing_quote)
+			if (*p == L'\n' || *p == L'\r')
 			{
-				if (*p != L'\n' && *p != L'\r')
-				{
-					// Accumulate space.
-					space += *p;
-				}
-
-				// Skip
-				p++;
+				// Just skip.
+			}
+			else if (std::isspace(*p) && !closing_quote)
+			{
+				// Accumulate space.
+				space += *p;
 			}
 			else if (*p == closing_quote)
 			{
@@ -43,18 +41,12 @@ namespace BearLibTerminal
 					// End of quoted string.
 					closing_quote = 0;
 				}
-
-				// Skip
-				p++;
 			}
 			else if ((*p == L'\'' || *p == L'"' || *p == L'[') && !closing_quote)
 			{
 				// Start of quoted string.
 				closing_quote = (*p == L'['? L']': *p);
 				space.clear();
-
-				// Skip
-				p++;
 			}
 			else
 			{
@@ -64,8 +56,11 @@ namespace BearLibTerminal
 				space.clear();
 
 				// Append current symbol.
-				value += *p++;
+				value += *p;
 			}
+
+			// Advance
+			p++;
 		}
 
 		return value;
@@ -83,11 +78,6 @@ namespace BearLibTerminal
 			if (name.empty())
 			{
 				// Ignore empty names. Empty value, on the other hand, triggers removal.
-				return;
-			}
-			else if (name.find_first_of(L"\n\r") != std::wstring::npos) // FIXME: check for _allowed_ characters
-			{
-				// Ignore malformed ones.
 				return;
 			}
 
