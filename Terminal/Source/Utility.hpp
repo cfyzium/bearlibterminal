@@ -71,7 +71,7 @@ namespace BearLibTerminal
 
 	template<typename char_t> bool ends_with(const std::basic_string<char_t>& what, const std::basic_string<char_t>& with)
 	{
-		return what.rfind(with) == what.length() - with.length();
+		return with.length() <= what.length() && what.rfind(with) == what.length() - with.length();
 	}
 
 	template<typename char_t> std::basic_string<char_t> file_extension(const std::basic_string<char_t>& s)

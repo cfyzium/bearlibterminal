@@ -418,7 +418,8 @@ namespace BearLibTerminal
 			BOOL rc = TRUE;
 			do
 			{
-				result.push_back(data.cFileName);
+				if (!(data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
+					result.push_back(data.cFileName);
 				rc = ::FindNextFileW(dir, &data);
 			}
 			while (rc);
