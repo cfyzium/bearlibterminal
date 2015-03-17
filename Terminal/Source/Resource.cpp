@@ -38,7 +38,8 @@ namespace BearLibTerminal
 		{L"codepage-1250", BuiltinResource(kCodepage1250, false)},
 		{L"codepage-1251", BuiltinResource(kCodepage1251, false)},
 		{L"tileset-default", BuiltinResource(kDefaultFont, true)},
-		{L"codepage-tileset-default", BuiltinResource(kDefaultFontCodepage, false)}
+		{L"codepage-tileset-default", BuiltinResource(kDefaultFontCodepage, false)},
+		{L"codepage-tcod", BuiltinResource(kCodepageTCOD, false)}
 	};
 
 	std::unique_ptr<std::istream> Resource::Open(std::wstring name, std::wstring prefix)
