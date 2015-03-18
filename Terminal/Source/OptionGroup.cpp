@@ -66,7 +66,7 @@ namespace BearLibTerminal
 		return value;
 	};
 
-	std::list<OptionGroup> ParseOptions2(const std::wstring& s)
+	std::list<OptionGroup> ParseOptions2(const std::wstring& s, bool semicolon_comments)
 	{
 		std::list<OptionGroup> result;
 		std::map<std::wstring, decltype(result.begin())> lookup;
@@ -148,6 +148,9 @@ namespace BearLibTerminal
 			}
 			else if (*p == L';')
 			{
+				if (semicolon_comments)
+					break;
+
 				// Discard.
 				p++;
 			}

@@ -191,7 +191,7 @@ namespace BearLibTerminal
 				std::wstring name = trim(line.substr(0, pos));
 				line[pos] = L':';
 
-				for (const auto& group: ParseOptions2(line))
+				for (const auto& group: ParseOptions2(line, true))
 				{
 					for (auto& i: group.attributes)
 					{
@@ -457,7 +457,7 @@ namespace BearLibTerminal
 				// universal parsing by ParseOptions function.
 				line[pos] = ':';
 
-				for (const auto& group: ParseOptions2(UTF8Encoding().Convert(line)))
+				for (const auto& group: ParseOptions2(UTF8Encoding().Convert(line), true))
 				{
 					for (auto& i: group.attributes)
 					{
