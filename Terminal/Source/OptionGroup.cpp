@@ -75,35 +75,33 @@ namespace BearLibTerminal
 
 		auto keep_property2 = [&](std::wstring name, std::wstring value)
 		{
-			if (name.empty())
-			{
-				// Ignore empty names. Empty value, on the other hand, triggers removal.
-				return;
-			}
-
-			// a       --> invalid?
+			// a       --> [a] ''       font.''
 			// a.b     --> [a] b        window.title
 			// a.b.c   --> [a.b] c      ini.custom.property
 			// a.b.c.d --> [a.b] c.d    ini.bearlibterminal.window.title
 
+			std::wstring section_name;
+
 			size_t first_period_pos = name.find(L'.');
 			if (first_period_pos == std::wstring::npos)
 			{
-				// Consider it invalid for now.
-				return;
+				// Nameless property.
+				section_name.swap(name);
 			}
-
-			size_t second_period_pos = name.find(L'.', first_period_pos+1);
-			size_t section_end = (second_period_pos == std::wstring::npos)? first_period_pos: second_period_pos;
-
-			if (section_end == 0 || section_end == name.length()-1)
+			else
 			{
-				// Surely invalid.
-				return;
-			}
+				size_t second_period_pos = name.find(L'.', first_period_pos+1);
+				size_t section_end = (second_period_pos == std::wstring::npos)? first_period_pos: second_period_pos;
 
-			std::wstring section_name = name.substr(0, section_end);
-			name = name.substr(section_end+1);
+				if (section_end == 0 || section_end == name.length()-1)
+				{
+					// Surely invalid.
+					return;
+				}
+
+				section_name = name.substr(0, section_end);
+				name = name.substr(section_end+1);
+			}
 
 			auto i = lookup.find(section_name);
 			if (i == lookup.end())
@@ -142,7 +140,7 @@ namespace BearLibTerminal
 					else if (*p == L',' || *p == L';' || *p == L'\0')
 					{
 						// Nameless subproperty (both continued or finale).
-						keep_property2(name + L".name", subname);
+						keep_property2(name, subname);
 					}
 				}
 			}

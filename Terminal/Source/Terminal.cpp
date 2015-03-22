@@ -277,7 +277,7 @@ namespace BearLibTerminal
 
 		OptionGroup options;
 		options.name = L"0xFFFF";
-		options.attributes[L"name"] = L"dynamic";
+		options.attributes[L""] = L"dynamic";
 		options.attributes[L"size"] = to_string<wchar_t>(size);
 
 		tileset = Tileset::Create(m_world.tiles, options);

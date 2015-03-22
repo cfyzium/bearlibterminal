@@ -198,8 +198,7 @@ namespace BearLibTerminal
 						std::wstring key = i.first;
 						std::wstring value = i.second;
 
-						// FIXME: use empty attribute name consistently
-						key = (key == L"name")? name: (name + L"." + key);
+						key = key.empty()? name: (name + L"." + key);
 
 						Property& property = section.m_properties[key];
 						property.m_value = value;
@@ -224,19 +223,23 @@ namespace BearLibTerminal
 		if (!starts_with<wchar_t>(name, L"sys.") && !starts_with<wchar_t>(name, L"ini."))
 			name = L"sys." + name;
 
+		std::wstring section_name, property_name;
+
 		const size_t domain_name_length = 4;
 		size_t section_end_pos = name.find(L'.', domain_name_length+1);
 		if (section_end_pos == std::wstring::npos)
 		{
 			// The name is in form 'ini.section'.
-			// Querying section value is not supported.
-			return false;
+			section_name = name.substr(domain_name_length);
+			property_name = L"";
+		}
+		else
+		{
+			section_name = name.substr(0, section_end_pos);
+			property_name = name.substr(section_end_pos+1);
 		}
 
-		std::wstring section_name = name.substr(0, section_end_pos);
-		std::wstring property_name = name.substr(section_end_pos+1);
-
-		if (section_name.empty() || property_name.empty())
+		if (section_name.empty())
 		{
 			// Malformed name
 			return false;
@@ -289,19 +292,23 @@ namespace BearLibTerminal
 		if (!ini_domain && !starts_with<wchar_t>(name, L"sys."))
 			name = L"sys." + name;
 
+		std::wstring section_name, property_name;
+
 		const size_t domain_name_length = 4;
 		size_t section_end_pos = name.find(L'.', domain_name_length+1);
 		if (section_end_pos == std::wstring::npos)
 		{
 			// The name is in form 'ini.section'.
-			// Querying section value is not supported.
-			return;
+			section_name = name.substr(domain_name_length);
+			property_name = L"";
+		}
+		else
+		{
+			section_name = name.substr(domain_name_length, section_end_pos-domain_name_length);
+			property_name = name.substr(section_end_pos+1);
 		}
 
-		std::wstring section_name = name.substr(domain_name_length, section_end_pos-domain_name_length);
-		std::wstring property_name = name.substr(section_end_pos+1);
-
-		if (section_name.empty() || property_name.empty())
+		if (section_name.empty())
 		{
 			// Malformed name.
 			return;
@@ -463,10 +470,6 @@ namespace BearLibTerminal
 					{
 						std::string subname = UTF8Encoding().Convert(i.first);
 						std::string subvalue = UTF8Encoding().Convert(i.second);
-
-						if (subname == "name")
-							subname = ""; // FIXME: use empty attribute name consistently
-
 						pieces[subname] = subvalue;
 					}
 				}
