@@ -60,6 +60,7 @@ namespace BearLibTerminal
 		m_filename(),
 		m_truncated(false)
 	{
+		EnsureStandardOutput();
 		Init();
 	}
 
@@ -95,11 +96,11 @@ namespace BearLibTerminal
 		std::lock_guard<std::mutex> guard(m_lock);
 
 		std::wostringstream ss;
-		ss << FormatTime().c_str() << " [" << level << "] " << what;
+		ss << FormatTime().c_str() << " [" << level << "] " << what << std::endl;
 
 		if (m_filename.empty())
 		{
-			std::cerr << UTF8Encoding().Convert(ss.str()) << std::endl;
+			WriteStandardError(UTF8Encoding().Convert(ss.str()).c_str());
 		}
 		else
 		{
@@ -122,7 +123,7 @@ namespace BearLibTerminal
 			// (as well it shouldn't, there is no such overload in standard)
 			stream.open(UTF8Encoding().Convert(m_filename), flags);
 	#endif
-			stream << UTF8Encoding().Convert(ss.str()) << std::endl;
+			stream << UTF8Encoding().Convert(ss.str());
 		}
 	}
 

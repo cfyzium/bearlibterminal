@@ -29,6 +29,11 @@
 #include <iostream>
 
 #if defined(_WIN32)
+// Force SDK version to XP SP3
+#if !defined(WINVER)
+#define WINVER 0x502
+#define _WIN32_WINNT 0x502
+#endif
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 #else
@@ -447,5 +452,27 @@ namespace BearLibTerminal
 		}
 #endif
 		return result;
+	}
+
+	void EnsureStandardOutput()
+	{
+#if defined(_WIN32)
+		::AttachConsole(ATTACH_PARENT_PROCESS);
+		WriteStandardError("\n");
+#endif
+	}
+
+	void WriteStandardError(const char* what)
+	{
+#if defined(_WIN32)
+		HANDLE stderr_handle = GetStdHandle(STD_OUTPUT_HANDLE);
+		if (stderr_handle == INVALID_HANDLE_VALUE)
+			return;
+
+		DWORD written = 0;
+		WriteFile(stderr_handle, what, strlen(what), &written, NULL);
+#else
+		std::cerr << what;
+#endif
 	}
 }

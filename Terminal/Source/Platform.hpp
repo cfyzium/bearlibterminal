@@ -69,6 +69,10 @@ namespace BearLibTerminal
 	std::wstring GetCurrentDirectory();
 
 	std::list<std::wstring> EnumerateFiles(std::wstring path);
+
+	void EnsureStandardOutput();
+
+	void WriteStandardError(const char* what);
 }
 
 #endif // BEARLIBTERMINAL_PLATFORM_HPP
