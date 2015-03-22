@@ -487,19 +487,15 @@ namespace BearLibTerminal
 
 		auto append_escaped = [](std::ostringstream& stream, const std::string& value)
 		{
-			// Several characters should no appear outside of string values.
-			// Especially separators like ':' which otherwise will break the
-			// parser when read back from configuration file later.
-			static const char* must_be_escaped = " ,;:'\"\t\r\n";
-
-			if (value.find_first_of(must_be_escaped) != std::string::npos || value.empty())
+			if (value.find('\'') != std::string::npos ||
+			    (!value.empty() && (std::isspace(value.front()) || std::isspace(value.back()))))
 			{
 				const char quote_mark = '\'';
 				stream << quote_mark;
 				for (auto c: value)
 				{
 					if (c == quote_mark)
-						stream << "\\";
+						stream << quote_mark;
 					stream << c;
 				}
 				stream << quote_mark;
