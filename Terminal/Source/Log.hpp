@@ -36,8 +36,8 @@ namespace BearLibTerminal
 	public:
 		enum class Level {None, Fatal, Error, Warning, Info, Debug, Trace};
 		enum class Mode {Truncate, Append};
+
 	public:
-		Log();
 		void Write(Level level, const std::wstring& what);
 		void SetFile(const std::wstring& filename);
 		void SetLevel(Level level);
@@ -45,8 +45,18 @@ namespace BearLibTerminal
 		std::wstring GetFile() const;
 		Level GetLevel() const;
 		Mode GetMode() const;
+		void Dispose();
+
+	public:
+		static Log& Instance();
+
+	private:
+		Log();
+		void Init();
+
 	private:
 		mutable std::mutex m_lock;
+		bool m_initialized;
 		volatile Level m_level;
 		Mode m_mode;
 		std::wstring m_filename;
@@ -58,18 +68,16 @@ namespace BearLibTerminal
 
 	std::wostream& operator<< (std::wostream& stream, const Log::Mode& value);
 	std::wistream& operator>> (std::wistream& stream, Log::Mode& mode);
-
-	extern Log* g_logger; // FIXME: dependency hack
 }
 
 #define LOG(level, what)\
 	do\
 	{\
-		if (BearLibTerminal::Log::Level::level <= BearLibTerminal::g_logger->GetLevel())\
+		if (BearLibTerminal::Log::Level::level <= BearLibTerminal::Log::Instance().GetLevel())\
 		{\
 			std::wostringstream wss_;\
 			wss_ << what;\
-			BearLibTerminal::g_logger->Write(BearLibTerminal::Log::Level::level, wss_.str());\
+			BearLibTerminal::Log::Instance().Write(BearLibTerminal::Log::Level::level, wss_.str());\
 		}\
 	}\
 	while (0)

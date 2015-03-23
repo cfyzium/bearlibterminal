@@ -57,7 +57,7 @@ namespace BearLibTerminal
 		int Pick(int x, int y, int index);
 		Color PickForeColor(int x, int y, int index);
 		Color PickBackColor(int x, int y);
-		int Print(int x, int y, const std::wstring& str, bool raw, bool measure_only);
+		int Print(int x, int y, std::wstring str, bool raw, bool measure_only);
 		int HasInput();
 		int GetState(int code);
 		int Read();

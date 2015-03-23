@@ -24,6 +24,10 @@
 #define BEARLIBTERMINAL_PLATFORM_HPP
 
 #include <string>
+#include <memory>
+#include <istream>
+#include <ostream>
+#include <list>
 
 namespace BearLibTerminal
 {
@@ -49,6 +53,26 @@ namespace BearLibTerminal
 		Handle m_handle;
 		bool m_owner;
 	};
+
+	std::unique_ptr<std::istream> OpenFileReading(std::wstring name);
+
+	std::unique_ptr<std::ostream> OpenFileWriting(std::wstring name);
+
+	std::wstring GetEnvironmentVariable(const std::wstring& name, const std::wstring& default_ = std::wstring());
+
+	bool FileExists(std::wstring name);
+
+	std::wstring GetAppName();
+
+	std::wstring GetAppDirectory();
+
+	std::wstring GetCurrentDirectory();
+
+	std::list<std::wstring> EnumerateFiles(std::wstring path);
+
+	void EnsureStandardOutput();
+
+	void WriteStandardError(const char* what);
 }
 
 #endif // BEARLIBTERMINAL_PLATFORM_HPP

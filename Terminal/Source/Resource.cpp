@@ -7,6 +7,7 @@
 
 #include "Resource.hpp"
 #include "Encoding.hpp"
+#include "Platform.hpp"
 #include "Base64.hpp"
 #include "Log.hpp"
 #include <sstream>
@@ -37,7 +38,8 @@ namespace BearLibTerminal
 		{L"codepage-1250", BuiltinResource(kCodepage1250, false)},
 		{L"codepage-1251", BuiltinResource(kCodepage1251, false)},
 		{L"tileset-default", BuiltinResource(kDefaultFont, true)},
-		{L"codepage-tileset-default", BuiltinResource(kDefaultFontCodepage, false)}
+		{L"codepage-tileset-default", BuiltinResource(kDefaultFontCodepage, false)},
+		{L"codepage-tcod", BuiltinResource(kCodepageTCOD, false)}
 	};
 
 	std::unique_ptr<std::istream> Resource::Open(std::wstring name, std::wstring prefix)
@@ -60,24 +62,7 @@ namespace BearLibTerminal
 		}
 		else
 		{
-			// Search on filesystem
-#if defined(_WIN32)
-			// Windows version: change slashes to backslashes
-			for (auto& c: name) if (c == L'/') c = L'\\';
-#endif
-			std::unique_ptr<std::istream> result;
-#if defined(_MSC_VER)
-			result.reset(new std::ifstream(name, std::ios_base::in|std::ios_base::binary));
-#else
-			std::string name_u8 = UTF8Encoding().Convert(name);
-			result.reset(new std::ifstream(name_u8, std::ios_base::in|std::ios_base::binary));
-#endif
-			if (result->fail())
-			{
-				throw std::runtime_error("resource \"" + UTF8Encoding().Convert(name) + "\" cannot be opened");
-				result.reset();
-			}
-			return result;
+			return OpenFileReading(name);
 		}
 	}
 }

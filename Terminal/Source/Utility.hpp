@@ -64,9 +64,14 @@ namespace BearLibTerminal
 		return stream.str();
 	}
 
+	template<typename char_t> bool starts_with(const std::basic_string<char_t>& what, const std::basic_string<char_t>& with)
+	{
+		return what.find(with) == 0;
+	}
+
 	template<typename char_t> bool ends_with(const std::basic_string<char_t>& what, const std::basic_string<char_t>& with)
 	{
-		return what.rfind(with) == what.length() - with.length();
+		return with.length() <= what.length() && what.rfind(with) == what.length() - with.length();
 	}
 
 	template<typename char_t> std::basic_string<char_t> file_extension(const std::basic_string<char_t>& s)
@@ -92,6 +97,12 @@ namespace BearLibTerminal
 	{
 		std::transform(s.begin(), s.end(), s.begin(), ::tolower);
 		return s;
+	}
+
+	// Because strcasecmp/wcscasecmp support is not uniform across platforms.
+	template<typename char_t> bool ci_compare(const std::basic_string<char_t>& s1, const std::basic_string<char_t>& s2)
+	{
+		return to_lower(s1) == to_lower(s2);
 	}
 
 	template<typename char_t> std::basic_string<char_t> trim(const std::basic_string<char_t>& s)

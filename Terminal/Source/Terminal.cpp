@@ -17,6 +17,7 @@
 #include <vector>
 
 #include <iostream>
+#include "Config.hpp"
 
 // Internal usage
 #define TK_CLIENT_WIDTH  0xF0
@@ -161,9 +162,10 @@ namespace BearLibTerminal
 		m_viewport_modified{false},
 		m_scale_step(kScaleDefault)
 	{
-		// Reset logger (this is terrible)
-		m_log = std::make_unique<Log>();
-		g_logger = m_log.get();
+		// Synchronize log settings (logger reads them from config file but they may be left default).
+		m_options.log_filename = Log::Instance().GetFile();
+		m_options.log_level = Log::Instance().GetLevel();
+		m_options.log_mode = Log::Instance().GetMode();
 
 		// Try to create window
 		m_window = Window::Create();
@@ -171,6 +173,22 @@ namespace BearLibTerminal
 
 		// Default parameters
 		SetOptionsInternal(L"window: size=80x25, icon=default; font: default; terminal.encoding=utf8");
+
+		// Apply parameters from configuration file:
+		// Each group (line) is applied separately to allow some error resilience.
+		LOG(Info, "Applying options from configuration file, if any");
+		std::map<std::wstring, std::wstring> groups;
+		for (auto& pair: Config::Instance().List(L"ini.bearlibterminal"))
+		{
+			// TODO: use some more readable "split" function
+			std::wstring group = pair.first.substr(0, pair.first.find(L'.'));
+			std::wstring property = group.length() >= pair.first.length()-1?
+				L"name": pair.first.substr(group.length()+1);
+			groups[group] += group + L"." + property + L"=" + pair.second + L";";
+		}
+		for (auto& pair: groups)
+			SetOptions(pair.second);
+		LOG(Info, "Terminal initialization complete");
 	}
 
 	Terminal::~Terminal()
@@ -259,7 +277,7 @@ namespace BearLibTerminal
 
 		OptionGroup options;
 		options.name = L"0xFFFF";
-		options.attributes[L"name"] = L"dynamic";
+		options.attributes[L""] = L"dynamic";
 		options.attributes[L"size"] = to_string<wchar_t>(size);
 
 		tileset = Tileset::Create(m_world.tiles, options);
@@ -270,7 +288,7 @@ namespace BearLibTerminal
 	{
 		std::lock_guard<std::mutex> guard(m_lock);
 
-		auto groups = ParseOptions(value);
+		auto groups = ParseOptions2(value);
 		Options updated = m_options;
 		std::map<uint16_t, std::unique_ptr<Tileset>> new_tilesets;
 
@@ -303,6 +321,14 @@ namespace BearLibTerminal
 			{
 				ValidateLoggingOptions(group, updated);
 			}
+			else if (starts_with(group.name, std::wstring(L"ini.")))
+			{
+				for (auto& i: group.attributes)
+				{
+					// XXX: Just use section-property-value
+					Config::Instance().Set(group.name + L"." + i.first, i.second);
+				}
+			}
 			else
 			{
 				uint16_t base_code = 0; // Basic font base_code is 0
@@ -332,9 +358,9 @@ namespace BearLibTerminal
 		}
 
 		// Such implementation is awful. Should use some global (external library?) instance.
-		if (updated.log_filename != m_options.log_filename) g_logger->SetFile(updated.log_filename);
-		if (updated.log_level != m_options.log_level) g_logger->SetLevel(updated.log_level);
-		if (updated.log_mode != m_options.log_mode) g_logger->SetMode(updated.log_mode);
+		if (updated.log_filename != m_options.log_filename) Log::Instance().SetFile(updated.log_filename);
+		if (updated.log_level != m_options.log_level) Log::Instance().SetLevel(updated.log_level);
+		if (updated.log_mode != m_options.log_mode) Log::Instance().SetMode(updated.log_mode);
 
 		if (updated.terminal_encoding != m_options.terminal_encoding)
 		{
@@ -477,6 +503,35 @@ namespace BearLibTerminal
 		//*/
 
 		m_options = updated;
+
+		// Synchronize options struct with configuration cache (sys.group.option).
+		auto bool_to_wstring = [](bool flag) {return flag? L"true": L"false";};
+		auto size_to_wstring = [](Size size) {return size.Area()? to_string<wchar_t>(size): std::wstring(L"auto");};
+		auto& C = Config::Instance();
+		// terminal
+		C.Set(L"terminal.encoding", m_options.terminal_encoding);
+		C.Set(L"terminal.encoding-affects-put", bool_to_wstring(m_options.terminal_encoding_affects_put));
+		// window
+		C.Set(L"window.size", size_to_wstring(m_options.window_size));
+		C.Set(L"window.cellsize", size_to_wstring(m_options.window_cellsize));
+		C.Set(L"window.client-size", size_to_wstring(m_options.window_client_size));
+		C.Set(L"window.title", m_options.window_title);
+		C.Set(L"window.icon", m_options.window_icon);
+		C.Set(L"window.resizeable", bool_to_wstring(m_options.window_resizeable));
+		C.Set(L"window.minimum-size", size_to_wstring(m_options.window_minimum_size));
+		C.Set(L"window.fullscreen", bool_to_wstring(m_options.window_toggle_fullscreen)); // WTF
+		// input
+		C.Set(L"input.precise-mouse", bool_to_wstring(m_options.input_precise_mouse));
+		//C.Set(L"input.filter", m_options.input_filter_str); // FIXME
+		C.Set(L"input.cursor-symbol", std::wstring(1, (wchar_t)m_options.input_cursor_symbol));
+		C.Set(L"input.cursor-blink-rate", to_string<wchar_t>(m_options.input_cursor_blink_rate));
+		C.Set(L"input.mouse-cursor", bool_to_wstring(m_options.input_mouse_cursor));
+		// output
+		C.Set(L"input.vsync", bool_to_wstring(m_options.output_vsync));
+		// log
+		C.Set(L"input.file", m_options.log_filename);
+		C.Set(L"input.level", to_string<wchar_t>(m_options.log_level));
+		C.Set(L"input.mode", to_string<wchar_t>(m_options.log_mode));
 	}
 
 	void Terminal::ValidateTerminalOptions(OptionGroup& group, Options& options)
@@ -604,6 +659,7 @@ namespace BearLibTerminal
 			throw std::runtime_error("input.precise-mouse cannot be parsed");
 		}
 
+		// TODO: deprecated
 		if (group.attributes.count(L"sticky-close") && !try_parse(group.attributes[L"sticky-close"], options.input_sticky_close))
 		{
 			throw std::runtime_error("input.sticky-close cannot be parsed");
@@ -739,6 +795,7 @@ namespace BearLibTerminal
 	{
 		// Possible options: postformatting, vsync
 
+		// TODO: deprecated
 		if (group.attributes.count(L"postformatting") && !try_parse(group.attributes[L"postformatting"], options.output_postformatting))
 		{
 			throw std::runtime_error("output.postformatting cannot be parsed");
@@ -1143,7 +1200,7 @@ namespace BearLibTerminal
 		}
 	}
 
-	int Terminal::Print(int x0, int y0, const std::wstring& str, bool raw, bool measure_only)
+	int Terminal::Print(int x0, int y0, std::wstring str, bool raw, bool measure_only)
 	{
 		uint16_t base = 0;
 		const Encoding<char>* codepage = nullptr;
@@ -1266,7 +1323,7 @@ namespace BearLibTerminal
 				{
 					tag = [&]{m_world.state.color = original_fore;};
 				}
-				if ((name == L"bkcolor" || name == L"b") && !params.empty())
+				else if ((name == L"bkcolor" || name == L"b") && !params.empty())
 				{
 					color_t color = Palette::Instance[params];
 					tag = [&, color]{m_world.state.bkcolor = color;};
@@ -1373,6 +1430,18 @@ namespace BearLibTerminal
 				else if (try_parse(name, arbitrary_code))
 				{
 					AppendSymbol(arbitrary_code);
+				}
+				else
+				{
+					std::wstring subs;
+					if (Config::Instance().TryGet(name, subs))
+					{
+						str.insert(closing_bracket_pos+1, subs);
+						if (str.length() > m_world.stage.size.Area())
+						{
+							break; // Overflow, most likely it is an recursive expanding.
+						}
+					}
 				}
 
 				if (tag)

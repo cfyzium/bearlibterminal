@@ -76,3 +76,20 @@ static const std::string kCodepage1251 = // Windows Cyrillic
 "U+0438, U+0439, U+043A, U+043B, U+043C, U+043D, U+043E, U+043F,"
 "U+0440, U+0441, U+0442, U+0443, U+0444, U+0445, U+0446, U+0447,"
 "U+0448, U+0449, U+044A, U+044B, U+044C, U+044D, U+044E, U+044F";
+
+static const std::string kCodepageTCOD =
+// First row
+"U+0020-U+003F,"
+// Second row
+"U+0040, U+005B-U+0060, U+007B-U+007E, U+2591-U+2593,"
+"U+2502, U+2500, U+253C, U+2524, U+2534, U+251C, U+252C, U+2514, U+250C, U+2510, U+2518,"
+"U+2598, U+259D, U+2580, U+2597, U+259A, U+2590, U+2596,"
+// Third row
+"U+2191, U+2193, U+2190, U+2192, U+25B2, U+25BC, U+25C4, U+25BA, U+2195, U+2194,"
+"U+2610, U+2611, U+26AA, U+26AB,"
+"U+2551, U+2550, U+256C, U+2563, U+2569, U+2560, U+2565, U+255A, U+2554, U+2557, U+255D,"
+"U+0020, U+0002-U+0007,"
+// Fourth row
+"U+0041-U+005A, U+0008-U+000D,"
+// Fifth row
+"U+0061-U+007A";
