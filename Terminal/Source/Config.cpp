@@ -71,7 +71,7 @@ namespace BearLibTerminal
 				{
 					priority = 2;
 				}
-				else if (ends_with<wchar_t>(file, L".ini"))
+				else if (ends_with<wchar_t>(to_lower(file), L".ini"))
 				{
 					priority = 1;
 				}
