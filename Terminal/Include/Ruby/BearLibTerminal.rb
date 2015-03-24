@@ -19,7 +19,7 @@
 # IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #
-# Release date: 2014-11-10
+# Release date: 2015-03-24
 
 require 'fiddle'
 require 'rbconfig'
@@ -84,6 +84,7 @@ module Terminal
 	Peek = Fiddle::Function.new(Lib['terminal_peek'], [], Fiddle::TYPE_INT)
 	ReadStr = Fiddle::Function.new(Lib['terminal_read_str8'], [Fiddle::TYPE_INT, Fiddle::TYPE_INT, Fiddle::TYPE_VOIDP, Fiddle::TYPE_INT], Fiddle::TYPE_INT)
 	Delay = Fiddle::Function.new(Lib['terminal_delay'], [Fiddle::TYPE_INT], Fiddle::TYPE_VOID)
+	Get = Fiddle::Function.new(Lib['terminal_get8'], [Fiddle::TYPE_VOIDP, Fiddle::TYPE_VOIDP], Fiddle::TYPE_VOIDP)
 	ColorFromName = Fiddle::Function.new(Lib['color_from_name8'], [Fiddle::TYPE_VOIDP], -Fiddle::TYPE_INT)
 	
 	# Wrappers
@@ -137,6 +138,9 @@ module Terminal
 		return rc
 	end
 	def self.delay period; Delay.call period; end
+	def self.get s, default_value = ""
+		return (Get.call Ptr[s], Ptr[default_value]).to_s
+	end
 	def self.color_from_name name; return ColorFromName.call Ptr[name]; end
 	def self.color_from_argb a, r, g, b
 		return (a << 24) | (r << 16) | (g << 8) | b
