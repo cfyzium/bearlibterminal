@@ -19,7 +19,7 @@
 # IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #
-# Release date: 2014-11-10
+# Release date: 2015-03-24
 
 import sys, ctypes, numbers
 
@@ -50,12 +50,14 @@ if ctypes.sizeof(ctypes.c_wchar()) == 4:
 	_wmeasure = _library.terminal_measure32
 	_read_wstr = _library.terminal_read_str32
 	_color_from_wname = _library.color_from_name32
+	_wget = _library.terminal_get32
 else:
 	_wset = _library.terminal_set16
 	_wprint = _library.terminal_print16
 	_wmeasure = _library.terminal_measure16
 	_read_wstr = _library.terminal_read_str16
 	_color_from_wname = _library.color_from_name16
+	_wget = _library.terminal_get16
 
 # color/bkcolor accept uint32, color_from_name returns uint32
 _library.terminal_color.argtypes = [ctypes.c_uint32]
@@ -175,6 +177,15 @@ def read_str(x, y, s, max):
 		return rc, p.value
 
 delay = _library.terminal_delay
+
+_library.terminal_get8.restype = ctypes.c_char_p
+_wget.restype = ctypes.c_wchar_p
+
+def get(s, default_value=None):
+	if _version3 or isinstance(s, unicode):
+		return unicode(_wget(s, default_value));
+	else:
+		return str(_library.terminal_get8(s, default_value))
 
 def color_from_argb(a, r, g, b):
 	result = a
