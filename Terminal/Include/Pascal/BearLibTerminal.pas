@@ -19,12 +19,12 @@
 * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *
-* Release date: 2014-11-10
+* Release date: 2015-03-24
 *}
 
 {$H+}
 
-unit BeaRLibTerminal;
+unit BearLibTerminal;
 
 interface  
 
@@ -299,6 +299,15 @@ function terminal_peek(): Integer;
 procedure terminal_delay(Period: Integer);
   cdecl; external 'BearLibTerminal' name 'terminal_delay';
 
+// Get
+function terminal_get(const S: String): String;
+
+function terminal_get(const S, Default: String): String;
+
+function terminal_get(const S: UnicodeString): UnicodeString;
+
+function terminal_get(const S, Default: UnicodeString): UnicodeString;
+
 // ColorFromName
 function color_from_name(const Name: String): Color;
 
@@ -414,6 +423,32 @@ end;
 function terminal_check(Code: Integer): Boolean;
 begin
 	terminal_check := terminal_state(Code) > 0;
+end;
+
+function terminal_get_ansi(const S: PChar; const Default: PChar): PChar;
+  cdecl; external 'BearLibTerminal' name 'terminal_get8';
+
+function terminal_get_unicode(const S: PUnicodeChar; const Default: PUnicodeChar): PUnicodeChar;
+  cdecl; external 'BearLibTerminal' name 'terminal_get16';
+
+function terminal_get(const S: String): String;
+begin
+	terminal_get := terminal_get_ansi(PChar(S), nil);
+end;
+
+function terminal_get(const S, Default: String): String;
+begin
+	terminal_get := terminal_get_ansi(PChar(S), PChar(Default));
+end;
+
+function terminal_get(const S: UnicodeString): UnicodeString;
+begin
+	terminal_get := terminal_get_unicode(PUnicodeChar(S), nil);
+end;
+
+function terminal_get(const S, Default: UnicodeString): UnicodeString;
+begin
+	terminal_get := terminal_get_unicode(PUnicodeChar(S), PUnicodeChar(Default));
 end;
 
 function color_from_name_ansi(const Name: PChar): Color;
