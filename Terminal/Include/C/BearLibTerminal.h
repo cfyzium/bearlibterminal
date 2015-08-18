@@ -174,6 +174,8 @@
 #define TK_WCHAR            0xC9 /* Unicode codepoint of last produced character */
 #define TK_EVENT            0xCA /* Last dequeued event */
 #define TK_FULLSCREEN       0xCB /* Fullscreen state */
+#define TK_CURSOR_X         0xCD
+#define TK_CURSOR_Y         0xCE
 
 /*
  * Other events
@@ -193,6 +195,12 @@
  */
 #define TK_INPUT_NONE          0
 #define TK_INPUT_CANCELLED    -1
+
+/*
+ * Use current cursor position.
+ * This is a constant for internal use (for put/print function wrappers).
+ */
+#define TK_USE_CURSOR_POS     -32767
 
 /*
  * Terminal uses unsigned 32-bit value for color representation in ARGB order (0xAARRGGBB), e. g.
@@ -232,6 +240,7 @@ TERMINAL_API void terminal_layer(int index);
 TERMINAL_API void terminal_color(color_t color);
 TERMINAL_API void terminal_bkcolor(color_t color);
 TERMINAL_API void terminal_composition(int mode);
+TERMINAL_API void terminal_move(int x, int y);
 TERMINAL_API void terminal_put(int x, int y, int code);
 TERMINAL_API void terminal_put_ext(int x, int y, int dx, int dy, int code, color_t* corners);
 TERMINAL_API int terminal_pick(int x, int y, int index);

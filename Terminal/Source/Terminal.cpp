@@ -504,6 +504,11 @@ namespace BearLibTerminal
 
 		m_options = updated;
 
+		// Update cursor state
+		m_world.stage.backbuffer.cursor.symbol = m_options.input_cursor_symbol;
+		m_world.stage.backbuffer.cursor.blink_rate = m_options.input_cursor_blink_rate;
+		m_world.stage.backbuffer.cursor.visibility = m_options.input_cursor_visible;
+
 		// Synchronize options struct with configuration cache (sys.group.option).
 		auto bool_to_wstring = [](bool flag) {return flag? L"true": L"false";};
 		auto size_to_wstring = [](Size size) {return size.Area()? to_string<wchar_t>(size): std::wstring(L"auto");};
@@ -525,6 +530,7 @@ namespace BearLibTerminal
 		//C.Set(L"input.filter", m_options.input_filter_str); // FIXME
 		C.Set(L"input.cursor-symbol", std::wstring(1, (wchar_t)m_options.input_cursor_symbol));
 		C.Set(L"input.cursor-blink-rate", to_string<wchar_t>(m_options.input_cursor_blink_rate));
+		C.Set(L"input.cursor-visible", bool_to_wstring(m_options.input_cursor_visible));
 		C.Set(L"input.mouse-cursor", bool_to_wstring(m_options.input_mouse_cursor));
 		// output
 		C.Set(L"input.vsync", bool_to_wstring(m_options.output_vsync));
@@ -681,6 +687,11 @@ namespace BearLibTerminal
 		}
 
 		if (options.input_cursor_blink_rate <= 0) options.input_cursor_blink_rate = 1;
+
+		if (group.attributes.count(L"cursor-visible") && !try_parse(group.attributes[L"cursor-visible"], options.input_cursor_visible))
+		{
+			throw std::runtime_error("input.cursor-visible cannot be parsed");
+		}
 
 		if (group.attributes.count(L"mouse-cursor") && !try_parse(group.attributes[L"mouse-cursor"], options.input_mouse_cursor))
 		{
@@ -900,6 +911,12 @@ namespace BearLibTerminal
 
 		// Synchronously copy backbuffer to frontbuffer
 		{
+			// Update cursor state
+			m_world.stage.backbuffer.cursor.color = m_world.state.color;
+			m_world.stage.backbuffer.cursor.layer = m_world.state.layer;
+			m_world.stage.backbuffer.cursor.position = Point(m_vars[TK_CURSOR_X], m_vars[TK_CURSOR_Y]);
+
+			// Swap buffers
 			std::lock_guard<std::mutex> guard(m_lock);
 			m_world.stage.frontbuffer = m_world.stage.backbuffer;
 		}
@@ -937,6 +954,9 @@ namespace BearLibTerminal
 		{
 			color = m_world.state.bkcolor;
 		}
+
+		m_vars[TK_CURSOR_X] = 0;
+		m_vars[TK_CURSOR_Y] = 0;
 	}
 
 	void Terminal::Clear(int x, int y, int w, int h)
@@ -1000,6 +1020,12 @@ namespace BearLibTerminal
 		m_vars[TK_COMPOSITION] = mode;
 	}
 
+	void Terminal::Move(int x, int y)
+	{
+		m_vars[TK_CURSOR_X] = x;
+		m_vars[TK_CURSOR_Y] = y;
+	}
+
 	void Terminal::PutInternal(int x, int y, int dx, int dy, wchar_t code, Color* colors)
 	{
 		if (x < 0 || y < 0 || x >= m_world.stage.size.width || y >= m_world.stage.size.height) return;
@@ -1057,10 +1083,17 @@ namespace BearLibTerminal
 				m_world.stage.backbuffer.background[index] = Color(); // Transparent color, no background
 			}
 		}
+
+		m_vars[TK_CURSOR_X] = x+1;
+		m_vars[TK_CURSOR_Y] = y;
 	}
 
 	void Terminal::Put(int x, int y, int code)
 	{
+		if (x == TK_USE_CURSOR_POS)
+			x = m_vars[TK_CURSOR_X];
+		if (y == TK_USE_CURSOR_POS)
+			y = m_vars[TK_CURSOR_Y];
 		PutExtended(x, y, 0, 0, code, nullptr);
 	}
 
@@ -1202,6 +1235,11 @@ namespace BearLibTerminal
 
 	int Terminal::Print(int x0, int y0, std::wstring str, bool raw, bool measure_only)
 	{
+		if (x0 == TK_USE_CURSOR_POS)
+			x0 = m_vars[TK_CURSOR_X];
+		if (y0 == TK_USE_CURSOR_POS)
+			y0 = m_vars[TK_CURSOR_Y];
+
 		uint16_t base = 0;
 		const Encoding<char>* codepage = nullptr;
 		bool combine = false;
@@ -1581,17 +1619,25 @@ namespace BearLibTerminal
 
 					w = -1;
 
-					for (auto& s: line.symbols)
+					if (line.symbols.size() == 0)
 					{
-						if (s.code > 0)
+						m_vars[TK_CURSOR_X] = x;
+						m_vars[TK_CURSOR_Y] = y;
+					}
+					else
+					{
+						for (auto& s: line.symbols)
 						{
-							PutInternal(x, y, offset.x, offset.y, (wchar_t)s.code, nullptr);
-							w = x;
-							x += s.spacing.width;
-						}
-						else
-						{
-							tags[-s.code]();
+							if (s.code > 0)
+							{
+								PutInternal(x, y, offset.x, offset.y, (wchar_t)s.code, nullptr);
+								w = x;
+								x += s.spacing.width;
+							}
+							else
+							{
+								tags[-s.code]();
+							}
 						}
 					}
 				}
@@ -1666,7 +1712,24 @@ namespace BearLibTerminal
 
 	int Terminal::Read()
 	{
-		return ReadEvent(std::numeric_limits<int>::max()).code;
+		int rc = TK_INPUT_NONE;
+
+		if (m_world.stage.backbuffer.cursor.visibility)
+		{
+			// Need to redraw periodically to make it look like a cursor.
+			while (rc == TK_INPUT_NONE)
+			{
+				Refresh();
+				rc = ReadEvent(m_world.stage.backbuffer.cursor.blink_rate).code;
+			}
+		}
+		else
+		{
+			// No cursor visible, no animation present, may just wait.
+			rc = ReadEvent(std::numeric_limits<int>::max()).code;
+		}
+
+		return rc;
 	}
 
 	int Terminal::Peek()
@@ -1694,9 +1757,19 @@ namespace BearLibTerminal
 	 */
 	int Terminal::ReadString(int x, int y, wchar_t* buffer, int max)
 	{
+		// Some cells will be rewritten.
 		std::vector<Cell> original;
+
+		// Composition mode is used to write over any background.
 		int composition_mode = m_world.state.composition;
 		m_world.state.composition = TK_ON;
+
+		// Cursor is temporarily enabled to provide feedback.
+		bool cursor_visibility = m_world.stage.backbuffer.cursor.visibility;
+		m_world.stage.backbuffer.cursor.visibility = true;
+
+		// And it should be returned back as it was.
+		Point cursor_position = Point(m_vars[TK_CURSOR_X], m_vars[TK_CURSOR_Y]);
 
 		if (buffer == nullptr || max <= 0)
 		{
@@ -1722,12 +1795,6 @@ namespace BearLibTerminal
 		buffer[max] = 0;
 		int cursor = std::wcslen(buffer);
 
-		auto put_buffer = [&](bool put_cursor)
-		{
-			Print(x, y, buffer, true, false);
-			if (put_cursor && cursor < max) Put(x+cursor, y, m_options.input_cursor_symbol);
-		};
-
 		auto restore_scene = [&]()
 		{
 			std::lock_guard<std::mutex> guard(m_lock);
@@ -1744,47 +1811,35 @@ namespace BearLibTerminal
 		while (true)
 		{
 			restore_scene();
-			put_buffer(show_cursor);
-			Refresh();
+			Print(x, y, buffer, true, false);
+			int code = Read();
 
-			auto event = ReadEvent(m_options.input_cursor_blink_rate);
-
-			if (event.code == TK_INPUT_NONE)
-			{
-				// Timed out
-				show_cursor = !show_cursor;
-			}
-			else if (event.code == TK_RETURN)
+			if (code == TK_RETURN)
 			{
 				rc = wcslen(buffer);
 				break;
 			}
-			else if (event.code == TK_ESCAPE || event.code == TK_CLOSE)
+			else if (code == TK_ESCAPE || code == TK_CLOSE)
 			{
 				rc = TK_INPUT_CANCELLED;
 				break;
 			}
-			else if (event.code == TK_BACKSPACE)
+			else if (code == TK_BACKSPACE && cursor > 0)
 			{
-				if (cursor > 0)
-				{
-					buffer[--cursor] = 0;
-					show_cursor = true;
-				}
+				buffer[--cursor] = 0;
 			}
-			else if (wchar_t ch = GetState(TK_WCHAR))
+			else if (wchar_t ch = GetState(TK_WCHAR) && cursor < max)
 			{
-				if (cursor < max)
-				{
-					buffer[cursor++] = ch;
-					show_cursor = true;
-				}
+				buffer[cursor++] = ch;
 			}
 		}
 
 		// Restore
 		restore_scene();
 		m_world.state.composition = composition_mode;
+		m_world.stage.backbuffer.cursor.visibility = cursor_visibility;
+		m_vars[TK_CURSOR_X] = cursor_position.x;
+		m_vars[TK_CURSOR_Y] = cursor_position.y;
 
 		return rc;
 	}
@@ -1939,6 +1994,11 @@ namespace BearLibTerminal
 		std::unique_lock<std::mutex> guard(m_lock);
 		//*/
 
+		// Make sure the cursor tile is always present.
+		if (m_world.stage.frontbuffer.cursor.visibility &&
+		   !m_world.tiles.slots.count(m_world.stage.frontbuffer.cursor.symbol))
+			m_fresh_codes.push_back(m_world.stage.frontbuffer.cursor.symbol);
+
 		// Provide tile slots for newly added codes
 		if (!m_fresh_codes.empty())
 		{
@@ -2003,8 +2063,10 @@ namespace BearLibTerminal
 		uint64_t current_texture_id = 0;
 		glBegin(GL_QUADS);
 		glColor4f(1, 1, 1, 1);
-		for (auto& layer: m_world.stage.frontbuffer.layers)
+		for (size_t layer_index = 0; layer_index < m_world.stage.frontbuffer.layers.size(); layer_index++)
 		{
+			Layer& layer = m_world.stage.frontbuffer.layers[layer_index];
+
 			if (layer.crop.Area() > 0)
 			{
 				Rectangle scissors = layer.crop * m_world.state.cellsize / m_stage_area_factor;
@@ -2053,6 +2115,29 @@ namespace BearLibTerminal
 
 				left = 0;
 				top += m_world.state.cellsize.height;
+			}
+
+			if (m_world.stage.frontbuffer.cursor.visibility && layer_index == m_world.stage.frontbuffer.cursor.layer)
+			{
+				// Put cursor
+				bool visible_right_now = ((gettime() / 1000 / m_world.stage.frontbuffer.cursor.blink_rate) % 2 == 0);
+				if (visible_right_now)
+				{
+					// Code may not change while rendering and it was already checker/prepared.
+					auto& slot = *m_world.tiles.slots[m_world.stage.frontbuffer.cursor.symbol];
+					if (slot.texture_id != current_texture_id)
+					{
+						glEnd();
+						slot.BindTexture();
+						current_texture_id = slot.texture_id;
+						glBegin(GL_QUADS);
+					}
+
+					Leaf leaf;
+					leaf.color[0] = m_world.stage.frontbuffer.cursor.color;
+					Point position = m_world.stage.frontbuffer.cursor.position * m_world.state.cellsize;
+					slot.Draw(leaf, position.x, position.y, w2, h2);
+				}
 			}
 
 			if (layer_scissors_applied)

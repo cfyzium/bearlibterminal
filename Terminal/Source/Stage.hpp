@@ -44,10 +44,22 @@ namespace BearLibTerminal
 		Rectangle crop;
 	};
 
+	struct CursorState
+	{
+		CursorState();
+		bool visibility;
+		Point position;
+		wchar_t symbol;
+		int blink_rate;
+		Color color;
+		int layer;
+	};
+
 	struct Scene
 	{
 		std::vector<Layer> layers;
 		std::vector<Color> background;
+		CursorState cursor;
 	};
 
 	struct Stage

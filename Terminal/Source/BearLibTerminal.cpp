@@ -199,6 +199,12 @@ void terminal_composition(int mode)
 	g_instance->SetComposition(mode);
 }
 
+void terminal_move(int x, int y)
+{
+	if (!g_instance) return;
+	g_instance->Move(x, y);
+}
+
 void terminal_put(int x, int y, int code)
 {
 	if (!g_instance) return;

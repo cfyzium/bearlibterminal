@@ -54,6 +54,11 @@ namespace BearLibTerminal
 			stream >> s.y;
 			return stream;
 	}
+
+	template<typename T> BasicPoint<T> operator*(const BasicPoint<T>& left, const BasicSize<T>& right)
+	{
+		return BasicPoint<T>(left.x * right.width, left.y * right.height);
+	}
 }
 
 #endif /* GEOMETRY_HPP_ */

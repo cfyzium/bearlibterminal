@@ -14,6 +14,13 @@ namespace BearLibTerminal
 		cells(size.Area())
 	{ }
 
+	CursorState::CursorState():
+		visibility(true),
+		symbol(L'_'),
+		blink_rate(500),
+		layer(0)
+	{ }
+
 	void Stage::Resize(Size new_size)
 	{
 		size = new_size;
