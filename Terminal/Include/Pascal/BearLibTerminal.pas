@@ -229,8 +229,9 @@ procedure terminal_layer(Mode: Int32);
   cdecl; external 'BearLibTerminal' name 'terminal_layer';
 
 // Put
-procedure terminal_put(X, Y: Int32; Code: Int32);
-  cdecl; external 'BearLibTerminal' name 'terminal_put';
+procedure terminal_put(X, Y, Code: Int32);
+
+procedure terminal_put(X, Y: Int32; Code: AnsiChar);
 
 procedure terminal_put(X, Y: Int32; Code: WideChar);
 
@@ -357,9 +358,22 @@ begin
 	terminal_bkcolor(color_from_name(Color));
 end;
 
+procedure terminal_put_integer(X, Y: Int32; Code: Int32);
+  cdecl; external 'BearLibTerminal' name 'terminal_put';
+
+procedure terminal_put(X, Y, Code: Int32);
+begin
+    terminal_put_integer(X, Y, Code);
+end;
+
+procedure terminal_put(X, Y: Int32; Code: AnsiChar);
+begin
+    terminal_put_integer(X, Y, ord(Code));
+end;
+
 procedure terminal_put(X, Y: Int32; Code: WideChar);
 begin
-    terminal_put(X, Y, ord(Code));
+    terminal_put_integer(X, Y, ord(Code));
 end;
 
 procedure terminal_put_ext(X, Y, dX, dY: Int32; Code: WideChar; Corners: PUInt32);
