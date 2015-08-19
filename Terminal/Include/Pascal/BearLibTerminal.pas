@@ -157,6 +157,8 @@ const
   TK_WCHAR            = $C9; // Unicode codepoint of last produced character
   TK_EVENT            = $CA; // Last dequeued event
   TK_FULLSCREEN       = $CB; // Fullscreen state
+  TK_CURSOR_X         = $CC;
+  TK_CURSOR_Y         = $CD;
 
   //Other events
   TK_CLOSE            = $E0;
@@ -170,6 +172,10 @@ const
   // Input result codes for terminal_read function.
   TK_INPUT_NONE       =   0;
   TK_INPUT_CANCELLED  =  -1;
+  
+  // Use current cursor position.
+  // This is a constant for internal use (for put/print function wrappers).
+  TK_USE_CURSOR_POS = -32767;
 
 // ----------------------------------------------------------------------------
 // Module interface
@@ -228,12 +234,22 @@ procedure terminal_composition(Mode: Int32);
 procedure terminal_layer(Mode: Int32);
   cdecl; external 'BearLibTerminal' name 'terminal_layer';
 
+// Move
+procedure terminal_move(X, Y: Int32);
+  cdecl; external 'BearLibTerminal' name 'terminal_move';
+
 // Put
 procedure terminal_put(X, Y, Code: Int32);
 
 procedure terminal_put(X, Y: Int32; Code: AnsiChar);
 
 procedure terminal_put(X, Y: Int32; Code: WideChar);
+
+procedure terminal_put(Code: Int32);
+
+procedure terminal_put(Code: AnsiChar);
+
+procedure terminal_put(Code: WideChar);
 
 // PutExt
 procedure terminal_put_ext(X, Y, dX, dY: Int32; Code: Int32; Corners: PUInt32);
@@ -265,6 +281,10 @@ function terminal_pick_bkcolor(X, Y: Int32): UInt32;
 function terminal_print(X, Y: Int32; const S: AnsiString): Int32;
 
 function terminal_print(X, Y: Int32; const S: WideString): Int32;
+
+function terminal_print(const S: AnsiString): Int32;
+
+function terminal_print(const S: WideString): Int32;
 
 // Measure
 function terminal_measure(const S: AnsiString): Int32;
@@ -376,6 +396,21 @@ begin
     terminal_put_integer(X, Y, ord(Code));
 end;
 
+procedure terminal_put(Code: Int32);
+begin
+    terminal_put_integer(TK_USE_CURSOR_POS, TK_USE_CURSOR_POS, Code);
+end;
+
+procedure terminal_put(Code: AnsiChar);
+begin
+    terminal_put_integer(TK_USE_CURSOR_POS, TK_USE_CURSOR_POS, ord(Code));
+end;
+
+procedure terminal_put(Code: WideChar);
+begin
+    terminal_put_integer(TK_USE_CURSOR_POS, TK_USE_CURSOR_POS, ord(Code));
+end;
+
 procedure terminal_put_ext(X, Y, dX, dY: Int32; Code: WideChar; Corners: PUInt32);
 begin
 	terminal_put_ext(X, Y, dX, dY, ord(Code), Corners);
@@ -409,12 +444,22 @@ begin
     terminal_print := terminal_print_ansi(X, Y, PAnsiChar(S));
 end;
 
+function terminal_print(const S: AnsiString): Int32;
+begin
+    terminal_print := terminal_print_ansi(TK_USE_CURSOR_POS, TK_USE_CURSOR_POS, PAnsiChar(S));
+end;
+
 function terminal_print_unicode(X, Y: Int32; const S: PWideChar): Int32;
   cdecl; external 'BearLibTerminal' name 'terminal_print16';
 
 function terminal_print(X, Y: Int32; const S: WideString): Int32;
 begin
 	terminal_print := terminal_print_unicode(X, Y, PWideChar(S));
+end;
+
+function terminal_print(const S: WideString): Int32;
+begin
+	terminal_print := terminal_print_unicode(TK_USE_CURSOR_POS, TK_USE_CURSOR_POS, PWideChar(S));
 end;
 
 function terminal_measure_ansi(const S: PAnsiChar): Int32;
