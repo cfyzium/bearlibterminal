@@ -174,8 +174,8 @@
 #define TK_WCHAR            0xC9 /* Unicode codepoint of last produced character */
 #define TK_EVENT            0xCA /* Last dequeued event */
 #define TK_FULLSCREEN       0xCB /* Fullscreen state */
-#define TK_CURSOR_X         0xCD
-#define TK_CURSOR_Y         0xCE
+#define TK_CURSOR_X         0xCC
+#define TK_CURSOR_Y         0xCD
 
 /*
  * Other events
@@ -200,7 +200,7 @@
  * Use current cursor position.
  * This is a constant for internal use (for put/print function wrappers).
  */
-#define TK_USE_CURSOR_POS     -32767
+#define TK_USE_CURSOR_POS -32767
 
 /*
  * Terminal uses unsigned 32-bit value for color representation in ARGB order (0xAARRGGBB), e. g.
