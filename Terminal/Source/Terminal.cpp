@@ -18,6 +18,7 @@
 
 #include <iostream>
 #include "Config.hpp"
+#include <limits.h>
 
 // Internal usage
 #define TK_CLIENT_WIDTH  0xF0

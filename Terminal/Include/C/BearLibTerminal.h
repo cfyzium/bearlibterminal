@@ -200,7 +200,7 @@
  * Use current cursor position.
  * This is a constant for internal use (for put/print function wrappers).
  */
-#define TK_USE_CURSOR_POS -32767
+#define TK_USE_CURSOR_POS SHRT_MIN
 
 /*
  * Terminal uses unsigned 32-bit value for color representation in ARGB order (0xAARRGGBB), e. g.
