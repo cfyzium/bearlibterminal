@@ -1814,6 +1814,7 @@ namespace BearLibTerminal
 			restore_scene();
 			Print(x, y, buffer, true, false);
 			int code = Read();
+			wchar_t ch = 0;
 
 			if (code == TK_RETURN)
 			{
@@ -1829,7 +1830,7 @@ namespace BearLibTerminal
 			{
 				buffer[--cursor] = 0;
 			}
-			else if (wchar_t ch = GetState(TK_WCHAR) && cursor < max)
+			else if ((ch = GetState(TK_WCHAR)) > 0 && cursor < max)
 			{
 				buffer[cursor++] = ch;
 			}
