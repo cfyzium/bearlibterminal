@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 2.8)
 
+option(BUILD_SHARED_LIBS "Build dynamic version of library" ON)
+
 add_subdirectory(Dependencies/FreeType)
 add_subdirectory(Dependencies/PicoPNG)
 
@@ -26,6 +28,9 @@ if (WIN32)
 else()
 	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -static-libgcc")
 endif()
+if (NOT BUILD_SHARED_LIBS)
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBEARLIBTERMINAL_STATIC_BUILD")
+endif()
 
 find_package(OpenGL)
 
@@ -34,7 +39,7 @@ include_directories(./Dependencies/FreeType/Include)
 include_directories(./Dependencies/PicoPNG/Include)
 include_directories(./Dependencies/NanoJPEG/Include)
 
-add_library(BearLibTerminal SHARED ${TERMINAL_SOURCES})
+add_library(BearLibTerminal ${TERMINAL_SOURCES})
 
 target_link_libraries(BearLibTerminal freetype2)
 target_link_libraries(BearLibTerminal picopng)

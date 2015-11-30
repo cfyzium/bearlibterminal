@@ -201,7 +201,9 @@
  */
 typedef uint32_t color_t;
 
-#if defined(_WIN32)
+#if defined(BEARLIBTERMINAL_STATIC_BUILD)
+#  define TERMINAL_API
+#elif defined(_WIN32)
 #  if defined(BEARLIBTERMINAL_BUILDING_LIBRARY)
 #    define TERMINAL_API __declspec(dllexport)
 #  else
