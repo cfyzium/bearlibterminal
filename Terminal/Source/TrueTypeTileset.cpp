@@ -29,7 +29,7 @@ namespace BearLibTerminal
 			throw std::runtime_error("TrueTypeTileset: failed to parse base code");
 		}
 
-		if (!group.attributes.count(L"") || group.attributes[L""].empty())
+		if (group.attributes[L"name"].empty())
 		{
 			throw std::runtime_error("TrueTypeTileset: missing or empty main value attribute");
 		}
@@ -119,7 +119,7 @@ namespace BearLibTerminal
 			throw std::runtime_error("TrueTypeTileset: can't initialize Freetype");
 		}
 
-		std::string filename_u8 = UTF8Encoding().Convert(group.attributes[L""]);
+		std::string filename_u8 = UTF8Encoding().Convert(group.attributes[L"name"]);
 		if (FT_New_Face(m_font_library, filename_u8.c_str(), 0, &m_font_face))
 		{
 			throw std::runtime_error("TrueTypeTileset: can't load font from file \"" + filename_u8 + "\"");

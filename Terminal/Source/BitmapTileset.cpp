@@ -30,12 +30,11 @@ namespace BearLibTerminal
 			throw std::runtime_error("BitmapTileset: failed to parse base code");
 		}
 
-		if (!group.attributes.count(L"") || group.attributes[L""].empty())
+		std::wstring name = group.attributes[L"name"];
+		if (name.empty())
 		{
 			throw std::runtime_error("BitmapTileset: missing or empty main value attribute");
 		}
-
-		std::wstring name = group.attributes[L""];
 
 		// Try to guess anyway, rewrite if supplied
 		{

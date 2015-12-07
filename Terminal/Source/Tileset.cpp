@@ -32,12 +32,13 @@ namespace BearLibTerminal
 			throw std::runtime_error("Tileset::Create: failed to parse font base code");
 		}
 
-		if (!options.attributes.count(L""))
+		if (!options.attributes.count(L"name"))
+			options.attributes[L"name"] = options.attributes[L""];
+		std::wstring name = options.attributes[L"name"];
+		if (name.empty())
 		{
-			throw std::runtime_error("Tileset::Create: main value attribute is missing");
+			throw std::runtime_error("Tileset::Create: main value attribute is missing or empty");
 		}
-
-		std::wstring name = options.attributes[L""];
 
 		if (name == L"none")
 		{
