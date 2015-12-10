@@ -160,7 +160,13 @@ namespace BearLibTerminal
 		m_vars{},
 		m_show_grid{false},
 		m_viewport_modified{false},
-		m_scale_step(kScaleDefault)
+		m_scale_step(kScaleDefault),
+		m_rendering_state(kStopped)
+#if defined(USING_SDL)
+		,
+		m_window2(nullptr),
+		m_gl_context(nullptr)
+#endif
 	{
 		// Synchronize log settings (logger reads them from config file but they may be left default).
 		m_options.log_filename = Log::Instance().GetFile();
@@ -168,8 +174,7 @@ namespace BearLibTerminal
 		m_options.log_mode = Log::Instance().GetMode();
 
 		// Try to create window
-		m_window = Window::Create();
-		m_window->SetEventHandler(std::bind(&Terminal::OnWindowEvent, this, std::placeholders::_1));
+		CreateWindow();
 
 		// Default parameters
 		SetOptionsInternal(L"window: size=80x25, icon=default; font: default; terminal.encoding=utf8");
@@ -193,8 +198,7 @@ namespace BearLibTerminal
 
 	Terminal::~Terminal()
 	{
-		m_window->Stop();
-		m_window.reset(); // TODO: is it needed?
+		DestroyWindow();
 	}
 
 	int Terminal::SetOptions(const std::wstring& value)
@@ -370,6 +374,7 @@ namespace BearLibTerminal
 		if (updated.input_mouse_cursor != m_options.input_mouse_cursor)
 		{
 			m_window->SetCursorVisibility(updated.input_mouse_cursor);
+			// FIXME: NYI
 		}
 
 		// Apply on per-option basis
@@ -388,6 +393,7 @@ namespace BearLibTerminal
 
 		if (updated.window_resizeable != m_options.window_resizeable)
 		{
+			// XXX: It's not always possible to change resizeability in runtime.
 			m_window->SetResizeable(updated.window_resizeable);
 
 			if (updated.window_resizeable)
@@ -485,13 +491,16 @@ namespace BearLibTerminal
 				m_world.stage.size * m_world.state.cellsize * scale_factor;
 			m_vars[TK_CLIENT_WIDTH] = viewport_size.width;
 			m_vars[TK_CLIENT_HEIGHT] = viewport_size.height;
+
 			m_window->SetSizeHints(m_world.state.cellsize*scale_factor, updated.window_minimum_size);
 			m_window->SetClientSize(viewport_size);
+
 			m_viewport_modified = true;
 		}
 
 		if (updated.window_toggle_fullscreen)
 		{
+			// XXX: It's not always possible to change fullscreen state in runtime.
 			m_window->ToggleFullscreen();
 			updated.window_toggle_fullscreen = false;
 		}
@@ -611,11 +620,6 @@ namespace BearLibTerminal
 
 		if (group.attributes.count(L"icon"))
 		{
-			if (!m_window->ValidateIcon(group.attributes[L"icon"]))
-			{
-				throw std::runtime_error("window.icon cannot be loaded");
-			}
-
 			options.window_icon = group.attributes[L"icon"];
 		}
 
@@ -896,19 +900,10 @@ namespace BearLibTerminal
 			m_state = kVisible;
 		}
 
-		if (m_state != kVisible) return;
+		if (m_state != kVisible)
+			return;
 
-		// Synchronously copy backbuffer to frontbuffer
-		{
-			std::lock_guard<std::mutex> guard(m_lock);
-			m_world.stage.frontbuffer = m_world.stage.backbuffer;
-		}
-
-		m_window->Invoke([&]()
-		{
-			Redraw(false);
-			m_window->SwapBuffers();
-		});
+		Render(true);
 	}
 #endif
 
@@ -1613,6 +1608,8 @@ namespace BearLibTerminal
 
 	int Terminal::HasInput()
 	{
+		PumpEvents(); // XXX
+
 		std::lock_guard<std::mutex> guard(m_input_lock);
 		if (m_state == kClosed) return 1;
 		return HasInputInternalUnlocked();
@@ -1626,6 +1623,7 @@ namespace BearLibTerminal
 
 	Event Terminal::ReadEvent(int timeout)
 	{
+		/*
 		std::unique_lock<std::mutex> lock(m_input_lock);
 
 		if (m_state == kClosed)
@@ -1662,15 +1660,48 @@ namespace BearLibTerminal
 			// Instance is not closed and input either timed out or was not present from the start
 			return Event(TK_INPUT_NONE);
 		}
+		/*/
+		auto started = std::chrono::system_clock::now();
+
+		while (std::chrono::system_clock::now() - started < std::chrono::milliseconds{timeout})
+		{
+			PumpEvents();
+
+			if (HasInputInternalUnlocked())
+			{
+				Event event = m_input_queue.front();
+				ConsumeEvent(event);
+				m_input_queue.pop_front();
+				return event;
+			}
+			else
+			{
+				Delay(5);
+			}
+		}
+
+		if (m_state == kClosed)
+		{
+			return Event{TK_CLOSE};
+		}
+		else
+		{
+			return Event{TK_INPUT_NONE};
+		}
+		//*/
 	}
 
 	int Terminal::Read()
 	{
+		PumpEvents(); // XXX
+
 		return ReadEvent(std::numeric_limits<int>::max()).code;
 	}
 
 	int Terminal::Peek()
 	{
+		PumpEvents(); // XXX
+
 		std::unique_lock<std::mutex> lock(m_input_lock);
 
 		if (m_state == kClosed)
@@ -1791,7 +1822,8 @@ namespace BearLibTerminal
 
 	void Terminal::Delay(int period)
 	{
-		m_window->Delay(period);
+		// FIXME: PumpEvents for specified time.
+		usleep(period * 1000);
 	}
 
 	const Encoding<char>& Terminal::GetEncoding() const
@@ -1802,6 +1834,7 @@ namespace BearLibTerminal
 	void Terminal::ConfigureViewport()
 	{
 		Size viewport_size = m_window->GetActualSize();
+
 		Size stage_size = m_world.stage.size * m_world.state.cellsize;
 		m_stage_area = Rectangle(stage_size);
 		m_stage_area_factor = SizeF(1, 1);
@@ -1930,11 +1963,11 @@ namespace BearLibTerminal
 		// Rendering callback will try to acquire the lock. Failing to  do so
 		// will mean that Terminal is currently busy. Calling window implementation
 		// SHOULD be prepared to reschedule painting to a later time.
-		std::unique_lock<std::mutex> guard(m_lock, std::try_to_lock);
-		if (!guard.owns_lock())
-		{
-			return -1; // TODO: enum TODO: timed try
-		}
+		//std::unique_lock<std::mutex> guard(m_lock, std::try_to_lock);
+		//if (!guard.owns_lock())
+		//{
+		//	return -1; // TODO: enum TODO: timed try
+		//}
 		/*/
 		std::unique_lock<std::mutex> guard(m_lock);
 		//*/
@@ -1953,6 +1986,7 @@ namespace BearLibTerminal
 
 		// Clear must be done between scissoring test switch
 		glDisable(GL_SCISSOR_TEST);
+		//glClearColor(0.95f, 0.75f, 0.25f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		if (m_viewport_scissors_enabled)
@@ -2143,10 +2177,13 @@ namespace BearLibTerminal
 			HandleDestroy();
 			return 0;
 		}
+		/*
+		// NOTE: replaced by Expose -> Render routine.
 		else if (event.code == TK_REDRAW)
 		{
 			return Redraw(true);
 		}
+		//*/
 		else if (event.code == TK_INVALIDATE)
 		{
 			std::lock_guard<std::mutex> guard(m_lock);
@@ -2260,8 +2297,7 @@ namespace BearLibTerminal
 		{
 			// Alt+G: toggle grid
 			m_show_grid = !m_show_grid;
-			if (Redraw(true) != -1)
-				m_window->SwapBuffers();
+			Render(false);
 			return 0;
 		}
 		else if (event.code == TK_RETURN && alt)
@@ -2291,6 +2327,7 @@ namespace BearLibTerminal
 
 			m_window->SetSizeHints(m_world.state.cellsize * kScaleSteps[m_scale_step], m_options.window_minimum_size);
 			m_window->SetClientSize(m_world.state.cellsize * m_world.stage.size * kScaleSteps[m_scale_step]);
+			// FIXME: NYI
 
 			return 0;
 		}
@@ -2367,5 +2404,112 @@ namespace BearLibTerminal
 		}
 
 		m_vars[TK_EVENT] = event.code;
+	}
+
+	// ------------------------------------------------------------------------
+
+	bool Terminal::CreateWindow()
+	{
+		m_window = Window::Create();
+		m_window->ReleaseRC();
+		return StartRenderingThread();
+	}
+
+	void Terminal::DestroyWindow()
+	{
+		StopRenderingThread();
+		m_window.reset();
+	}
+
+	bool Terminal::StartRenderingThread()
+	{
+		std::lock_guard<std::mutex> guard{m_rendering_lock};
+		if (m_rendering_thread.joinable())
+			throw std::runtime_error("[...] Rendering thread already started");
+		m_rendering_thread = std::thread(&Terminal::RenderingThreadFunction, this);
+		m_rendering_state = kReady;
+	}
+
+	void Terminal::StopRenderingThread()
+	{
+		std::unique_lock<std::mutex> guard{m_rendering_lock};
+		if (!m_rendering_thread.joinable())
+			throw std::runtime_error("[...] Rendering thread is not running");
+		m_rendering_condition.wait(m_rendering_lock, [&]{return m_rendering_state == kReady;});
+		m_rendering_state = kStopped;
+		m_rendering_condition.notify_all();
+		guard.unlock();
+		m_rendering_thread.join();
+	}
+
+	void Terminal::Render(bool update_scene)
+	{
+		std::lock_guard<std::mutex> guard{m_rendering_lock};
+
+		// Ususally just a check (w/o wait) but let us synchronize if there is contention.
+		m_rendering_condition.wait
+			(m_rendering_lock, [&]{return m_rendering_state == kReady || m_rendering_state == kStopped;});
+		if (m_rendering_state == kStopped)
+			return;
+
+		// If we're here, the lock has been acquired with state == ready.
+		if (update_scene)
+			m_world.stage.frontbuffer = m_world.stage.backbuffer;
+		m_rendering_state = kRendering;
+		m_rendering_condition.notify_all();
+
+		// Wait for rendering thread to do its work.
+		m_rendering_condition.wait(m_rendering_lock, [&]{return m_rendering_state != kRendering;});
+		// This gives the lock up for a while, but no other thread could squeeze in during this wait:
+		// * other drawing threads are still waiting for ready|stopped state because
+		//   only one thread can wake with state == ready (and it changes state immediately);
+		// * start/stop (main) thread is waiting for ready state;
+
+		//if (m_rendering_state == kCompleted) // TODO: prove it is unnecessary
+		m_rendering_state = kReady;
+		m_rendering_condition.notify_all();
+	}
+
+	void Terminal::RenderingThreadFunction()
+	{
+		LOG(Debug, "Entering rendering thread function");
+		m_window->AcquireRC();
+		ProbeOpenGL();
+
+		std::lock_guard<std::mutex> guard{m_rendering_lock};
+		while (true)
+		{
+			m_rendering_condition.wait
+				(m_rendering_lock, [&]{return m_rendering_state != kReady && m_rendering_state != kCompleted;});
+			if (m_rendering_state == kStopped)
+				break;
+			RenderImpl();
+			m_rendering_state = kCompleted;
+			m_rendering_condition.notify_all();
+		}
+
+		m_window->ReleaseRC();
+		LOG(Debug, "Exiting rendering thread function");
+	}
+
+	void Terminal::RenderImpl()
+	{
+		Redraw(false);
+		m_window->SwapBuffers();
+	}
+
+	void Terminal::PumpEvents() // XXX: number of events
+	{
+		for (auto& event: m_window->PumpEvents())
+		{
+			if (event.code == TK_REDRAW)
+			{
+				Render(false);
+			}
+			else
+			{
+				OnWindowEvent(event);
+			}
+		}
 	}
 }

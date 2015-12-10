@@ -81,8 +81,6 @@ namespace BearLibTerminal
 		void ConsumeEvent(Event& event);
 		bool HasInputInternalUnlocked();
 		Event ReadEvent(int timeout);
-		int ReadStringInternalBlocking(int x, int y, wchar_t* buffer, int max);
-		int ReadStringInternalNonblocking(wchar_t* buffer, int max);
 		void HandleDestroy();
 		int Redraw(bool async);
 		int OnWindowEvent(Event event);
@@ -108,6 +106,23 @@ namespace BearLibTerminal
 		int m_scale_step;
 		Rectangle m_stage_area;
 		SizeF m_stage_area_factor;
+
+		// new threading
+		std::thread::id m_main_thread_id;
+		enum RenderingState {kReady, kRendering, kCompleted, kStopped};
+		std::mutex m_rendering_lock;
+		std::condition_variable_any m_rendering_condition;
+		std::thread m_rendering_thread;
+		RenderingState m_rendering_state;
+
+		bool CreateWindow();
+		void DestroyWindow();
+		bool StartRenderingThread();
+		void StopRenderingThread();
+		void RenderingThreadFunction();
+		void Render(bool update_scene);
+		void RenderImpl();
+		void PumpEvents();
 	};
 }
 

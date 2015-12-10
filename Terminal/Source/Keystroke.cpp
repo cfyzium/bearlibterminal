@@ -28,12 +28,10 @@
 namespace BearLibTerminal
 {
 	Event::Event(int code):
-		domain(GetDomainByCode(code)),
 		code(code)
 	{ }
 
 	Event::Event(int code, std::unordered_map<int, int> properties):
-		domain(GetDomainByCode(code)),
 		code(code),
 		properties(std::move(properties))
 	{ }
@@ -41,29 +39,5 @@ namespace BearLibTerminal
 	int& Event::operator[](int index)
 	{
 		return properties[index];
-	}
-
-	Event::Domain Event::GetDomainByCode(int code)
-	{
-		if ((code & 0xFF) >= TK_A && (code & 0xFF) <= TK_CONTROL+1) // FIXME: TK_ALT constant
-		{
-			return Domain::Keyboard;
-		}
-		else if ((code & 0xFF) >= TK_MOUSE_LEFT && (code & 0xFF) <= TK_MOUSE_PIXEL_Y)
-		{
-			return Domain::Mouse;
-		}
-		else if (code <= 0 || (code >= TK_CLOSE && code <= TK_RESIZED))
-		{
-			return Domain::System;
-		}
-		else if (code >= 0x1000)
-		{
-			return Domain::Internal;
-		}
-		else
-		{
-			throw std::runtime_error("Unknown event code");
-		}
 	}
 }

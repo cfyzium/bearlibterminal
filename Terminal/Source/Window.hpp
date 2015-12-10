@@ -27,6 +27,7 @@
 #include "Size.hpp"
 #include "Point.hpp"
 #include "Keystroke.hpp"
+#include <list>
 #include <mutex>
 #include <atomic>
 #include <memory>
@@ -46,46 +47,29 @@
 
 namespace BearLibTerminal
 {
-	typedef std::function<int(Event)> EventHandler;
-
 	class Window
 	{
 	public:
 		virtual ~Window();
-		void SetEventHandler(EventHandler handler);
-		Size GetClientSize();
-		virtual Size GetActualSize() = 0;
-		virtual bool ValidateIcon(const std::wstring& filename) = 0;
+		virtual Size GetActualSize() = 0; // XXX: GetClientSize?
 		virtual void SetTitle(const std::wstring& title) = 0;
 		virtual void SetIcon(const std::wstring& filename) = 0;
 		virtual void SetSizeHints(Size increment, Size minimum_size);
-		virtual void SetClientSize(const Size& size) = 0;
+		virtual void SetClientSize(const Size& size) = 0; // XXX: const& wtf
 		virtual void Show() = 0;
 		virtual void Hide() = 0;
-		virtual std::future<void> Post(std::function<void()> func) = 0;
 		virtual void SwapBuffers() = 0;
 		virtual void SetVSync(bool enabled) = 0;
 		virtual void SetResizeable(bool resizeable) = 0;
-		virtual void ToggleFullscreen();
+		virtual void ToggleFullscreen(); // FIXME: SetFullscreen(bool)
 		virtual void SetCursorVisibility(bool visible) = 0;
-		virtual void Delay(int period) = 0;
-		void Invoke(std::function<void()> func);
 		bool IsFullscreen() const;
-		void Run();
-		void Stop();
+		virtual std::list<Event> PumpEvents() = 0;
+		virtual void AcquireRC() = 0;
+		virtual void ReleaseRC() = 0;
 		static std::unique_ptr<Window> Create();
 	protected:
 		Window();
-		virtual void ThreadFunction() = 0; // noexcept(true)
-		virtual bool Construct() = 0;
-		virtual void Destroy() = 0; // noexcept(true)
-		virtual bool PumpEvents() = 0;
-		int Handle(Event event);
-		EventHandler m_event_handler;
-		std::atomic<bool> m_event_handler_is_set;
-		std::mutex m_lock;
-		std::thread m_thread;
-		std::atomic<bool> m_proceed;
 		Size m_cell_size;
 		Size m_minimum_size;
 		Point m_location;

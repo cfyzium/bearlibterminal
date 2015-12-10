@@ -29,6 +29,9 @@
 #include "Window.hpp"
 #include "Semaphore.hpp"
 #include "Point.hpp"
+#include <X11/Xlib.h>
+#include <X11/Xmu/Xmu.h>
+#include <GL/glx.h>
 
 namespace BearLibTerminal
 {
@@ -37,40 +40,55 @@ namespace BearLibTerminal
 	public:
 		X11Window();
 		~X11Window();
-		bool ValidateIcon(const std::wstring& filename);
 		void SetTitle(const std::wstring& title);
 		void SetIcon(const std::wstring& filename);
 		void SetClientSize(const Size& size);
 		void Show();
 		void Hide();
-		std::future<void> Post(std::function<void()> func);
-		bool AcquireRC();
-		bool ReleaseRC();
+		void AcquireRC();
+		void ReleaseRC();
 		void SwapBuffers();
 		void SetVSync(bool enabled);
-		bool PumpEvents();
+		std::list<Event> PumpEvents();
 		void SetResizeable(bool resizeable);
 		Size GetActualSize();
 		void ToggleFullscreen();
 		void SetCursorVisibility(bool visible);
-		void Delay(int period);
 	protected:
-		void ThreadFunction();
-		bool Construct();
-		void Destroy();
-		void DestroyUnlocked();
-		bool CreateWindowObject();
-		void DestroyWindowObject();
-		void HandleRepaint();
+		void Create();
+		void Dispose();
 		void UpdateSizeHints(Size size=Size());
 		void Demaximize();
+		void InitKeymaps();
+		int TranslateKeycode(KeyCode kc);
 	protected:
-		struct Private;
-		std::unique_ptr<Private> m_private;
 		uint64_t m_last_mouse_click;
 		int m_consecutive_mouse_clicks;
 		bool m_resizeable;
 		bool m_client_resize;
+
+	private:
+		typedef void (*PFN_GLXSWAPINTERVALEXT)(Display *dpy, GLXDrawable drawable, int interval);
+		typedef int (*PFN_GLXSWAPINTERVALMESA)(int interval);
+
+		Display* m_display;
+		int m_screen;
+		::Window m_window;
+		Colormap m_colormap;
+		XVisualInfo* m_visual;
+		GLXContext m_glx;
+		XIM m_im;
+		XIC m_ic;
+		Atom m_wm_close_message;
+		Atom m_wm_invoke_message;
+		Atom m_wm_state;
+		Atom m_wm_name;
+		Atom m_wm_maximized_horz;
+		Atom m_wm_maximized_vert;
+		XSizeHints* m_size_hints;
+		int m_keymaps[2][256]; // TODO: static
+		PFN_GLXSWAPINTERVALEXT m_glXSwapIntervalEXT;
+		PFN_GLXSWAPINTERVALMESA m_glXSwapIntervalMESA;
 	};
 }
 
