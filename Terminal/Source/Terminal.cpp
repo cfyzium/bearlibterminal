@@ -157,7 +157,6 @@ namespace BearLibTerminal
 
 	Terminal::Terminal():
 		m_state{kHidden},
-		m_vars{},
 		m_show_grid{false},
 		m_viewport_modified{false},
 		m_scale_step(kScaleDefault),
@@ -168,6 +167,10 @@ namespace BearLibTerminal
 		m_gl_context(nullptr)
 #endif
 	{
+		// Atomic variables are not default-initialized even within container.
+		for (auto& var: m_vars)
+			var = 0;
+
 		// Synchronize log settings (logger reads them from config file but they may be left default).
 		m_options.log_filename = Log::Instance().GetFile();
 		m_options.log_level = Log::Instance().GetLevel();
@@ -290,7 +293,7 @@ namespace BearLibTerminal
 
 	void Terminal::SetOptionsInternal(const std::wstring& value)
 	{
-		std::lock_guard<std::mutex> guard(m_lock);
+		std::lock_guard<std::mutex> guard(m_rendering_lock);
 
 		auto groups = ParseOptions2(value);
 		Options updated = m_options;
@@ -346,7 +349,7 @@ namespace BearLibTerminal
 
 		if (updated.output_vsync != m_options.output_vsync)
 		{
-			m_window->SetVSync(updated.output_vsync);
+			m_viewport_modified = true; // XXX: atomic? lock?
 		}
 
 		// All options and parameters must be validated, may try to apply them
@@ -912,7 +915,7 @@ namespace BearLibTerminal
 		if (m_world.stage.backbuffer.background.size() != m_world.stage.size.Area())
 		{
 			LOG(Trace, "World resize");
-			std::lock_guard<std::mutex> guard(m_lock);
+			std::lock_guard<std::mutex> guard(m_rendering_lock);
 			m_world.stage.Resize(m_world.stage.size);
 		}
 		else
@@ -1601,73 +1604,33 @@ namespace BearLibTerminal
 		return wrap.width > 0? total_height: total_width;
 	}
 
-	bool Terminal::HasInputInternalUnlocked()
-	{
-		return !m_input_queue.empty();
-	}
-
 	int Terminal::HasInput()
 	{
-		PumpEvents(); // XXX
+		PumpEvents();
 
-		std::lock_guard<std::mutex> guard(m_input_lock);
-		if (m_state == kClosed) return 1;
-		return HasInputInternalUnlocked();
+		if (m_state == kClosed)
+			return 1;
+
+		return !m_input_queue.empty();
 	}
 
 	int Terminal::GetState(int code)
 	{
-		std::lock_guard<std::mutex> guard(m_input_lock);
-		return (code >= 0 && code < (int)m_vars.size())? m_vars[code]: 0;
+		return (code >= 0 && code < (int)m_vars.size())? m_vars[code].load(): 0;
 	}
 
-	Event Terminal::ReadEvent(int timeout)
+	Event Terminal::ReadEvent(int timeout) // FIXME: more precise wait
 	{
-		/*
-		std::unique_lock<std::mutex> lock(m_input_lock);
-
 		if (m_state == kClosed)
-		{
-			return Event(TK_CLOSE);
-		}
+			return {TK_CLOSE};
 
-		bool timed_out = false;
-
-		if (timeout > 0)
-		{
-			timed_out = !m_input_condvar.wait_for
-			(
-				lock,
-				std::chrono::milliseconds(timeout),
-				[&](){return HasInputInternalUnlocked();}
-			);
-		}
-
-		if ((timeout > 0 && !timed_out) || (timeout == 0 && HasInputInternalUnlocked()))
-		{
-			Event event = m_input_queue.front();
-			ConsumeEvent(event);
-			m_input_queue.pop_front();
-			return event;
-		}
-		else if (m_state == kClosed)
-		{
-			// State may change while waiting for a condvar
-			return Event(TK_CLOSE);
-		}
-		else
-		{
-			// Instance is not closed and input either timed out or was not present from the start
-			return Event(TK_INPUT_NONE);
-		}
-		/*/
 		auto started = std::chrono::system_clock::now();
 
-		while (std::chrono::system_clock::now() - started < std::chrono::milliseconds{timeout})
+		do
 		{
 			PumpEvents();
 
-			if (HasInputInternalUnlocked())
+			if (!m_input_queue.empty())
 			{
 				Event event = m_input_queue.front();
 				ConsumeEvent(event);
@@ -1676,33 +1639,23 @@ namespace BearLibTerminal
 			}
 			else
 			{
-				Delay(5);
+				//Delay(5);
+				std::this_thread::sleep_for(std::chrono::milliseconds{5});
 			}
 		}
+		while (std::chrono::system_clock::now() - started < std::chrono::milliseconds{timeout});
 
-		if (m_state == kClosed)
-		{
-			return Event{TK_CLOSE};
-		}
-		else
-		{
-			return Event{TK_INPUT_NONE};
-		}
-		//*/
+		return {TK_INPUT_NONE};
 	}
 
 	int Terminal::Read()
 	{
-		PumpEvents(); // XXX
-
 		return ReadEvent(std::numeric_limits<int>::max()).code;
 	}
 
 	int Terminal::Peek()
 	{
-		PumpEvents(); // XXX
-
-		std::unique_lock<std::mutex> lock(m_input_lock);
+		PumpEvents();
 
 		if (m_state == kClosed)
 		{
@@ -1761,7 +1714,13 @@ namespace BearLibTerminal
 
 		auto restore_scene = [&]()
 		{
-			std::lock_guard<std::mutex> guard(m_lock);
+			// XXX: this was never thread-safe
+			// e. g. separate thread drawing while backbuffer is modified here
+			// XXX: and it may be tricky now
+			// logical conflict: read_str both input and drawing function
+			// * it reads input so it must be called from main thread
+			// * it provides visual feedback so it may be called from graphics thread
+			std::lock_guard<std::mutex> guard(m_rendering_lock);
 			for (int i = 0; i < max; i++)
 			{
 				Layer& layer = m_world.stage.backbuffer.layers[m_world.state.layer];
@@ -1822,8 +1781,14 @@ namespace BearLibTerminal
 
 	void Terminal::Delay(int period)
 	{
-		// FIXME: PumpEvents for specified time.
-		usleep(period * 1000);
+		auto until = std::chrono::system_clock::now() + std::chrono::milliseconds{period};
+		std::chrono::system_clock::duration step = std::chrono::milliseconds{5};
+
+		while (std::chrono::system_clock::now() < until)
+		{
+			if (!PumpEvents())
+				std::this_thread::sleep_for(std::min(step, until - std::chrono::system_clock::now()));
+		}
 	}
 
 	const Encoding<char>& Terminal::GetEncoding() const
@@ -1906,6 +1871,9 @@ namespace BearLibTerminal
 		);
 
 		m_viewport_scissors_enabled = viewport_size != stage_size;
+
+		// ?..
+		m_window->SetVSync(m_options.output_vsync);
 	}
 
 	void Terminal::PrepareFreshCharacters()
@@ -1959,19 +1927,6 @@ namespace BearLibTerminal
 
 	int Terminal::Redraw(bool async)
 	{
-		//*
-		// Rendering callback will try to acquire the lock. Failing to  do so
-		// will mean that Terminal is currently busy. Calling window implementation
-		// SHOULD be prepared to reschedule painting to a later time.
-		//std::unique_lock<std::mutex> guard(m_lock, std::try_to_lock);
-		//if (!guard.owns_lock())
-		//{
-		//	return -1; // TODO: enum TODO: timed try
-		//}
-		/*/
-		std::unique_lock<std::mutex> guard(m_lock);
-		//*/
-
 		// Provide tile slots for newly added codes
 		if (!m_fresh_codes.empty())
 		{
@@ -1986,7 +1941,6 @@ namespace BearLibTerminal
 
 		// Clear must be done between scissoring test switch
 		glDisable(GL_SCISSOR_TEST);
-		//glClearColor(0.95f, 0.75f, 0.25f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		if (m_viewport_scissors_enabled)
@@ -2130,32 +2084,12 @@ namespace BearLibTerminal
 		return 1;
 	}
 
-	/**
-	 * NOTE: if window initialization has succeeded, this callback will be called for sure
-	 */
-	void Terminal::HandleDestroy()
-	{
-		std::lock_guard<std::mutex> guard(m_lock);
-		m_state = kClosed;
-
-		// Dispose of graphics
-		m_world.tiles.slots.clear();
-		m_world.tilesets.clear();
-		m_world.tiles.atlas.Dispose();
-
-		// Unblock possibly blocked client thread
-		m_input_condvar.notify_all();
-	}
-
 	void Terminal::PushEvent(Event event)
 	{
 		bool must_be_consumed = false;
 		{
-			std::lock_guard<std::mutex> guard(m_lock);
 			must_be_consumed = !m_options.input_filter.empty() && !m_options.input_filter.count(event.code);
 		}
-
-		std::lock_guard<std::mutex> guard(m_input_lock);
 
 		if (must_be_consumed)
 		{
@@ -2164,32 +2098,23 @@ namespace BearLibTerminal
 		else
 		{
 			m_input_queue.push_back(event);
-			m_input_condvar.notify_all();
 		}
 	}
 
 	int Terminal::OnWindowEvent(Event event)
 	{
-		bool alt = get_locked(m_vars[TK_ALT], m_input_lock);
-
-		if (event.code == TK_DESTROY)
+		if (event.code == TK_REDRAW)
 		{
-			HandleDestroy();
+			Render(false);
 			return 0;
 		}
-		/*
-		// NOTE: replaced by Expose -> Render routine.
-		else if (event.code == TK_REDRAW)
-		{
-			return Redraw(true);
-		}
-		//*/
 		else if (event.code == TK_INVALIDATE)
 		{
-			std::lock_guard<std::mutex> guard(m_lock);
+			// XXX: atomic? lock?
 			m_viewport_modified = true;
 			return 0;
 		}
+		// XXX: used to release keys on input focus gain (at least under Windows)
 		else if (event.code == TK_ACTIVATED)
 		{
 			for (int i = TK_A; i <= TK_CONTROL; i++)
@@ -2200,6 +2125,7 @@ namespace BearLibTerminal
 
 			return 0;
 		}
+		// XXX: used for TK_FULLSCREEN feedback, comes from ToggleFullscreen, WTF
 		else if (event.code == TK_STATE_UPDATE)
 		{
 			ConsumeEvent(event);
@@ -2207,8 +2133,6 @@ namespace BearLibTerminal
 		}
 		else if (event.code == TK_RESIZED)
 		{
-			std::lock_guard<std::mutex> guard(m_lock);
-
 			float scale_factor = kScaleSteps[m_scale_step];
 			Size& cellsize = m_world.state.cellsize;
 			Size size
@@ -2231,8 +2155,6 @@ namespace BearLibTerminal
 		}
 		else if (event.code == TK_MOUSE_MOVE)
 		{
-			std::lock_guard<std::mutex> guard(m_lock);
-
 			int& pixel_x = event[TK_MOUSE_PIXEL_X];
 			int& pixel_y = event[TK_MOUSE_PIXEL_Y];
 
@@ -2246,33 +2168,8 @@ namespace BearLibTerminal
 
 			// Cell location of mouse pointer
 			Size& cellsize = m_world.state.cellsize;
-			Point location
-			(
-				std::floor(pixel_x/(float)cellsize.width),
-				std::floor(pixel_y/(float)cellsize.height)
-			);
-
-			if (location.x < 0)
-			{
-				location.x = 0;
-				pixel_x = 0;
-			}
-			else if (location.x >= m_world.stage.size.width)
-			{
-				location.x = m_world.stage.size.width-1;
-				pixel_x = m_world.stage.size.width*cellsize.width-1;
-			}
-
-			if (location.y < 0)
-			{
-				location.y = 0;
-				pixel_y = 0;
-			}
-			else if (location.y >= m_world.stage.size.height)
-			{
-				location.y = m_world.stage.size.height-1;
-				pixel_y = m_world.stage.size.height*cellsize.height-1;
-			}
+			Point location(pixel_x / cellsize.width, pixel_y / cellsize.height);
+			location = Rectangle(m_world.stage.size).Clamp(location);
 
 			if (!m_options.input_precise_mouse && m_vars[TK_MOUSE_X] == location.x && m_vars[TK_MOUSE_Y] == location.y)
 			{
@@ -2286,30 +2183,29 @@ namespace BearLibTerminal
 				event[TK_MOUSE_Y] = location.y;
 			}
 		}
-		else if (event.code == TK_A && alt)
+		else if (event.code == TK_A && m_vars[TK_ALT])
 		{
 			// Alt+A: dump atlas textures to disk.
-			std::lock_guard<std::mutex> guard(m_lock);
 			m_world.tiles.atlas.Dump();
 			return 0;
 		}
-		else if (event.code == TK_G && alt)
+		else if (event.code == TK_G && m_vars[TK_ALT])
 		{
 			// Alt+G: toggle grid
 			m_show_grid = !m_show_grid;
 			Render(false);
 			return 0;
 		}
-		else if (event.code == TK_RETURN && alt)
+		else if (event.code == TK_RETURN && m_vars[TK_ALT])
 		{
 			// Alt+ENTER: toggle fullscreen.
 			m_viewport_modified = true;
 			m_window->ToggleFullscreen();
 			return 0;
 		}
-		else if ((event.code == TK_MINUS || event.code == TK_EQUALS || event.code == TK_KP_MINUS || event.code == TK_KP_PLUS) && alt)
+		else if ((event.code == TK_MINUS || event.code == TK_EQUALS || event.code == TK_KP_MINUS || event.code == TK_KP_PLUS) && m_vars[TK_ALT])
 		{
-			if (get_locked(m_options.window_resizeable, m_lock))
+			if (m_options.window_resizeable)
 			{
 				// No scaling in resizeable mode, at least not yet.
 				return 0;
@@ -2327,13 +2223,11 @@ namespace BearLibTerminal
 
 			m_window->SetSizeHints(m_world.state.cellsize * kScaleSteps[m_scale_step], m_options.window_minimum_size);
 			m_window->SetClientSize(m_world.state.cellsize * m_world.stage.size * kScaleSteps[m_scale_step]);
-			// FIXME: NYI
 
 			return 0;
 		}
 		else if ((event.code & 0xFF) == TK_ALT)
 		{
-			std::lock_guard<std::mutex> guard(m_input_lock);
 			ConsumeEvent(event);
 			return 0;
 		}
@@ -2347,10 +2241,11 @@ namespace BearLibTerminal
 	{
 		if (event.code == TK_RESIZED)
 		{
-			std::lock_guard<std::mutex> guard(m_lock);
-
 			if (m_options.window_resizeable)
 			{
+				// XXX: was never thread-safe!
+				// e. g. separate thread drawing while backbuffer is resized here
+
 				// Stage size changed, must reallocate and reconstruct scene
 				m_options.window_size = Size(event[TK_WIDTH], event[TK_HEIGHT]);
 				m_world.stage.Resize(m_options.window_size);
@@ -2369,8 +2264,6 @@ namespace BearLibTerminal
 		}
 		else if (event.code == TK_CLOSE)
 		{
-			std::lock_guard<std::mutex> guard(m_lock);
-
 			if (m_options.input_sticky_close)
 			{
 				m_vars[TK_CLOSE] = 1;
@@ -2417,6 +2310,7 @@ namespace BearLibTerminal
 
 	void Terminal::DestroyWindow()
 	{
+		m_state = kClosed;
 		StopRenderingThread();
 		m_window.reset();
 	}
@@ -2488,6 +2382,11 @@ namespace BearLibTerminal
 			m_rendering_condition.notify_all();
 		}
 
+		// Dispose of graphics
+		m_world.tiles.slots.clear();
+		m_world.tilesets.clear();
+		m_world.tiles.atlas.Dispose();
+
 		m_window->ReleaseRC();
 		LOG(Debug, "Exiting rendering thread function");
 	}
@@ -2498,18 +2397,15 @@ namespace BearLibTerminal
 		m_window->SwapBuffers();
 	}
 
-	void Terminal::PumpEvents() // XXX: number of events
+	int Terminal::PumpEvents() // XXX: bool?
 	{
-		for (auto& event: m_window->PumpEvents())
+		auto events = m_window->PumpEvents();
+
+		for (auto& event: events)
 		{
-			if (event.code == TK_REDRAW)
-			{
-				Render(false);
-			}
-			else
-			{
-				OnWindowEvent(event);
-			}
+			OnWindowEvent(event);
 		}
+
+		return !events.empty();
 	}
 }
