@@ -10,6 +10,10 @@ BearLibTerminal provides a pseudoterminal window with a grid of character cells 
 * Bindings for several programming languages: С/С++, C#, Lua, Pascal, Python, Ruby.
 * Windows and Linux support.
 
+## Documentation ##
+
+* [Reference](http://foo.wyrd.name/en%3Abearlibterminal%3Areference) (functions, constants, behaviour)
+* [Design overview](http://foo.wyrd.name/en%3Abearlibterminal%3Adesign)
 
 ## Using ##
 
