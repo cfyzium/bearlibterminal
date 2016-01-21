@@ -159,8 +159,7 @@ namespace BearLibTerminal
 		m_state{kHidden},
 		m_show_grid{false},
 		m_viewport_modified{false},
-		m_scale_step(kScaleDefault),
-		m_rendering_state(kStopped)
+		m_scale_step(kScaleDefault)
 #if defined(USING_SDL)
 		,
 		m_window2(nullptr),
@@ -293,7 +292,7 @@ namespace BearLibTerminal
 
 	void Terminal::SetOptionsInternal(const std::wstring& value)
 	{
-		std::lock_guard<std::mutex> guard(m_rendering_lock);
+		std::lock_guard<std::mutex> guard(m_lock);
 
 		auto groups = ParseOptions2(value);
 		Options updated = m_options;
@@ -915,7 +914,7 @@ namespace BearLibTerminal
 		if (m_world.stage.backbuffer.background.size() != m_world.stage.size.Area())
 		{
 			LOG(Trace, "World resize");
-			std::lock_guard<std::mutex> guard(m_rendering_lock);
+			std::lock_guard<std::mutex> guard(m_lock);
 			m_world.stage.Resize(m_world.stage.size);
 		}
 		else
@@ -1720,7 +1719,7 @@ namespace BearLibTerminal
 			// logical conflict: read_str both input and drawing function
 			// * it reads input so it must be called from main thread
 			// * it provides visual feedback so it may be called from graphics thread
-			std::lock_guard<std::mutex> guard(m_rendering_lock);
+			std::lock_guard<std::mutex> guard(m_lock);
 			for (int i = 0; i < max; i++)
 			{
 				Layer& layer = m_world.stage.backbuffer.layers[m_world.state.layer];
@@ -2304,95 +2303,20 @@ namespace BearLibTerminal
 	bool Terminal::CreateWindow()
 	{
 		m_window = Window::Create();
-		m_window->ReleaseRC();
-		return StartRenderingThread();
+		return true;
 	}
 
 	void Terminal::DestroyWindow()
 	{
 		m_state = kClosed;
-		StopRenderingThread();
 		m_window.reset();
-	}
-
-	bool Terminal::StartRenderingThread()
-	{
-		std::lock_guard<std::mutex> guard{m_rendering_lock};
-		if (m_rendering_thread.joinable())
-			throw std::runtime_error("[...] Rendering thread already started");
-		m_rendering_thread = std::thread(&Terminal::RenderingThreadFunction, this);
-		m_rendering_state = kReady;
-	}
-
-	void Terminal::StopRenderingThread()
-	{
-		std::unique_lock<std::mutex> guard{m_rendering_lock};
-		if (!m_rendering_thread.joinable())
-			throw std::runtime_error("[...] Rendering thread is not running");
-		m_rendering_condition.wait(m_rendering_lock, [&]{return m_rendering_state == kReady;});
-		m_rendering_state = kStopped;
-		m_rendering_condition.notify_all();
-		guard.unlock();
-		m_rendering_thread.join();
 	}
 
 	void Terminal::Render(bool update_scene)
 	{
-		std::lock_guard<std::mutex> guard{m_rendering_lock};
-
-		// Ususally just a check (w/o wait) but let us synchronize if there is contention.
-		m_rendering_condition.wait
-			(m_rendering_lock, [&]{return m_rendering_state == kReady || m_rendering_state == kStopped;});
-		if (m_rendering_state == kStopped)
-			return;
-
-		// If we're here, the lock has been acquired with state == ready.
+		std::lock_guard<std::mutex> guard{m_lock};
 		if (update_scene)
 			m_world.stage.frontbuffer = m_world.stage.backbuffer;
-		m_rendering_state = kRendering;
-		m_rendering_condition.notify_all();
-
-		// Wait for rendering thread to do its work.
-		m_rendering_condition.wait(m_rendering_lock, [&]{return m_rendering_state != kRendering;});
-		// This gives the lock up for a while, but no other thread could squeeze in during this wait:
-		// * other drawing threads are still waiting for ready|stopped state because
-		//   only one thread can wake with state == ready (and it changes state immediately);
-		// * start/stop (main) thread is waiting for ready state;
-
-		//if (m_rendering_state == kCompleted) // TODO: prove it is unnecessary
-		m_rendering_state = kReady;
-		m_rendering_condition.notify_all();
-	}
-
-	void Terminal::RenderingThreadFunction()
-	{
-		LOG(Debug, "Entering rendering thread function");
-		m_window->AcquireRC();
-		ProbeOpenGL();
-
-		std::lock_guard<std::mutex> guard{m_rendering_lock};
-		while (true)
-		{
-			m_rendering_condition.wait
-				(m_rendering_lock, [&]{return m_rendering_state != kReady && m_rendering_state != kCompleted;});
-			if (m_rendering_state == kStopped)
-				break;
-			RenderImpl();
-			m_rendering_state = kCompleted;
-			m_rendering_condition.notify_all();
-		}
-
-		// Dispose of graphics
-		m_world.tiles.slots.clear();
-		m_world.tilesets.clear();
-		m_world.tiles.atlas.Dispose();
-
-		m_window->ReleaseRC();
-		LOG(Debug, "Exiting rendering thread function");
-	}
-
-	void Terminal::RenderImpl()
-	{
 		Redraw(false);
 		m_window->SwapBuffers();
 	}

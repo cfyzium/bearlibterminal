@@ -102,20 +102,10 @@ namespace BearLibTerminal
 		SizeF m_stage_area_factor;
 
 		// new threading
-		std::thread::id m_main_thread_id;
-		enum RenderingState {kReady, kRendering, kCompleted, kStopped};
-		std::mutex m_rendering_lock;
-		std::condition_variable_any m_rendering_condition;
-		std::thread m_rendering_thread;
-		RenderingState m_rendering_state;
-
+		std::mutex m_lock;
 		bool CreateWindow();
 		void DestroyWindow();
-		bool StartRenderingThread();
-		void StopRenderingThread();
-		void RenderingThreadFunction();
 		void Render(bool update_scene);
-		void RenderImpl();
 		int PumpEvents();
 	};
 }
