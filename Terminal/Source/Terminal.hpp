@@ -80,11 +80,14 @@ namespace BearLibTerminal
 		void PrepareFreshCharacters();
 		void ConsumeEvent(Event& event);
 		Event ReadEvent(int timeout);
-		int Redraw(bool async);
+		void Render(bool update_scene);
+		int Redraw();
 		int OnWindowEvent(Event event);
 		void PushEvent(Event event);
+		int PumpEvents();
 	private:
 		enum state_t {kHidden, kVisible, kClosed} m_state;
+		std::mutex m_lock;
 		std::unique_ptr<Window> m_window;
 		std::deque<Event> m_input_queue;
 		std::array<std::atomic<int32_t>, 256> m_vars;
@@ -100,13 +103,6 @@ namespace BearLibTerminal
 		int m_scale_step;
 		Rectangle m_stage_area;
 		SizeF m_stage_area_factor;
-
-		// new threading
-		std::mutex m_lock;
-		bool CreateWindow();
-		void DestroyWindow();
-		void Render(bool update_scene);
-		int PumpEvents();
 	};
 }
 

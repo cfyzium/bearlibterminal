@@ -176,7 +176,7 @@ namespace BearLibTerminal
 		m_options.log_mode = Log::Instance().GetMode();
 
 		// Try to create window
-		CreateWindow();
+		m_window = Window::Create();
 
 		// Default parameters
 		SetOptionsInternal(L"window: size=80x25, icon=default; font: default; terminal.encoding=utf8");
@@ -200,7 +200,7 @@ namespace BearLibTerminal
 
 	Terminal::~Terminal()
 	{
-		DestroyWindow();
+		// Window will be disposed of automatically.
 	}
 
 	int Terminal::SetOptions(const std::wstring& value)
@@ -1924,7 +1924,7 @@ namespace BearLibTerminal
 		m_fresh_codes.clear();
 	}
 
-	int Terminal::Redraw(bool async)
+	int Terminal::Redraw()
 	{
 		// Provide tile slots for newly added codes
 		if (!m_fresh_codes.empty())
@@ -2200,6 +2200,8 @@ namespace BearLibTerminal
 			// Alt+ENTER: toggle fullscreen.
 			m_viewport_modified = true;
 			m_window->ToggleFullscreen();
+			// FIXME: keep a good track of fullscreen (set + alt+enter).
+			m_vars[TK_FULLSCREEN] = !m_vars[TK_FULLSCREEN];
 			return 0;
 		}
 		else if ((event.code == TK_MINUS || event.code == TK_EQUALS || event.code == TK_KP_MINUS || event.code == TK_KP_PLUS) && m_vars[TK_ALT])
@@ -2244,6 +2246,7 @@ namespace BearLibTerminal
 			{
 				// XXX: was never thread-safe!
 				// e. g. separate thread drawing while backbuffer is resized here
+				// May be worked around by allowing front- and backbuffers of different sizes.
 
 				// Stage size changed, must reallocate and reconstruct scene
 				m_options.window_size = Size(event[TK_WIDTH], event[TK_HEIGHT]);
@@ -2298,26 +2301,12 @@ namespace BearLibTerminal
 		m_vars[TK_EVENT] = event.code;
 	}
 
-	// ------------------------------------------------------------------------
-
-	bool Terminal::CreateWindow()
-	{
-		m_window = Window::Create();
-		return true;
-	}
-
-	void Terminal::DestroyWindow()
-	{
-		m_state = kClosed;
-		m_window.reset();
-	}
-
 	void Terminal::Render(bool update_scene)
 	{
 		std::lock_guard<std::mutex> guard{m_lock};
 		if (update_scene)
 			m_world.stage.frontbuffer = m_world.stage.backbuffer;
-		Redraw(false);
+		Redraw();
 		m_window->SwapBuffers();
 	}
 
