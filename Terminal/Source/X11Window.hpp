@@ -38,7 +38,7 @@ namespace BearLibTerminal
 	class X11Window: public Window
 	{
 	public:
-		X11Window();
+		X11Window(EventHandler handler);
 		~X11Window();
 		void SetTitle(const std::wstring& title);
 		void SetIcon(const std::wstring& filename);
@@ -49,7 +49,7 @@ namespace BearLibTerminal
 		void ReleaseRC();
 		void SwapBuffers();
 		void SetVSync(bool enabled);
-		std::list<Event> PumpEvents();
+		int PumpEvents();
 		void SetResizeable(bool resizeable);
 		Size GetActualSize();
 		void ToggleFullscreen();

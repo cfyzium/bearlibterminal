@@ -176,7 +176,7 @@ namespace BearLibTerminal
 		m_options.log_mode = Log::Instance().GetMode();
 
 		// Try to create window
-		m_window = Window::Create();
+		m_window = Window::Create(std::bind(&Terminal::OnWindowEvent, this, std::placeholders::_1));
 
 		// Default parameters
 		SetOptionsInternal(L"window: size=80x25, icon=default; font: default; terminal.encoding=utf8");
@@ -1605,7 +1605,7 @@ namespace BearLibTerminal
 
 	int Terminal::HasInput()
 	{
-		PumpEvents();
+		m_window->PumpEvents();
 
 		if (m_state == kClosed)
 			return 1;
@@ -1627,7 +1627,7 @@ namespace BearLibTerminal
 
 		do
 		{
-			PumpEvents();
+			m_window->PumpEvents();
 
 			if (!m_input_queue.empty())
 			{
@@ -1654,7 +1654,7 @@ namespace BearLibTerminal
 
 	int Terminal::Peek()
 	{
-		PumpEvents();
+		m_window->PumpEvents();
 
 		if (m_state == kClosed)
 		{
@@ -1785,7 +1785,7 @@ namespace BearLibTerminal
 
 		while (std::chrono::system_clock::now() < until)
 		{
-			if (!PumpEvents())
+			if (!m_window->PumpEvents())
 				std::this_thread::sleep_for(std::min(step, until - std::chrono::system_clock::now()));
 		}
 	}
@@ -2308,17 +2308,5 @@ namespace BearLibTerminal
 			m_world.stage.frontbuffer = m_world.stage.backbuffer;
 		Redraw();
 		m_window->SwapBuffers();
-	}
-
-	int Terminal::PumpEvents() // XXX: bool?
-	{
-		auto events = m_window->PumpEvents();
-
-		for (auto& event: events)
-		{
-			OnWindowEvent(event);
-		}
-
-		return !events.empty();
 	}
 }

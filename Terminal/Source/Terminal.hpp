@@ -84,7 +84,6 @@ namespace BearLibTerminal
 		int Redraw();
 		int OnWindowEvent(Event event);
 		void PushEvent(Event event);
-		int PumpEvents();
 	private:
 		enum state_t {kHidden, kVisible, kClosed} m_state;
 		std::mutex m_lock;

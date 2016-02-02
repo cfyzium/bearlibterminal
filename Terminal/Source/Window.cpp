@@ -28,10 +28,12 @@
 #include "WinApiWindow.hpp"
 #endif
 #include "Log.hpp"
+#include "Utility.hpp"
 
 namespace BearLibTerminal
 {
-	Window::Window():
+	Window::Window(EventHandler handler):
+		m_event_handler(handler),
 		m_minimum_size(1, 1),
 		m_fullscreen(false),
 		m_resizeable(false)
@@ -57,17 +59,13 @@ namespace BearLibTerminal
 		return m_fullscreen;
 	}
 
-	std::unique_ptr<Window> Window::Create()
+	std::unique_ptr<Window> Window::Create(EventHandler handler)
 	{
-		std::unique_ptr<Window> result;
-
 #if defined(__linux)
-		result.reset(new X11Window());
+		return std::make_unique<X11Window>(handler);
 #endif
 #if defined(_WIN32)
-		result.reset(new WinApiWindow());
+		return std::make_unique<WinApiWindow>(handler);
 #endif
-
-		return std::move(result);
 	}
 }

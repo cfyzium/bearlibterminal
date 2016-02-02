@@ -50,6 +50,7 @@ namespace BearLibTerminal
 	class Window
 	{
 	public:
+		typedef std::function<int(Event)> EventHandler;
 		virtual ~Window();
 		virtual Size GetActualSize() = 0; // XXX: GetClientSize?
 		virtual void SetTitle(const std::wstring& title) = 0;
@@ -64,12 +65,11 @@ namespace BearLibTerminal
 		virtual void ToggleFullscreen(); // FIXME: SetFullscreen(bool)
 		virtual void SetCursorVisibility(bool visible) = 0;
 		bool IsFullscreen() const;
-		virtual std::list<Event> PumpEvents() = 0;
-		virtual void AcquireRC() = 0;
-		virtual void ReleaseRC() = 0;
-		static std::unique_ptr<Window> Create();
+		virtual int PumpEvents() = 0;
+		static std::unique_ptr<Window> Create(EventHandler handler);
 	protected:
-		Window();
+		Window(EventHandler handler);
+		EventHandler m_event_handler;
 		Size m_cell_size;
 		Size m_minimum_size;
 		Point m_location;

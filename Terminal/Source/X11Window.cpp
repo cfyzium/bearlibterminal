@@ -206,7 +206,8 @@ namespace BearLibTerminal
 
 	// ------------------------------------------------------------------------
 
-	X11Window::X11Window():
+	X11Window::X11Window(EventHandler handler):
+		Window(handler),
 		m_last_mouse_click(0),
 		m_consecutive_mouse_clicks(1),
 		m_resizeable(false),
@@ -624,19 +625,20 @@ namespace BearLibTerminal
 		}
 	}
 
-	std::list<Event> X11Window::PumpEvents()
+	int X11Window::PumpEvents()
 	{
-		std::list<Event> result;
-
 		XEvent e;
+		int processed = 0;
 
 		while (XPending(m_display))
 		{
+			processed += 1;
+
 			XNextEvent(m_display, &e);
 
 			if (e.type == Expose && e.xexpose.count == 0)
 			{
-				result.emplace_back(TK_REDRAW);
+				m_event_handler(TK_REDRAW);
 			}
 			else if (e.type == XlibKeyPress || e.type == XlibKeyRelease)
 			{
@@ -685,8 +687,7 @@ namespace BearLibTerminal
 					Event event(code|(pressed? 0: TK_KEY_RELEASED));
 					event[code] = pressed? 1: 0;
 					event[TK_WCHAR] = (int)buffer[0];
-					//Handle(std::move(event));
-					result.push_back(event);
+					m_event_handler(std::move(event));
 				}
 				catch (std::exception& e)
 				{
@@ -700,8 +701,7 @@ namespace BearLibTerminal
 				Size new_size(e.xconfigure.width, e.xconfigure.height);
 				if (new_size.width != m_client_size.width || new_size.height != m_client_size.height)
 				{
-					//Handle(TK_INVALIDATE);
-					result.emplace_back(TK_INVALIDATE);
+					m_event_handler(TK_INVALIDATE);
 
 					if (!m_fullscreen)
 					{
@@ -710,12 +710,11 @@ namespace BearLibTerminal
 						Event event(TK_RESIZED);
 						event[TK_WIDTH] = new_size.width;
 						event[TK_HEIGHT] = new_size.height;
-						//Handle(event);
-						result.push_back(event);
+						m_event_handler(event);
 					}
 
 					//HandleRepaint();
-					result.emplace_back(TK_INVALIDATE); // XXX: EXPOSE
+					m_event_handler(TK_INVALIDATE); // XXX: EXPOSE
 				}
 			}
 			else if (e.type == MotionNotify)
@@ -724,8 +723,7 @@ namespace BearLibTerminal
 				Event event(TK_MOUSE_MOVE);
 				event[TK_MOUSE_PIXEL_X] = e.xmotion.x;
 				event[TK_MOUSE_PIXEL_Y] = e.xmotion.y;
-				//Handle(std::move(event));
-				result.push_back(event);
+				m_event_handler(std::move(event));
 			}
 			else if (e.type == ButtonPress || e.type == ButtonRelease)
 			{
@@ -770,18 +768,15 @@ namespace BearLibTerminal
 					Event event(code | (pressed? 0: TK_KEY_RELEASED));
 					event[code] = pressed? 1: 0;
 					event[TK_MOUSE_CLICKS] = pressed? m_consecutive_mouse_clicks: 0;
-					//Handle(event);
-					result.push_back(event);
+					m_event_handler(event);
 				}
 				else if (e.xbutton.button == 4 && e.type == ButtonPress)
 				{
-					//Handle(Event(TK_MOUSE_SCROLL, {{TK_MOUSE_WHEEL, -1}}));
-					result.push_back(Event(TK_MOUSE_SCROLL, {{TK_MOUSE_WHEEL, -1}}));
+					m_event_handler(Event(TK_MOUSE_SCROLL, {{TK_MOUSE_WHEEL, -1}}));
 				}
 				else if (e.xbutton.button == 5 && e.type == ButtonPress)
 				{
-					//Handle(Event(TK_MOUSE_SCROLL, {{TK_MOUSE_WHEEL, +1}}));
-					result.push_back(Event(TK_MOUSE_SCROLL, {{TK_MOUSE_WHEEL, +1}}));
+					m_event_handler(Event(TK_MOUSE_SCROLL, {{TK_MOUSE_WHEEL, +1}}));
 				}
 				else
 				{
@@ -791,11 +786,11 @@ namespace BearLibTerminal
 			}
 			else if (e.type == ClientMessage && e.xclient.data.l[0] == (long)m_wm_close_message)
 			{
-				result.emplace_back(TK_CLOSE);
+				m_event_handler(TK_CLOSE);
 			}
 		}
 
-		return std::move(result);
+		return processed;
 	}
 
 	void X11Window::AcquireRC()
