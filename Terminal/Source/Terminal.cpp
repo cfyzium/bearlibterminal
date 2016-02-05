@@ -406,13 +406,6 @@ namespace BearLibTerminal
 			}
 		}
 
-		if (updated.window_resizeable && m_scale_step != kScaleDefault)
-		{
-			// No scaling in resizeable mode, at least not yet.
-			m_scale_step = kScaleDefault;
-			viewport_size_changed = true;
-		}
-
 		// If the size of cell has changed -OR- new basic tileset has been specified
 		if (updated.window_cellsize != m_options.window_cellsize || new_tilesets.count(0))
 		{
@@ -2124,12 +2117,6 @@ namespace BearLibTerminal
 
 			return 0;
 		}
-		// XXX: used for TK_FULLSCREEN feedback, comes from ToggleFullscreen, WTF
-		else if (event.code == TK_STATE_UPDATE)
-		{
-			ConsumeEvent(event);
-			return 0;
-		}
 		else if (event.code == TK_RESIZED)
 		{
 			float scale_factor = kScaleSteps[m_scale_step];
@@ -2206,9 +2193,9 @@ namespace BearLibTerminal
 		}
 		else if ((event.code == TK_MINUS || event.code == TK_EQUALS || event.code == TK_KP_MINUS || event.code == TK_KP_PLUS) && m_vars[TK_ALT])
 		{
-			if (m_options.window_resizeable)
+			if (m_vars[TK_FULLSCREEN])
 			{
-				// No scaling in resizeable mode, at least not yet.
+				// No scaling in fullscreen mode (does not make sense anyway).
 				return 0;
 			}
 
@@ -2222,8 +2209,19 @@ namespace BearLibTerminal
 				m_scale_step += 1;
 			}
 
-			m_window->SetSizeHints(m_world.state.cellsize * kScaleSteps[m_scale_step], m_options.window_minimum_size);
-			m_window->SetClientSize(m_world.state.cellsize * m_world.stage.size * kScaleSteps[m_scale_step]);
+			float scale = kScaleSteps[m_scale_step];
+
+			if (m_options.window_resizeable || m_options.window_client_size.Area() == 0)
+			{
+				// Resizeable window always snaps to cell borders.
+				m_window->SetSizeHints(m_world.state.cellsize * scale, m_options.window_minimum_size);
+				m_window->SetClientSize(m_world.state.cellsize * m_world.stage.size * scale);
+			}
+			else
+			{
+				// Overriden client-size is scaled with everything else.
+				m_window->SetClientSize(m_options.window_client_size * scale);
+			}
 
 			return 0;
 		}

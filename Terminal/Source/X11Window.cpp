@@ -697,7 +697,10 @@ namespace BearLibTerminal
 			}
 			else if (e.type == ConfigureNotify)
 			{
-				// OnResize
+				// Ignore 'synthetic' events, they interfere with resizeable fullscreen operatrion.
+				if (e.xconfigure.send_event)
+					continue;
+
 				Size new_size(e.xconfigure.width, e.xconfigure.height);
 				if (new_size.width != m_client_size.width || new_size.height != m_client_size.height)
 				{
