@@ -2111,6 +2111,15 @@ namespace BearLibTerminal
 		}
 		else if (event.code == TK_RESIZED)
 		{
+			// Remove all unprocessed resize events as the latest one overrides them.
+			for (auto i = m_input_queue.begin(); i != m_input_queue.end(); )
+			{
+				if (i->code == TK_RESIZED)
+					i = m_input_queue.erase(i);
+				else
+					i++;
+			}
+
 			float scale_factor = kScaleSteps[m_scale_step];
 			Size& cellsize = m_world.state.cellsize;
 			Size size
