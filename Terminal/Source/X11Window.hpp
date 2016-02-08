@@ -89,6 +89,7 @@ namespace BearLibTerminal
 		int m_keymaps[2][256]; // TODO: static
 		PFN_GLXSWAPINTERVALEXT m_glXSwapIntervalEXT;
 		PFN_GLXSWAPINTERVALMESA m_glXSwapIntervalMESA;
+		uint64_t m_expose_timer;
 	};
 }
 

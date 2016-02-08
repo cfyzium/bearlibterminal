@@ -223,7 +223,8 @@ namespace BearLibTerminal
 		//m_wm_close_message(),
 		m_glXSwapIntervalEXT(nullptr),
 		m_glXSwapIntervalMESA(nullptr),
-		m_size_hints(XAllocSizeHints())
+		m_size_hints(XAllocSizeHints()),
+		m_expose_timer(0)
 	{
 		try
 		{
@@ -637,7 +638,8 @@ namespace BearLibTerminal
 
 			if (e.type == Expose && e.xexpose.count == 0)
 			{
-				m_event_handler(TK_REDRAW);
+				if (!m_expose_timer)
+					m_expose_timer = gettime();
 			}
 			else if (e.type == XlibKeyPress || e.type == XlibKeyRelease)
 			{
@@ -790,6 +792,12 @@ namespace BearLibTerminal
 			{
 				m_event_handler(TK_CLOSE);
 			}
+		}
+
+		if (m_expose_timer > 0 && (gettime() - m_expose_timer) > (1000/30))
+		{
+			m_event_handler(TK_REDRAW);
+			m_expose_timer = 0;
 		}
 
 		return processed;
