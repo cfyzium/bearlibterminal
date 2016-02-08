@@ -18,7 +18,7 @@ namespace BearLibTerminal
 		window_icon(L":default_icon"),
 		window_resizeable(false),
 		window_minimum_size(1, 1),
-		window_toggle_fullscreen(false),
+		window_fullscreen(false),
 		output_postformatting(true),
 		output_vsync(true),
 		input_precise_mouse(false),

@@ -51,9 +51,6 @@ namespace BearLibTerminal
 		if (m_minimum_size.height < 1) m_minimum_size.height = 1;
 	}
 
-	void Window::ToggleFullscreen()
-	{ }
-
 	bool Window::IsFullscreen() const
 	{
 		return m_fullscreen;

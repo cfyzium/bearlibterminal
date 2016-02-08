@@ -493,11 +493,10 @@ namespace BearLibTerminal
 			m_viewport_modified = true;
 		}
 
-		if (updated.window_toggle_fullscreen)
+		if (updated.window_fullscreen != m_options.window_fullscreen)
 		{
 			// XXX: It's not always possible to change fullscreen state in runtime.
-			m_window->ToggleFullscreen();
-			updated.window_toggle_fullscreen = false;
+			m_window->SetFullscreen(updated.window_fullscreen);
 		}
 
 		// Do not touch input lock. Input handlers should just take main lock if necessary.
@@ -523,7 +522,7 @@ namespace BearLibTerminal
 		C.Set(L"window.icon", m_options.window_icon);
 		C.Set(L"window.resizeable", bool_to_wstring(m_options.window_resizeable));
 		C.Set(L"window.minimum-size", size_to_wstring(m_options.window_minimum_size));
-		C.Set(L"window.fullscreen", bool_to_wstring(m_options.window_toggle_fullscreen)); // WTF
+		C.Set(L"window.fullscreen", bool_to_wstring(m_options.window_fullscreen));
 		// input
 		C.Set(L"input.precise-mouse", bool_to_wstring(m_options.input_precise_mouse));
 		//C.Set(L"input.filter", m_options.input_filter_str); // FIXME
@@ -635,16 +634,9 @@ namespace BearLibTerminal
 
 		if (group.attributes.count(L"fullscreen"))
 		{
-			bool desired_state = false;
-
-			if (!try_parse(group.attributes[L"fullscreen"], desired_state))
+			if (!try_parse(group.attributes[L"fullscreen"], options.window_fullscreen))
 			{
 				throw std::runtime_error("window.fullscreen value cannot be parsed");
-			}
-
-			if (desired_state != m_window->IsFullscreen())
-			{
-				options.window_toggle_fullscreen = true;
 			}
 		}
 	}
@@ -2185,10 +2177,9 @@ namespace BearLibTerminal
 		else if (event.code == TK_RETURN && m_vars[TK_ALT])
 		{
 			// Alt+ENTER: toggle fullscreen.
-			m_viewport_modified = true;
-			m_window->ToggleFullscreen();
-			// FIXME: keep a good track of fullscreen (set + alt+enter).
 			m_vars[TK_FULLSCREEN] = !m_vars[TK_FULLSCREEN];
+			m_options.window_fullscreen = m_vars[TK_FULLSCREEN];
+			m_window->SetFullscreen(m_options.window_fullscreen);
 			return 0;
 		}
 		else if ((event.code == TK_MINUS || event.code == TK_EQUALS || event.code == TK_KP_MINUS || event.code == TK_KP_PLUS) && m_vars[TK_ALT])

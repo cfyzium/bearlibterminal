@@ -492,25 +492,29 @@ namespace BearLibTerminal
 		XSendEvent(m_display, DefaultRootWindow(m_display), False, SubstructureNotifyMask, &xev);
 	}
 
-	void X11Window::ToggleFullscreen()
+	void X11Window::SetFullscreen(bool fullscreen)
 	{
+		if (fullscreen == m_fullscreen)
+			return;
+
 		if (!m_resizeable)
 		{
 			XSizeHints *sizehints = XAllocSizeHints();
 			long flags = 0;
 			XGetWMNormalHints(m_display, m_window, sizehints, &flags);
-			if (m_fullscreen)
+			if (fullscreen)
+			{
+				// Entering fullscreen mode
+				sizehints->flags &= ~(PMinSize | PMaxSize);
+			}
+			else
 			{
 				// Leaving fullscreen mode
 				sizehints->flags |= PMinSize | PMaxSize;
 				sizehints->min_width = sizehints->max_width = m_client_size.width;
 				sizehints->min_height = sizehints->max_height = m_client_size.height;
 			}
-			else
-			{
-				// Entering fullscreen mode
-				sizehints->flags &= ~(PMinSize | PMaxSize);
-			}
+
 			XSetWMNormalHints(m_display, m_window, sizehints);
 			XFree(sizehints);
 		}
@@ -521,17 +525,13 @@ namespace BearLibTerminal
 		e.xclient.window = m_window;
 		e.xclient.message_type = m_wm_state;
 		e.xclient.format = 32;
-		e.xclient.data.l[0] = m_fullscreen? 0: 1;
+		e.xclient.data.l[0] = fullscreen? 1: 0;
 		e.xclient.data.l[1] = XInternAtom(m_display, "_NET_WM_STATE_FULLSCREEN", False);
 		XSendEvent(m_display, DefaultRootWindow(m_display), False, SubstructureRedirectMask | SubstructureNotifyMask, &e);
 
-		m_fullscreen = !m_fullscreen;
+		m_event_handler(TK_INVALIDATE);
 
-		// FIXME: WTF
-		//Handle({TK_STATE_UPDATE, {{TK_FULLSCREEN, (int)m_fullscreen}}});
-		//Handle(TK_INVALIDATE);
-		//HandleRepaint();
-		//});
+		m_fullscreen = fullscreen;
 	}
 
 	void X11Window::SetCursorVisibility(bool visible)

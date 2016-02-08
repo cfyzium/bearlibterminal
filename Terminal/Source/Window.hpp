@@ -62,7 +62,7 @@ namespace BearLibTerminal
 		virtual void SwapBuffers() = 0;
 		virtual void SetVSync(bool enabled) = 0;
 		virtual void SetResizeable(bool resizeable) = 0;
-		virtual void ToggleFullscreen(); // FIXME: SetFullscreen(bool)
+		virtual void SetFullscreen(bool fullscreen) = 0;
 		virtual void SetCursorVisibility(bool visible) = 0;
 		bool IsFullscreen() const;
 		virtual int PumpEvents() = 0;
