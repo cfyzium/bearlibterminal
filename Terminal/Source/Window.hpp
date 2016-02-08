@@ -40,10 +40,7 @@
 #define TK_ALT           0x72
 #define TK_REDRAW        0x1001
 #define TK_INVALIDATE    0x1002
-#define TK_DESTROY       0x1003
 #define TK_ACTIVATED     0x1004
-#define TK_DEACTIVATED   0x1005
-#define TK_STATE_UPDATE  0x1006
 
 namespace BearLibTerminal
 {

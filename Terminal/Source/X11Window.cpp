@@ -406,7 +406,6 @@ namespace BearLibTerminal
 
 	void X11Window::SetTitle(const std::wstring& title)
 	{
-		//std::lock_guard<std::mutex> guard(m_lock);
 		if (m_window == 0)
 			return;
 
