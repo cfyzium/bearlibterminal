@@ -25,6 +25,7 @@
 
 #ifdef _WIN32
 
+#include <list>
 #include <string>
 #include <cstdint>
 #include "Window.hpp"
@@ -45,7 +46,7 @@ namespace BearLibTerminal
 	class WinApiWindow: public Window
 	{
 	public:
-		WinApiWindow();
+		WinApiWindow(EventHandler handler);
 		~WinApiWindow();
 		bool ValidateIcon(const std::wstring& filename);
 		void SetTitle(const std::wstring& title);
@@ -53,21 +54,18 @@ namespace BearLibTerminal
 		void SetClientSize(const Size& size);
 		void Show();
 		void Hide();
-		std::future<void> Post(std::function<void()> func);
 		bool AcquireRC();
 		bool ReleaseRC();
 		void SwapBuffers();
 		void SetVSync(bool enabled);
 		void SetResizeable(bool resizeable);
-		void ToggleFullscreen();
+		void SetFullscreen(bool fullscreen);
 		void SetCursorVisibility(bool visible);
-		void Delay(int period);
 		Size GetActualSize();
+		int PumpEvents();
 	protected:
-		void ThreadFunction();
 		bool Construct();
 		void Destroy();
-		bool PumpEvents();
 		void DestroyUnlocked();
 		bool CreateWindowObject();
 		bool CreateOpenGLContext();
@@ -89,12 +87,14 @@ namespace BearLibTerminal
 		bool m_suppress_wm_paint_once;
 		bool m_mouse_cursor_enabled;
 		bool m_mouse_cursor_visible;
+		std::list<Event> m_events;
+		bool m_resizing;
 
 		typedef BOOL (WINAPI *PFN_WGLSWAPINTERVALEXT)(int interval);
 		PFN_WGLSWAPINTERVALEXT m_wglSwapIntervalEXT;
 	};
 }
 
-#endif
+#endif // _WIN32
 
 #endif // BEARLIBTERMINAL_WINAPIWINDOW_HPP
