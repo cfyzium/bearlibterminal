@@ -47,8 +47,10 @@ set(SOURCE_FILES ./Source/Main.cpp
                  ./Source/WindowResize.cpp
                  ./Source/Pick.cpp)
 
+set(HEADER_FILES ./Source/Common.hpp)
+
 include_directories(${CMAKE_SOURCE_DIR}/Terminal/Include/C)
-add_executable(SampleOmni ${SOURCE_FILES})
+add_executable(SampleOmni ${SOURCE_FILES} ${HEADER_FILES})
 target_link_libraries(SampleOmni BearLibTerminal)
 if (LINUX)
     target_link_libraries(SampleOmni -Wl,-R.)

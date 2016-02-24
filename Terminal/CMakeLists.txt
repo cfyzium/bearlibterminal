@@ -10,6 +10,8 @@ project(BearLibTerminal)
 # Detect system bitness
 math(EXPR BITNESS "8*${CMAKE_SIZEOF_VOID_P}")
 
+file(GLOB TERMINAL_HEADERS ./Source/*.hpp ./Source/*.h)
+list(APPEND TERMINAL_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/Include/C/BearLibTerminal.h")
 if(APPLE)
 	file(GLOB TERMINAL_SOURCES ./Source/*.cpp ./Source/*.mm)
 else()
@@ -48,7 +50,7 @@ include_directories(./Dependencies/FreeType/Include)
 include_directories(./Dependencies/PicoPNG/Include)
 include_directories(./Dependencies/NanoJPEG/Include)
 
-add_library(BearLibTerminal ${TERMINAL_SOURCES})
+add_library(BearLibTerminal ${TERMINAL_SOURCES} ${TERMINAL_HEADERS})
 
 target_link_libraries(BearLibTerminal freetype2)
 target_link_libraries(BearLibTerminal picopng)
