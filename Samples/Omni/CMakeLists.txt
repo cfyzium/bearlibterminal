@@ -7,7 +7,9 @@ math(EXPR BITNESS "8*${CMAKE_SIZEOF_VOID_P}")
 
 # Release flags
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -g0")
-set(CMAKE_EXE_LINKER_FLAGS_RELEASE "-s")
+if(NOT APPLE)
+    set(CMAKE_EXE_LINKER_FLAGS_RELEASE "-s")
+endif()
 
 # Debug flags
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g3")
@@ -16,7 +18,7 @@ set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g3")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
 if(WIN32)
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static -mwindows")
-else()
+elseif(LINUX)
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++")
 endif()
 
@@ -47,7 +49,10 @@ set(SOURCE_FILES ./Source/Main.cpp
 
 include_directories(${CMAKE_SOURCE_DIR}/Terminal/Include/C)
 add_executable(SampleOmni ${SOURCE_FILES})
-target_link_libraries(SampleOmni BearLibTerminal -Wl,-R.)
+target_link_libraries(SampleOmni BearLibTerminal)
+if (LINUX)
+    target_link_libraries(SampleOmni -Wl,-R.)
+endif()
 if(WIN32)
 	target_link_libraries(SampleOmni winmm.lib)
 endif()

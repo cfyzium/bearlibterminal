@@ -64,5 +64,6 @@ namespace BearLibTerminal
 #if defined(_WIN32)
 		return std::make_unique<WinApiWindow>(handler);
 #endif
-	}
+        throw std::runtime_error("NYI");
+    }
 }

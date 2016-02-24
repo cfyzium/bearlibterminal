@@ -14,7 +14,7 @@ uint64_t GetTime()
 	return timeGetTime();
 }
 #endif
-#if defined(__linux)
+#if defined(__linux) || defined(__APPLE__)
 #include <unistd.h>
 #include <sys/time.h>
 uint64_t GetTime()
