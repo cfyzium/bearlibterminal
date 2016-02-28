@@ -27,6 +27,9 @@
 #if defined(_WIN32)
 #include "WinApiWindow.hpp"
 #endif
+#if defined(__APPLE__)
+#include "CocoaWindow.h"
+#endif
 #include "Log.hpp"
 #include "Utility.hpp"
 
@@ -64,6 +67,8 @@ namespace BearLibTerminal
 #if defined(_WIN32)
 		return std::make_unique<WinApiWindow>(handler);
 #endif
-        throw std::runtime_error("NYI");
+#if defined(__APPLE__)
+        return std::make_unique<CocoaWindow>(handler);
+#endif
     }
 }
