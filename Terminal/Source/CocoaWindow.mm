@@ -167,8 +167,6 @@ namespace BearLibTerminal
     
     void CocoaWindow::Impl::HandleEvent(NSEvent *e)
     {
-        std::cout << "Event " << (int)e.type << std::endl;
-        
         switch (e.type)
         {
             case NSKeyDown:
@@ -205,8 +203,54 @@ namespace BearLibTerminal
                     pressed = (e.modifierFlags & NSShiftKeyMask);
                 
                 int code = key | (pressed? 0: TK_KEY_RELEASED);
-                Event event{code, {{key, pressed? 1: 0}}};
+                m_handler({code, {{key, pressed? 1: 0}}});
+                break;
+            }
+                
+            case NSLeftMouseDown:
+            case NSRightMouseDown:
+            case NSOtherMouseDown:
+            case NSLeftMouseUp:
+            case NSRightMouseUp:
+            case NSOtherMouseUp:
+            {
+                int key = 0;
+                
+                if (e.type == NSLeftMouseDown || e.type == NSLeftMouseUp)
+                    key = TK_MOUSE_LEFT;
+                else if (e.type == NSRightMouseUp || e.type == NSRightMouseDown)
+                    key = TK_MOUSE_RIGHT;
+                else
+                    key = TK_MOUSE_MIDDLE;
+                
+                bool pressed =
+                    e.type == NSLeftMouseDown ||
+                    e.type == NSRightMouseDown ||
+                    e.type == NSOtherMouseDown;
+                
+                int code = key | (pressed? 0: TK_KEY_RELEASED);
+                m_handler({code, {{key, (int)pressed}, {TK_MOUSE_CLICKS, e.clickCount}}});
+                break;
+            }
+                
+            case NSMouseMoved:
+            case NSLeftMouseDragged:
+            case NSRightMouseDragged:
+            case NSOtherMouseDragged:
+            {
+                NSRect rect = [m_view frame];
+                NSPoint pos = [e locationInWindow];
+                Event event{TK_MOUSE_MOVE};
+                event[TK_MOUSE_PIXEL_X] = pos.x;
+                event[TK_MOUSE_PIXEL_Y] = rect.size.height - pos.y;
                 m_handler(std::move(event));
+                break;
+            }
+                
+            case NSScrollWheel:
+            {
+                CGFloat delta = e.scrollingDeltaY;
+                m_handler({TK_MOUSE_SCROLL, {{TK_MOUSE_WHEEL, (int)delta}}});
                 break;
             }
                 
@@ -340,15 +384,17 @@ namespace BearLibTerminal
     
     int CocoaWindow::PumpEvents()
     {
+        int processed = 0;
         while (true)
         {
             NSEvent* event = [NSApp nextEventMatchingMask:NSAnyEventMask untilDate:nil inMode:NSDefaultRunLoopMode dequeue:YES];
             if (event == nil)
                 break;
             [NSApp sendEvent:event];
+            processed += 1;
         }
         
-        return 0;
+        return processed;
     }
 }
 
@@ -398,7 +444,6 @@ namespace BearLibTerminal
 
 - (void)keyDown:(NSEvent*)e
 {
-    //std::cout << "Event #2" << std::endl;
     m_impl->HandleEvent(e);
 }
 
@@ -408,6 +453,61 @@ namespace BearLibTerminal
 }
 
 - (void)flagsChanged:(NSEvent*)e
+{
+    m_impl->HandleEvent(e);
+}
+
+- (void)mouseMoved:(NSEvent*)e
+{
+    m_impl->HandleEvent(e);
+}
+
+- (void)scrollWheel:(NSEvent*)e
+{
+    m_impl->HandleEvent(e);
+}
+
+- (void)mouseDown:(NSEvent *)e
+{
+    m_impl->HandleEvent(e);
+}
+
+- (void)mouseUp:(NSEvent*)e
+{
+    m_impl->HandleEvent(e);
+}
+
+- (void)mouseDragged:(NSEvent*)e
+{
+    m_impl->HandleEvent(e);
+}
+
+- (void)rightMouseDown:(NSEvent *)e
+{
+    m_impl->HandleEvent(e);
+}
+
+- (void)rightMouseUp:(NSEvent*)e
+{
+    m_impl->HandleEvent(e);
+}
+
+- (void)rightMouseDragged:(NSEvent*)e
+{
+    m_impl->HandleEvent(e);
+}
+
+- (void)otherMouseDown:(NSEvent *)e
+{
+    m_impl->HandleEvent(e);
+}
+
+- (void)otherMouseUp:(NSEvent*)e
+{
+    m_impl->HandleEvent(e);
+}
+
+- (void)otherMouseDragged:(NSEvent*)e
 {
     m_impl->HandleEvent(e);
 }
@@ -428,7 +528,7 @@ namespace BearLibTerminal
 
 - (BOOL)windowShouldClose:(id)sender
 {
-    // XXX: send TK_CLOSE?
+    m_impl->m_handler(TK_CLOSE);
     return NO;
 }
 
