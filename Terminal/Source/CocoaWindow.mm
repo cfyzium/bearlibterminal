@@ -158,12 +158,22 @@ namespace BearLibTerminal
     
     struct CocoaWindow::Impl
     {
+        Impl();
         void HandleEvent(NSEvent* e);
+        void HandleWindowDidResize();
+        NSSize HandleWindowWillResize(NSSize frameSize);
         
         EventHandler m_handler;
+        bool m_resizeable;
+        Size m_increment;
+        Size m_minimum_size;
         id m_window;
         id m_view;
     };
+    
+    CocoaWindow::Impl::Impl():
+        m_resizeable(false)
+    { }
     
     void CocoaWindow::Impl::HandleEvent(NSEvent *e)
     {
@@ -260,6 +270,31 @@ namespace BearLibTerminal
         }
     }
     
+    void CocoaWindow::Impl::HandleWindowDidResize()
+    {
+        if (m_resizeable)
+        {
+            NSRect frame = [[m_window contentView] frame];
+            m_handler({TK_RESIZED, {{TK_WIDTH, frame.size.width}, {TK_HEIGHT, frame.size.height}}});
+            m_handler(TK_INVALIDATE);
+            m_handler(TK_REDRAW);
+        }
+    }
+    
+    NSSize CocoaWindow::Impl::HandleWindowWillResize(NSSize frameSize)
+    {
+        if (!m_resizeable || m_increment.Area() == 0)
+            return frameSize;
+        
+        // This handles the situation when window is unzoomed ignoring the size increments.
+        NSRect frame = NSMakeRect(0, 0, frameSize.width, frameSize.height);
+        NSRect inner = [m_window contentRectForFrameRect:frame];
+        inner.size.width = std::floor(inner.size.width / m_increment.width) * m_increment.width;
+        inner.size.height = std::floor(inner.size.height / m_increment.height) * m_increment.height;
+        NSRect outer = [m_window frameRectForContentRect:inner];
+        return NSMakeSize(outer.size.width, outer.size.height);
+    }
+    
     CocoaWindow::CocoaWindow(EventHandler handler):
         Window(handler),
         m_impl(new Impl)
@@ -277,8 +312,7 @@ namespace BearLibTerminal
         NSUInteger styleMask =
             NSTitledWindowMask|
             NSClosableWindowMask|
-            NSMiniaturizableWindowMask|
-            NSResizableWindowMask;
+            NSMiniaturizableWindowMask;
         m_impl->m_window = [[CocoaTerminalWindow alloc] initWithImpl:m_impl.get() styleMask:styleMask];
         [m_impl->m_window setBackgroundColor:[NSColor blueColor]];
         [m_impl->m_window setAcceptsMouseMovedEvents:YES];
@@ -367,9 +401,51 @@ namespace BearLibTerminal
         // NYI
     }
     
+    void CocoaWindow::ApplySizeHints()
+    {
+        // Enforce discrete size increments...
+        NSSize increment = NSMakeSize(m_impl->m_increment.width, m_impl->m_increment.height);
+        [m_impl->m_window setContentResizeIncrements:increment];
+        
+        // ...and minimum size
+        NSRect inner = NSMakeRect
+            (
+                0, 0,
+                m_impl->m_minimum_size.width * m_impl->m_increment.width,
+                m_impl->m_minimum_size.height * m_impl->m_increment.height
+            );
+        NSRect outer = [m_impl->m_window frameRectForContentRect:inner];
+        NSSize minimum = NSMakeSize(outer.size.width, outer.size.height);
+        [m_impl->m_window setMinSize:minimum];
+    }
+    
+    void CocoaWindow::SetSizeHints(Size increment, Size minimum_size)
+    {
+        m_impl->m_increment = increment;
+        m_impl->m_minimum_size = minimum_size;
+        
+        if (m_impl->m_resizeable)
+            ApplySizeHints();
+    }
+    
     void CocoaWindow::SetResizeable(bool resizeable)
     {
-        // NYI
+        // Window bar buttons.
+        [m_impl->m_window standardWindowButton:NSWindowZoomButton].hidden = !resizeable;
+        [m_impl->m_window standardWindowButton:NSWindowFullScreenButton].hidden = !resizeable;
+     
+        // Window style that actually make window resizeable.
+        if (resizeable)
+        {
+            [m_impl->m_window setStyleMask:[m_impl->m_window styleMask] | NSResizableWindowMask];
+            ApplySizeHints();
+        }
+        else
+        {
+            [m_impl->m_window setStyleMask:[m_impl->m_window styleMask] & ~NSResizableWindowMask];
+        }
+        
+        m_impl->m_resizeable = resizeable;
     }
     
     void CocoaWindow::SetFullscreen(bool fullscreen)
@@ -532,9 +608,14 @@ namespace BearLibTerminal
     return NO;
 }
 
+- (NSSize)windowWillResize:(id)sender toSize:(NSSize)frameSize
+{
+    return m_impl->HandleWindowWillResize(frameSize);
+}
+
 - (void)windowDidResize:(NSNotification*)notification
 {
-    // onResize?
+    m_impl->HandleWindowDidResize();
 }
 
 - (void)windowDidMiniaturize:(NSNotification *)notification

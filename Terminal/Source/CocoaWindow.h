@@ -43,11 +43,13 @@ namespace BearLibTerminal
         void Hide();
         void SwapBuffers();
         void SetVSync(bool enabled);
+        void SetSizeHints(Size increment, Size minimum_size);
         void SetResizeable(bool resizeable);
         void SetFullscreen(bool fullscreen);
         void SetCursorVisibility(bool visible);
         int PumpEvents();
     protected:
+        void ApplySizeHints();
         std::unique_ptr<Impl> m_impl;
     };
 }
