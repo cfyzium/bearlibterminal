@@ -34,13 +34,22 @@
 @end
 
 @interface CocoaTerminalApplicationDelegate: NSObject<NSApplicationDelegate>
+{
+    BearLibTerminal::CocoaWindow::Impl* m_impl;
+}
+- (id)initWithImpl:(BearLibTerminal::CocoaWindow::Impl*)impl;
 @end
 
 @interface CocoaTerminalWindow: NSWindow<NSWindowDelegate>
 {
     BearLibTerminal::CocoaWindow::Impl* m_impl;
+    NSTrackingArea* m_tracking_area;
+    BOOL m_cursor_hidden;
 }
-- (id)initWithImpl:(BearLibTerminal::CocoaWindow::Impl*)owner styleMask:(NSUInteger)mask;
+- (id)initWithImpl:(BearLibTerminal::CocoaWindow::Impl*)impl styleMask:(NSUInteger)mask;
+- (void)updateTrackingAreas;
+- (void)hideCursor;
+- (void)unhideCursor;
 @end
 
 @interface CocoaTerminalWindowDelegate: NSObject<NSWindowDelegate>
@@ -159,6 +168,7 @@ namespace BearLibTerminal
     struct CocoaWindow::Impl
     {
         Impl();
+        void HandleApplicationDidBecomeActive();
         void HandleEvent(NSEvent* e);
         void HandleWindowDidResize();
         NSSize HandleWindowWillResize(NSSize frameSize);
@@ -167,13 +177,25 @@ namespace BearLibTerminal
         bool m_resizeable;
         Size m_increment;
         Size m_minimum_size;
+        bool m_cursor_visible;
         id m_window;
         id m_view;
     };
     
     CocoaWindow::Impl::Impl():
-        m_resizeable(false)
+        m_resizeable(false),
+        m_cursor_visible(true)
     { }
+    
+    void CocoaWindow::Impl::HandleApplicationDidBecomeActive()
+    {
+        // Once window become active again, it gets a mouse-move event
+        // but not the mouse-entered event, so the previously hidden
+        // cursor stay visible until mouse is moved once more
+        // and a mouse-entered event is received.
+        if (!m_cursor_visible)
+            [m_window hideCursor];
+    }
     
     void CocoaWindow::Impl::HandleEvent(NSEvent *e)
     {
@@ -224,6 +246,13 @@ namespace BearLibTerminal
             case NSRightMouseUp:
             case NSOtherMouseUp:
             {
+                NSRect rect = [m_view frame];
+                NSPoint pos = [e locationInWindow];
+                // Ignore positions out of the window's bounds
+                // to match behaviour of other platforms.
+                if (pos.x < 0 || pos.y < 0 || pos.x >= rect.size.width || pos.y >= rect.size.height)
+                    break;
+                
                 int key = 0;
                 
                 if (e.type == NSLeftMouseDown || e.type == NSLeftMouseUp)
@@ -250,6 +279,11 @@ namespace BearLibTerminal
             {
                 NSRect rect = [m_view frame];
                 NSPoint pos = [e locationInWindow];
+                // Ignore positions out of the window's bounds
+                // to match behaviour of other platforms.
+                if (pos.x < 0 || pos.y < 0 || pos.x >= rect.size.width || pos.y >= rect.size.height)
+                    break;
+                
                 Event event{TK_MOUSE_MOVE};
                 event[TK_MOUSE_PIXEL_X] = pos.x;
                 event[TK_MOUSE_PIXEL_Y] = rect.size.height - pos.y;
@@ -279,6 +313,8 @@ namespace BearLibTerminal
             m_handler(TK_INVALIDATE);
             m_handler(TK_REDRAW);
         }
+        
+        [m_window updateTrackingAreas];
     }
     
     NSSize CocoaWindow::Impl::HandleWindowWillResize(NSSize frameSize)
@@ -302,7 +338,7 @@ namespace BearLibTerminal
         m_impl->m_handler = handler; // TODO: impl ctor
         
         [CocoaTerminalApplication sharedApplication];
-        NSApp.delegate = [[CocoaTerminalApplicationDelegate alloc] init];
+        NSApp.delegate = [[CocoaTerminalApplicationDelegate alloc] initWithImpl:m_impl.get()];
         NSApp.activationPolicy = NSApplicationActivationPolicyRegular;
         [NSApp activateIgnoringOtherApps:YES];
         [[[NSThread alloc] init] start]; // XXX?
@@ -455,7 +491,15 @@ namespace BearLibTerminal
     
     void CocoaWindow::SetCursorVisibility(bool visible)
     {
-        // NYI
+        if (visible == m_impl->m_cursor_visible)
+            return;
+        
+        if (visible)
+            [m_impl->m_window unhideCursor];
+        else
+            [m_impl->m_window hideCursor];
+        
+        m_impl->m_cursor_visible = visible;
     }
     
     int CocoaWindow::PumpEvents()
@@ -490,6 +534,14 @@ namespace BearLibTerminal
 
 @implementation CocoaTerminalApplicationDelegate
 
+- (id)initWithImpl:(BearLibTerminal::CocoaWindow::Impl*)impl
+{
+    self = [super init];
+    if (self != nil)
+        m_impl = impl;
+    return self;
+}
+
 - (NSApplicationTerminateReply)applicationShouldTerminate: (NSApplication*)sender
 {
     return NSTerminateCancel;
@@ -498,6 +550,11 @@ namespace BearLibTerminal
 - (void)applicationDidFinishLaunching: (NSNotification*)notification
 {
     [NSApp stop:nil];
+}
+
+- (void)applicationDidBecomeActive:(NSNotification *)notification
+{
+    m_impl->HandleApplicationDidBecomeActive();
 }
 
 @end
@@ -509,8 +566,62 @@ namespace BearLibTerminal
     NSRect rect = NSMakeRect(0, 0, 100, 100);
     self = [super initWithContentRect:rect styleMask:mask backing:NSBackingStoreBuffered defer:NO];
     if (self != nil)
+    {
         m_impl = impl;
+        m_tracking_area = nil;
+        m_cursor_hidden = NO;
+    }
     return self;
+}
+
+- (void)dealloc
+{
+    [m_tracking_area release];
+    [self unhideCursor];
+    [super dealloc];
+}
+
+- (void)updateTrackingAreas
+{
+    id view = [self contentView];
+    if (view == nil)
+        return;
+    
+    if (m_tracking_area != nil)
+    {
+        [view removeTrackingArea:m_tracking_area];
+        [m_tracking_area release];
+    }
+    
+    const NSTrackingAreaOptions options =
+        NSTrackingMouseEnteredAndExited |
+        NSTrackingActiveInKeyWindow |
+        NSTrackingInVisibleRect;
+        // | NSTrackingAssumeInside;
+    
+    m_tracking_area = [[NSTrackingArea alloc] initWithRect:[view bounds]
+                                                   options:options
+                                                     owner:self
+                                                  userInfo:nil];
+    [view addTrackingArea:m_tracking_area];
+}
+
+- (void)hideCursor
+{
+    if (!m_cursor_hidden)
+    {
+        [NSCursor hide];
+        m_cursor_hidden = YES;
+    }
+}
+
+- (void)unhideCursor
+{
+    if (m_cursor_hidden)
+    {
+        [NSCursor unhide];
+        m_cursor_hidden = NO;
+    }
 }
 
 - (BOOL)canBecomeKeyWindow
@@ -586,6 +697,17 @@ namespace BearLibTerminal
 - (void)otherMouseDragged:(NSEvent*)e
 {
     m_impl->HandleEvent(e);
+}
+
+- (void)mouseEntered:(NSEvent*)e
+{
+    if (!m_impl->m_cursor_visible)
+        [self hideCursor];
+}
+
+- (void)mouseExited:(NSEvent*)e
+{
+    [self unhideCursor];
 }
 
 // TODO: other event handlers
