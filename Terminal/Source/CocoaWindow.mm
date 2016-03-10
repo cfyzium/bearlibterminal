@@ -293,7 +293,10 @@ namespace BearLibTerminal
                 
             case NSScrollWheel:
             {
+                // Wheel behaviour is a subject for discussion.
+                // For now, approximate behaviour of other systems.
                 CGFloat delta = e.scrollingDeltaY;
+                delta = (delta > 0? 1: -1) * std::ceil(std::sqrt(std::abs(delta)));
                 m_handler({TK_MOUSE_SCROLL, {{TK_MOUSE_WHEEL, (int)delta}}});
                 break;
             }
