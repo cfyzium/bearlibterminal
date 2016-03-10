@@ -15,6 +15,7 @@
 #include <cmath>
 #include <future>
 #include <vector>
+#include <locale.h>
 
 #include <iostream>
 #include "Config.hpp"
@@ -166,6 +167,14 @@ namespace BearLibTerminal
 		m_gl_context(nullptr)
 #endif
 	{
+#if defined(__APPLE__)
+		// OS X implementation of C-string manipulation routines (e. g. swprintf)
+		// do not accept wide characters (i. e. wide strings at all) unless
+		// the character classification locale is set to UTF-8. And default one is "C".
+		if (setlocale(LC_CTYPE, "UTF-8") == nullptr)
+			LOG(Error, "Failed to set LC_CTYPE locale to UTF-8");
+#endif
+
 		// Atomic variables are not default-initialized even within container.
 		for (auto& var: m_vars)
 			var = 0;
