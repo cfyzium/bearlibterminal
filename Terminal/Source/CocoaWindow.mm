@@ -26,6 +26,7 @@
 #include <map>
 #include <iostream>
 #import <Cocoa/Cocoa.h>
+#include "Encoding.hpp"
 
 #define TERMINAL_BUILDING_LIBRARY
 #include "BearLibTerminal.h"
@@ -214,9 +215,9 @@ namespace BearLibTerminal
                 Event event{code, {{key, pressed? 1: 0}}};
                 if (pressed && printable)
                 {
-                    const char* c = e.characters.UTF8String;
-                    if (c[0] > 32)
-                        event[TK_WCHAR] = (wchar_t)c[0]; // FIXME: wtf
+                    std::wstring w = UTF8Encoding().Convert(e.characters.UTF8String);
+                    if (!w.empty())
+                        event[TK_WCHAR] = w[0];
                 }
                 m_handler(std::move(event));
                 break;
