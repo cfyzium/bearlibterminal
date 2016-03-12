@@ -49,6 +49,8 @@ namespace BearLibTerminal
         void SetCursorVisibility(bool visible);
         int PumpEvents();
     protected:
+		void Construct();
+		void Destroy();
         void ApplySizeHints();
         std::unique_ptr<Impl> m_impl;
     };

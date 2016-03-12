@@ -168,7 +168,7 @@ namespace BearLibTerminal
     
     struct CocoaWindow::Impl
     {
-        Impl();
+        Impl(EventHandler handler);
         void HandleApplicationDidBecomeActive();
         void HandleEvent(NSEvent* e);
         void HandleWindowDidResize();
@@ -183,9 +183,12 @@ namespace BearLibTerminal
         id m_view;
     };
     
-    CocoaWindow::Impl::Impl():
+    CocoaWindow::Impl::Impl(EventHandler handler):
+        m_handler(handler),
         m_resizeable(false),
-        m_cursor_visible(true)
+        m_cursor_visible(true),
+        m_window(nil),
+        m_view(nil)
     { }
     
     void CocoaWindow::Impl::HandleApplicationDidBecomeActive()
@@ -337,15 +340,30 @@ namespace BearLibTerminal
     
     CocoaWindow::CocoaWindow(EventHandler handler):
         Window(handler),
-        m_impl(new Impl)
+        m_impl(new Impl(handler))
     {
-        m_impl->m_handler = handler; // TODO: impl ctor
-        
+        try
+        {
+            Construct();
+        }
+        catch (...)
+        {
+            Destroy();
+            throw;
+        }
+    }
+	
+    CocoaWindow::~CocoaWindow()
+    {
+        Destroy();
+    }
+	
+    void CocoaWindow::Construct()
+    {
         [CocoaTerminalApplication sharedApplication];
         NSApp.delegate = [[CocoaTerminalApplicationDelegate alloc] initWithImpl:m_impl.get()];
         NSApp.activationPolicy = NSApplicationActivationPolicyRegular;
         [NSApp activateIgnoringOtherApps:YES];
-        [[[NSThread alloc] init] start]; // XXX?
         
         [NSApp run];
         
@@ -380,15 +398,31 @@ namespace BearLibTerminal
         [m_impl->m_window setContentView:m_impl->m_view];
         [[m_impl->m_view openGLContext] makeCurrentContext];
         
-        // TODO: set vsync
-        
+        SetVSync(true);
+		
         // Zoom and fullscreen buttons: hidden by default.
         [m_impl->m_window standardWindowButton:NSWindowZoomButton].hidden = YES;
         [m_impl->m_window standardWindowButton:NSWindowFullScreenButton].hidden = YES;
     }
-    
-    CocoaWindow::~CocoaWindow()
-    { }
+	
+    void CocoaWindow::Destroy()
+    {
+        // NOTE: exit fullscreen here
+		
+        if (m_impl->m_view != nil)
+        {
+            [m_impl->m_view release];
+             m_impl->m_view = nil;
+        }
+		
+        if (m_impl->m_window != nil)
+        {
+            [m_impl->m_window orderOut:nil];
+            [m_impl->m_window setDelegate:nil];
+            [m_impl->m_window close];
+            m_impl->m_window = nil;
+        }
+    }
     
     Size CocoaWindow::GetActualSize()
     {
@@ -398,12 +432,13 @@ namespace BearLibTerminal
     
     void CocoaWindow::SetTitle(const std::wstring& title)
     {
-        // NYI
+        std::string u8 = UTF8Encoding().Convert(title);
+        [m_impl->m_window setTitle:[NSString stringWithUTF8String:u8.c_str()]];
     }
     
     void CocoaWindow::SetIcon(const std::wstring& filename)
     {
-        // NYI
+        // Is it even implementable?
     }
     
     void CocoaWindow::SetClientSize(const Size& size)
@@ -413,7 +448,6 @@ namespace BearLibTerminal
         NSRect frame = [m_impl->m_window frameRectForContentRect:next];
         [m_impl->m_window setFrame:frame display:YES];
         m_client_size = size;
-        // send TK_RESIZE event?
     }
     
     void CocoaWindow::Show()
@@ -438,7 +472,8 @@ namespace BearLibTerminal
     
     void CocoaWindow::SetVSync(bool enabled)
     {
-        // NYI
+        GLint value = enabled;
+        [[m_impl->m_view openGLContext] setValues:&value forParameter:NSOpenGLCPSwapInterval];
     }
     
     void CocoaWindow::ApplySizeHints()
@@ -490,7 +525,7 @@ namespace BearLibTerminal
     
     void CocoaWindow::SetFullscreen(bool fullscreen)
     {
-        // NYI
+        LOG(Error, "CocoaWindow::SetFullscreen: not yet implemented");
     }
     
     void CocoaWindow::SetCursorVisibility(bool visible)
@@ -713,8 +748,6 @@ namespace BearLibTerminal
 {
     [self unhideCursor];
 }
-
-// TODO: other event handlers
 
 @end
 
