@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 2.8)
 
+if (UNIX AND NOT APPLE)
+	set(LINUX TRUE)
+endif()
+
 option(BUILD_SHARED_LIBS "Build dynamic version of library" ON)
 
 add_subdirectory(Dependencies/FreeType)
