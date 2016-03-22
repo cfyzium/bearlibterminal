@@ -175,6 +175,9 @@ namespace BearLibTerminal
 			LOG(Error, "Failed to set LC_CTYPE locale to UTF-8");
 #endif
 
+		// Save main thread ID so we can catch threading violations.
+		m_main_thread_id = std::this_thread::get_id();
+
 		// Atomic variables are not default-initialized even within container.
 		for (auto& var: m_vars)
 			var = 0;
@@ -212,8 +215,21 @@ namespace BearLibTerminal
 		// Window will be disposed of automatically.
 	}
 
+	// NOTE: not every API function checks this, only functions dealing with configuration,
+	// input and rendering: set, refresh, has_input, read, read_str, peek and delay.
+	#define CHECK_THREAD(name, ret) \
+	if (m_state == kClosed) { \
+		return ret; \
+	} else if (std::this_thread::get_id() != m_main_thread_id) { \
+		LOG(Fatal, "'" name "' was not called from the main thread"); \
+		m_state = kClosed; \
+		return ret; \
+	}
+
 	int Terminal::SetOptions(const std::wstring& value)
 	{
+		CHECK_THREAD("set", 0);
+
 		LOG(Info, "Trying to set \"" << value << "\"");
 		try
 		{
@@ -301,8 +317,6 @@ namespace BearLibTerminal
 
 	void Terminal::SetOptionsInternal(const std::wstring& value)
 	{
-		std::lock_guard<std::mutex> guard(m_lock);
-
 		auto groups = ParseOptions2(value);
 		Options updated = m_options;
 		std::map<uint16_t, std::unique_ptr<Tileset>> new_tilesets;
@@ -890,14 +904,13 @@ namespace BearLibTerminal
 #else
 	void Terminal::Refresh()
 	{
+		CHECK_THREAD("refresh", );
+
 		if (m_state == kHidden)
 		{
 			m_window->Show();
 			m_state = kVisible;
 		}
-
-		if (m_state != kVisible)
-			return;
 
 		Render(true);
 	}
@@ -908,7 +921,6 @@ namespace BearLibTerminal
 		if (m_world.stage.backbuffer.background.size() != m_world.stage.size.Area())
 		{
 			LOG(Trace, "World resize");
-			std::lock_guard<std::mutex> guard(m_lock);
 			m_world.stage.Resize(m_world.stage.size);
 		}
 		else
@@ -1599,6 +1611,8 @@ namespace BearLibTerminal
 
 	int Terminal::HasInput()
 	{
+		CHECK_THREAD("has_input", 0);
+
 		m_window->PumpEvents();
 
 		if (m_state == kClosed)
@@ -1609,7 +1623,7 @@ namespace BearLibTerminal
 
 	int Terminal::GetState(int code)
 	{
-		return (code >= 0 && code < (int)m_vars.size())? m_vars[code].load(): 0;
+		return (code >= 0 && code < (int)m_vars.size())? m_vars[code]: 0;
 	}
 
 	Event Terminal::ReadEvent(int timeout) // FIXME: more precise wait
@@ -1643,11 +1657,15 @@ namespace BearLibTerminal
 
 	int Terminal::Read()
 	{
+		CHECK_THREAD("read", TK_CLOSE);
+
 		return ReadEvent(std::numeric_limits<int>::max()).code;
 	}
 
 	int Terminal::Peek()
 	{
+		CHECK_THREAD("peek", TK_CLOSE);
+
 		m_window->PumpEvents();
 
 		if (m_state == kClosed)
@@ -1671,6 +1689,8 @@ namespace BearLibTerminal
 	 */
 	int Terminal::ReadString(int x, int y, wchar_t* buffer, int max)
 	{
+		CHECK_THREAD("read_str", TK_INPUT_CANCELLED);
+
 		std::vector<Cell> original;
 		int composition_mode = m_world.state.composition;
 		m_world.state.composition = TK_ON;
@@ -1707,13 +1727,6 @@ namespace BearLibTerminal
 
 		auto restore_scene = [&]()
 		{
-			// XXX: this was never thread-safe
-			// e. g. separate thread drawing while backbuffer is modified here
-			// XXX: and it may be tricky now
-			// logical conflict: read_str both input and drawing function
-			// * it reads input so it must be called from main thread
-			// * it provides visual feedback so it may be called from graphics thread
-			std::lock_guard<std::mutex> guard(m_lock);
 			for (int i = 0; i < max; i++)
 			{
 				Layer& layer = m_world.stage.backbuffer.layers[m_world.state.layer];
@@ -1774,6 +1787,8 @@ namespace BearLibTerminal
 
 	void Terminal::Delay(int period)
 	{
+		CHECK_THREAD("delay", );
+
 		auto until = std::chrono::system_clock::now() + std::chrono::milliseconds{period};
 		std::chrono::system_clock::duration step = std::chrono::milliseconds{5};
 
@@ -2251,10 +2266,6 @@ namespace BearLibTerminal
 		{
 			if (m_options.window_resizeable)
 			{
-				// XXX: was never thread-safe!
-				// e. g. separate thread drawing while backbuffer is resized here
-				// May be worked around by allowing front- and backbuffers of different sizes.
-
 				// Stage size changed, must reallocate and reconstruct scene
 				m_options.window_size = Size(event[TK_WIDTH], event[TK_HEIGHT]);
 				m_world.stage.Resize(m_options.window_size);
@@ -2310,7 +2321,6 @@ namespace BearLibTerminal
 
 	void Terminal::Render(bool update_scene)
 	{
-		std::lock_guard<std::mutex> guard{m_lock};
 		if (update_scene)
 			m_world.stage.frontbuffer = m_world.stage.backbuffer;
 		Redraw();

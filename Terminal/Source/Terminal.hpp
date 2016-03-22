@@ -86,10 +86,10 @@ namespace BearLibTerminal
 		void PushEvent(Event event);
 	private:
 		enum state_t {kHidden, kVisible, kClosed} m_state;
-		std::mutex m_lock;
+		std::thread::id m_main_thread_id;
 		std::unique_ptr<Window> m_window;
 		std::deque<Event> m_input_queue;
-		std::array<std::atomic<int32_t>, 256> m_vars;
+		std::array<int32_t, 256> m_vars;
 		std::unique_ptr<Encoding8> m_encoding;
 		World m_world;
 		Options m_options;
