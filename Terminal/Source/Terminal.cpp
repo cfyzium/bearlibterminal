@@ -178,14 +178,14 @@ namespace BearLibTerminal
 		// Save main thread ID so we can catch threading violations.
 		m_main_thread_id = std::this_thread::get_id();
 
-		// Atomic variables are not default-initialized even within container.
+		// Elements of std::array are not default-initialized.
 		for (auto& var: m_vars)
 			var = 0;
 
 		// Synchronize log settings (logger reads them from config file but they may be left default).
-		m_options.log_filename = Log::Instance().GetFile();
-		m_options.log_level = Log::Instance().GetLevel();
-		m_options.log_mode = Log::Instance().GetMode();
+		m_options.log_filename = Log::Instance().filename;
+		m_options.log_level = Log::Instance().level;
+		m_options.log_mode = Log::Instance().mode;
 
 		// Try to create window
 		m_window = Window::Create(std::bind(&Terminal::OnWindowEvent, this, std::placeholders::_1));
@@ -217,6 +217,7 @@ namespace BearLibTerminal
 
 	// NOTE: not every API function checks this, only functions dealing with configuration,
 	// input and rendering: set, refresh, has_input, read, read_str, peek and delay.
+	// NOTE: this introduces an unlikely data race which should be acceptable in this particular case.
 	#define CHECK_THREAD(name, ret) \
 	if (m_state == kClosed) { \
 		return ret; \
@@ -371,7 +372,7 @@ namespace BearLibTerminal
 
 		if (updated.output_vsync != m_options.output_vsync)
 		{
-			m_viewport_modified = true; // XXX: atomic? lock?
+			m_viewport_modified = true;
 		}
 
 		// All options and parameters must be validated, may try to apply them
@@ -386,10 +387,9 @@ namespace BearLibTerminal
 			throw std::runtime_error("No base font has been configured");
 		}
 
-		// Such implementation is awful. Should use some global (external library?) instance.
-		if (updated.log_filename != m_options.log_filename) Log::Instance().SetFile(updated.log_filename);
-		if (updated.log_level != m_options.log_level) Log::Instance().SetLevel(updated.log_level);
-		if (updated.log_mode != m_options.log_mode) Log::Instance().SetMode(updated.log_mode);
+		Log::Instance().filename = updated.log_filename;
+		Log::Instance().level = updated.log_level;
+		Log::Instance().mode = updated.log_mode;
 
 		if (updated.terminal_encoding != m_options.terminal_encoding)
 		{
@@ -521,12 +521,6 @@ namespace BearLibTerminal
 			// XXX: It's not always possible to change fullscreen state in runtime.
 			m_window->SetFullscreen(updated.window_fullscreen);
 		}
-
-		// Do not touch input lock. Input handlers should just take main lock if necessary.
-		/*
-		// Briefly grab input lock so that input routines do not contend for m_options
-		std::lock_guard<std::mutex> input_guard(m_input_lock);
-		//*/
 
 		m_options = updated;
 
@@ -2118,7 +2112,6 @@ namespace BearLibTerminal
 		}
 		else if (event.code == TK_INVALIDATE)
 		{
-			// XXX: atomic? lock?
 			m_viewport_modified = true;
 			return 0;
 		}
@@ -2127,7 +2120,7 @@ namespace BearLibTerminal
 		{
 			for (int i = TK_A; i <= TK_CONTROL; i++)
 			{
-				if (m_vars[i]) // FIXME: race condition
+				if (m_vars[i])
 					PushEvent(Event(i|TK_KEY_RELEASED, {{i, 0}}));
 			}
 

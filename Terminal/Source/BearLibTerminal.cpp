@@ -96,20 +96,10 @@ int terminal_open()
 		return 0;
 	}
 
-	// Try to setup Log
-	{
-		std::wstring s;
-		if (Config::Instance().TryGet(L"ini.bearlibterminal.log.file", s))
-			Log::Instance().SetFile(s);
-
-		Log::Level level;
-		if (Config::Instance().TryGet(L"ini.bearlibterminal.log.level", s) && try_parse(s, level))
-			Log::Instance().SetLevel(level);
-
-		Log::Mode mode;
-		if (Config::Instance().TryGet(L"ini.bearlibterminal.log.mode", s) && try_parse(s, mode))
-			Log::Instance().SetMode(mode);
-	}
+	Config::Instance().Reload();
+	Config::Instance().TryGet(L"ini.bearlibterminal.log.file", Log::Instance().filename);
+	Config::Instance().TryGet(L"ini.bearlibterminal.log.level", Log::Instance().level);
+	Config::Instance().TryGet(L"ini.bearlibterminal.log.mode", Log::Instance().mode);
 
 	try
 	{
@@ -128,7 +118,7 @@ void terminal_close()
 	if (g_instance)
 	{
 		g_instance.reset();
-		BearLibTerminal::Log::Instance().Dispose();
+		BearLibTerminal::Log::Instance().Reset();
 	}
 }
 

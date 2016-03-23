@@ -31,20 +31,8 @@
 
 namespace BearLibTerminal
 {
-	Config::Config():
-		m_initialized(false)
-	{
-		Init();
-	}
-
-	void Config::Init()
-	{
-		m_filename = GuessConfigFilename();
-		LOG(Info, "Using configuration file '" << m_filename << "'");
-
-		Load();
-		m_initialized = true;
-	}
+	Config::Config()
+	{ }
 
 	std::wstring Config::GuessConfigFilename()
 	{
@@ -99,8 +87,14 @@ namespace BearLibTerminal
 		return best_filename;
 	}
 
-	void Config::Load()
+	void Config::Reload()
 	{
+		// Clear previous state.
+		m_sections.clear();
+		m_filename.clear();
+
+		m_filename = GuessConfigFilename();
+		LOG(Info, "Using configuration file '" << m_filename << "'");
 		if (!FileExists(m_filename))
 		{
 			// No use trying to open nonexistent file.
@@ -212,11 +206,6 @@ namespace BearLibTerminal
 
 	bool Config::TryGet(std::wstring name, std::wstring& out)
 	{
-		std::lock_guard<std::mutex> guard(m_lock);
-
-		if (!m_initialized)
-			Init();
-
 		if (name.empty())
 			return false;
 
@@ -266,7 +255,6 @@ namespace BearLibTerminal
 	std::map<std::wstring, std::wstring> Config::List(const std::wstring& section)
 	{
 		std::map<std::wstring, std::wstring> result;
-		std::lock_guard<std::mutex> guard(m_lock);
 		auto i = m_sections.find(section);
 		if (i != m_sections.end())
 		{
@@ -278,11 +266,6 @@ namespace BearLibTerminal
 
 	void Config::Set(std::wstring name, std::wstring value)
 	{
-		std::lock_guard<std::mutex> gurad(m_lock);
-
-		if (!m_initialized)
-			Init();
-
 		if (name.empty())
 			return;
 
@@ -590,14 +573,6 @@ namespace BearLibTerminal
 			LOG(Error, L"Cannot open configuration file '" << m_filename << "' for writing");
 			return;
 		}
-	}
-
-	void Config::Dispose()
-	{
-		std::lock_guard<std::mutex> gurad(m_lock);
-		m_sections.clear();
-		m_filename.clear();
-		m_initialized = false;
 	}
 
 	Config& Config::Instance()

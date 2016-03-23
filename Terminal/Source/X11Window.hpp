@@ -27,7 +27,6 @@
 
 #include <memory>
 #include "Window.hpp"
-#include "Semaphore.hpp"
 #include "Point.hpp"
 #include <X11/Xlib.h>
 #include <X11/Xmu/Xmu.h>

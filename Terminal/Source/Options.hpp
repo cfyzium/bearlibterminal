@@ -11,7 +11,6 @@
 #include "Size.hpp"
 #include "Log.hpp"
 #include <string>
-#include <atomic>
 #include <set>
 
 namespace BearLibTerminal

@@ -22,7 +22,6 @@
 
 #include <stdexcept>
 #include "Texture.hpp"
-//#include "Utility.hpp"
 #include "OpenGL.hpp"
 #include "Log.hpp"
 
@@ -30,8 +29,7 @@ namespace BearLibTerminal
 {
 	static const GLenum color_format = GL_BGRA;
 
-	//Texture::handle_t Texture::m_currently_bound_handle = 0;
-	std::atomic<uint32_t> Texture::m_currently_bound_handle{0};
+	uint32_t Texture::m_currently_bound_handle{0};
 
 	static bool IsPowerOfTwo(int value)
 	{

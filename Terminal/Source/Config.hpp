@@ -25,8 +25,8 @@
 
 #include <map>
 #include <string>
-#include <mutex>
 #include <algorithm>
+#include "Utility.hpp"
 
 namespace BearLibTerminal
 {
@@ -56,17 +56,23 @@ namespace BearLibTerminal
 	class Config
 	{
 	public:
+		void Reload();
 		bool TryGet(std::wstring name, std::wstring& out);
 		std::map<std::wstring, std::wstring> List(const std::wstring& section);
 		void Set(std::wstring name, std::wstring value);
-		void Dispose();
 		static Config& Instance();
+
+		template<typename T> bool TryGet(std::wstring name, T& out)
+		{
+			std::wstring temp;
+			if (!TryGet(std::move(name), temp))
+				return false;
+			return try_parse(name, out);
+		}
 
 	private:
 		Config();
-		void Init();
 		std::wstring GuessConfigFilename();
-		void Load();
 		void Update(std::wstring section, std::wstring property, std::wstring value);
 
 		struct Property
@@ -79,8 +85,6 @@ namespace BearLibTerminal
 			std::map<std::wstring, Property, ci_less<wchar_t>> m_properties;
 		};
 
-		std::mutex m_lock;
-		bool m_initialized;
 		std::wstring m_filename;
 		std::map<std::wstring, Section, ci_less<wchar_t>> m_sections;
 	};

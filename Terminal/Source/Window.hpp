@@ -28,11 +28,7 @@
 #include "Point.hpp"
 #include "Keystroke.hpp"
 #include <list>
-#include <mutex>
-#include <atomic>
 #include <memory>
-#include <thread>
-#include <future>
 #include <utility>
 #include <functional>
 

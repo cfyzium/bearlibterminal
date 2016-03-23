@@ -30,11 +30,9 @@
 #include "Encoding.hpp"
 #include "OptionGroup.hpp"
 #include "Log.hpp"
-#include <mutex>
 #include <deque>
-#include <atomic>
-#include <condition_variable>
 #include <array>
+#include <thread>
 
 namespace BearLibTerminal
 {

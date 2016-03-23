@@ -29,7 +29,6 @@
 #include <string>
 #include <cstdint>
 #include "Window.hpp"
-#include "Semaphore.hpp"
 
 // Force SDK version to XP SP3
 #if !defined(WINVER)
@@ -80,7 +79,6 @@ namespace BearLibTerminal
 		HWND m_handle;
 		HDC m_device_context;
 		HGLRC m_rendering_context;
-		Semaphore m_redraw_barrier;
 		bool m_maximized;
 		uint64_t m_last_mouse_click;
 		int m_consecutive_mouse_clicks;

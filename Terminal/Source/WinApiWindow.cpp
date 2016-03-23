@@ -41,8 +41,6 @@
 #define MAPVK_VSC_TO_VK 1
 #endif
 
-#define WM_CUSTOM_POST (WM_APP+1)
-
 namespace BearLibTerminal
 {
 	std::wstring GetLastErrorStr(std::uint32_t rc)
@@ -373,30 +371,6 @@ namespace BearLibTerminal
 			ShowWindow(m_handle, SW_HIDE);
 		}
 	}
-
-	/*
-	std::future<void> WinApiWindow::Post(std::function<void()> func)
-	{
-		if (!m_handle)
-		{
-			// This is more like logic error to invoke Post before window was constructed.
-			throw std::runtime_error("Posting closure to an uninitialized window");
-		}
-
-		auto task = new std::packaged_task<void()>(std::move(func));
-		auto future = task->get_future();
-		if (PostMessage(m_handle, WM_CUSTOM_POST, (WPARAM)NULL, (LPARAM)task) == FALSE)
-		{
-			LOG(Error, "Failed to post closure on window thread (" << GetLastErrorStr() << ")");
-
-			// If the invoking side is waiting for result, this will raise std::future_error exception.
-			// Otherwise the error will be ignored.
-			delete task;
-		}
-
-		return std::move(future);
-	}
-	//*/
 
 	int WinApiWindow::PumpEvents()
 	{
@@ -1230,13 +1204,6 @@ namespace BearLibTerminal
 				m_mouse_cursor_visible = true;
 				ShowCursor(true);
 			}
-		}
-		else if (uMsg == WM_CUSTOM_POST)
-		{
-			auto task = (std::packaged_task<void()>*)lParam;
-			(*task)();
-			delete task;
-			return 0;
 		}
 
 		return DefWindowProc(m_handle, uMsg, wParam, lParam);
