@@ -81,4 +81,8 @@ if (WIN32)
 		SUFFIX ".dll"
 		IMPORT_PREFIX ""
 		IMPORT_SUFFIX ".lib")
+elseif (APPLE)
+	set_target_properties(BearLibTerminal PROPERTIES
+		BUILD_WITH_INSTALL_RPATH TRUE
+		INSTALL_NAME_DIR "@executable_path")
 endif()
