@@ -54,6 +54,8 @@ namespace BearLibTerminal
 		bool m_owner;
 	};
 
+	std::wstring FixPathSeparators(std::wstring name);
+
 	std::unique_ptr<std::istream> OpenFileReading(std::wstring name);
 
 	std::unique_ptr<std::ostream> OpenFileWriting(std::wstring name);

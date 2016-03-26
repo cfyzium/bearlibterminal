@@ -24,7 +24,6 @@
 #define BEARLIBTERMINAL_TEXTURE_HPP
 
 #include <cstdint>
-#include <atomic>
 #include "Bitmap.hpp"
 #include "Size.hpp"
 
@@ -55,7 +54,7 @@ namespace BearLibTerminal
 	protected:
 		handle_t m_handle;
 		Size m_size;
-		static std::atomic<uint32_t> m_currently_bound_handle;
+		static uint32_t m_currently_bound_handle;
 	};
 }
 

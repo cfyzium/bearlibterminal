@@ -41,8 +41,6 @@
 #define MAPVK_VSC_TO_VK 1
 #endif
 
-#define WM_CUSTOM_POST (WM_APP+1)
-
 namespace BearLibTerminal
 {
 	std::wstring GetLastErrorStr(std::uint32_t rc)
@@ -76,7 +74,8 @@ namespace BearLibTerminal
 		return ((t.QuadPart-start)/(double)f.QuadPart)*1000000;
 	}
 
-	WinApiWindow::WinApiWindow():
+	WinApiWindow::WinApiWindow(EventHandler handler):
+		Window(handler),
 		m_class_name(L"BearLibTerminal"),
 		m_handle(nullptr),
 		m_device_context(nullptr),
@@ -87,15 +86,26 @@ namespace BearLibTerminal
 		m_suppress_wm_paint_once(false),
 		m_mouse_cursor_enabled(true),
 		m_mouse_cursor_visible(true),
-		m_wglSwapIntervalEXT(nullptr)
+		m_wglSwapIntervalEXT(nullptr),
+		m_resizing(false)
 	{
 		// Raising timing resolution for Delay function.
 		timeBeginPeriod(1);
+
+		try
+		{
+			Construct();
+		}
+		catch (...)
+		{
+			Destroy();
+			throw;
+		}
 	}
 
 	WinApiWindow::~WinApiWindow()
 	{
-		Stop();
+		Destroy();
 
 		// Timing resolution restore.
 		timeEndPeriod(1);
@@ -166,192 +176,176 @@ namespace BearLibTerminal
 
 	void WinApiWindow::SetTitle(const std::wstring& title)
 	{
-		Post([&, title]
-		{
-			SetWindowTextW(m_handle, title.c_str());
-		});
+		SetWindowTextW(m_handle, title.c_str());
 	}
 
 	void WinApiWindow::SetIcon(const std::wstring& filename)
 	{
-		if (filename.empty()) return;
+		if (filename.empty())
+			return;
 
-		Post([&, filename]
+		HICON new_small_icon = LoadIconFromFile(filename, true);
+		if ( new_small_icon != NULL )
 		{
-			HICON new_small_icon = LoadIconFromFile(filename, true);
-			if ( new_small_icon != NULL )
+			HICON old_small_icon = (HICON)SetClassLongPtr(m_handle, GCLP_HICONSM, (LONG_PTR)new_small_icon);
+			DWORD rc = GetLastError();
+			if ( rc == 0 )
 			{
-				HICON old_small_icon = (HICON)SetClassLongPtr(m_handle, GCLP_HICONSM, (LONG_PTR)new_small_icon);
-				DWORD rc = GetLastError();
-				if ( rc == 0 )
-				{
-					if ( old_small_icon != NULL ) DestroyIcon(old_small_icon);
-				}
-				else
-				{
-					LOG(Error, L"Failed to apply small icon (" << GetLastErrorStr() << ")");
-				}
+				if ( old_small_icon != NULL ) DestroyIcon(old_small_icon);
 			}
+			else
+			{
+				LOG(Error, L"Failed to apply small icon (" << GetLastErrorStr() << ")");
+			}
+		}
 
-			HICON new_large_icon = LoadIconFromFile(filename, false);
-			if ( new_large_icon != NULL )
+		HICON new_large_icon = LoadIconFromFile(filename, false);
+		if ( new_large_icon != NULL )
+		{
+			HICON old_large_icon = (HICON)SetClassLongPtr(m_handle, GCLP_HICON, (LONG_PTR)new_large_icon);
+			DWORD rc = GetLastError();
+			if ( rc == 0 )
 			{
-				HICON old_large_icon = (HICON)SetClassLongPtr(m_handle, GCLP_HICON, (LONG_PTR)new_large_icon);
-				DWORD rc = GetLastError();
-				if ( rc == 0 )
-				{
-					if ( old_large_icon != NULL ) DestroyIcon(old_large_icon);
-				}
-				else
-				{
-					LOG(Error, L"Failed to apply large icon (" << GetLastErrorStr() << ")");
-				}
+				if ( old_large_icon != NULL ) DestroyIcon(old_large_icon);
 			}
-		});
+			else
+			{
+				LOG(Error, L"Failed to apply large icon (" << GetLastErrorStr() << ")");
+			}
+		}
 	}
 
 	void WinApiWindow::SetClientSize(const Size& size)
 	{
-		Post([&, size]
+		if (!m_fullscreen)
 		{
-			if (!m_fullscreen)
-			{
-				DWORD style = GetWindowLongW(m_handle, GWL_STYLE);
-				RECT rectangle = {0, 0, size.width, size.height};
-				AdjustWindowRect(&rectangle, style, FALSE);
-				SetWindowPos
-				(
-					m_handle,
-					HWND_NOTOPMOST,
-					0, 0,
-					rectangle.right-rectangle.left,
-					rectangle.bottom-rectangle.top,
-					SWP_NOMOVE
-				);
-			}
+			DWORD style = GetWindowLongW(m_handle, GWL_STYLE);
+			RECT rectangle = {0, 0, size.width, size.height};
+			AdjustWindowRect(&rectangle, style, FALSE);
+			SetWindowPos
+			(
+				m_handle,
+				HWND_NOTOPMOST,
+				0, 0,
+				rectangle.right-rectangle.left,
+				rectangle.bottom-rectangle.top,
+				SWP_NOMOVE
+			);
+		}
 
-			m_client_size = size;
-		});
+		m_client_size = size;
 	}
 
 	void WinApiWindow::SetResizeable(bool resizeable)
 	{
-		if (!m_handle) return;
+		if (!m_handle)
+			return;
 
-		Post([=]
+		if (!m_fullscreen)
 		{
-			if (!m_fullscreen)
+			if (!resizeable)
 			{
-				if (!resizeable)
+				WINDOWPLACEMENT placement;
+				GetWindowPlacement(m_handle, &placement);
+				if (placement.showCmd & SW_MAXIMIZE)
 				{
-					WINDOWPLACEMENT placement;
-					GetWindowPlacement(m_handle, &placement);
-					if (placement.showCmd & SW_MAXIMIZE)
-					{
-						ShowWindow(m_handle, SW_RESTORE);
-					}
+					ShowWindow(m_handle, SW_RESTORE);
 				}
-
-				DWORD style = GetWindowLongW(m_handle, GWL_STYLE);
-				DWORD flags = WS_THICKFRAME | WS_MAXIMIZEBOX;
-				style = resizeable? style|flags: style^flags;
-				SetWindowLongW(m_handle, GWL_STYLE, style);
-
-				RECT rectangle = {0, 0, m_client_size.width, m_client_size.height};
-				AdjustWindowRect(&rectangle, style, FALSE);
-				BOOL rc = SetWindowPos
-				(
-					m_handle,
-					HWND_NOTOPMOST,
-					0, 0,
-					rectangle.right-rectangle.left,
-					rectangle.bottom-rectangle.top,
-					SWP_NOMOVE
-				);
 			}
 
-			m_resizeable = resizeable;
-		});
+			DWORD style = GetWindowLongW(m_handle, GWL_STYLE);
+			DWORD flags = WS_THICKFRAME | WS_MAXIMIZEBOX;
+			style = resizeable? style|flags: style^flags;
+			SetWindowLongW(m_handle, GWL_STYLE, style);
+
+			RECT rectangle = {0, 0, m_client_size.width, m_client_size.height};
+			AdjustWindowRect(&rectangle, style, FALSE);
+			BOOL rc = SetWindowPos
+			(
+				m_handle,
+				HWND_NOTOPMOST,
+				0, 0,
+				rectangle.right-rectangle.left,
+				rectangle.bottom-rectangle.top,
+				SWP_NOMOVE
+			);
+		}
+
+		m_resizeable = resizeable;
 	}
 
-	void WinApiWindow::ToggleFullscreen()
+	void WinApiWindow::SetFullscreen(bool fullscreen)
 	{
-		Post([=]
+		if (m_fullscreen == fullscreen)
+			return;
+
+		if (m_fullscreen)
 		{
-			if (m_fullscreen)
-			{
-				// Leave fullscreen mode
+			// Leave fullscreen mode
 
-				DWORD required_style = WS_BORDER|WS_CAPTION;
-				if (m_resizeable) required_style |= WS_THICKFRAME|WS_MAXIMIZEBOX;
+			DWORD required_style = WS_BORDER|WS_CAPTION;
+			if (m_resizeable) required_style |= WS_THICKFRAME|WS_MAXIMIZEBOX;
 
-				DWORD style = GetWindowLongW(m_handle, GWL_STYLE);
-				style = style|required_style;
-				SetWindowLongW(m_handle, GWL_STYLE, style);
+			DWORD style = GetWindowLongW(m_handle, GWL_STYLE);
+			style = style|required_style;
+			SetWindowLongW(m_handle, GWL_STYLE, style);
 
-				RECT rectangle = {0, 0, m_client_size.width, m_client_size.height};
-				AdjustWindowRect(&rectangle, style, FALSE);
+			RECT rectangle = {0, 0, m_client_size.width, m_client_size.height};
+			AdjustWindowRect(&rectangle, style, FALSE);
 
-				BOOL rc = SetWindowPos
-				(
-					m_handle,
-					HWND_TOP,//NOTOPMOST,
-					m_location.x, m_location.y,
-					rectangle.right-rectangle.left,
-					rectangle.bottom-rectangle.top,
-					0
-				);
-			}
-			else
-			{
-				// Enter fullscreen mode
+			BOOL rc = SetWindowPos
+			(
+				m_handle,
+				HWND_TOP,//NOTOPMOST,
+				m_location.x, m_location.y,
+				rectangle.right-rectangle.left,
+				rectangle.bottom-rectangle.top,
+				0
+			);
+		}
+		else
+		{
+			// Enter fullscreen mode
 
-				RECT rect;
-				GetWindowRect(m_handle, &rect);
-				m_location = Point(rect.left, rect.top);
+			RECT rect;
+			GetWindowRect(m_handle, &rect);
+			m_location = Point(rect.left, rect.top);
 
-				DWORD unnecessary_style = WS_BORDER|WS_CAPTION|WS_THICKFRAME|WS_MAXIMIZEBOX;
+			DWORD unnecessary_style = WS_BORDER|WS_CAPTION|WS_THICKFRAME|WS_MAXIMIZEBOX;
 
-				DWORD style = GetWindowLongW(m_handle, GWL_STYLE);
-				style &= ~unnecessary_style;
-				SetWindowLongW(m_handle, GWL_STYLE, style);
+			DWORD style = GetWindowLongW(m_handle, GWL_STYLE);
+			style &= ~unnecessary_style;
+			SetWindowLongW(m_handle, GWL_STYLE, style);
 
-				int width = GetSystemMetrics(SM_CXSCREEN);
-				int height = GetSystemMetrics(SM_CYSCREEN);
+			int width = GetSystemMetrics(SM_CXSCREEN);
+			int height = GetSystemMetrics(SM_CYSCREEN);
 
-				// Make sure this window is placed over everyting (taskbar is especially stubborn here)
-				SetWindowPos(m_handle, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE|SWP_NOSIZE|SWP_NOREDRAW);
-				SetWindowPos(m_handle, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE|SWP_NOSIZE|SWP_NOREDRAW);
+			// Make sure this window is placed over everyting (taskbar is especially stubborn here)
+			SetWindowPos(m_handle, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE|SWP_NOSIZE|SWP_NOREDRAW);
+			SetWindowPos(m_handle, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE|SWP_NOSIZE|SWP_NOREDRAW);
 
-				BOOL rc = SetWindowPos
-				(
-					m_handle,
-					HWND_TOP,
-					0, 0,
-					width,
-					height,
-					0
-				);
+			BOOL rc = SetWindowPos
+			(
+				m_handle,
+				HWND_TOP,
+				0, 0,
+				width,
+				height,
+				0
+			);
 
-				SetForegroundWindow(m_handle);
-			}
+			SetForegroundWindow(m_handle);
+		}
 
-			m_fullscreen = !m_fullscreen;
-			Handle({TK_STATE_UPDATE, {{TK_FULLSCREEN, (int)m_fullscreen}}});
+		m_fullscreen = fullscreen;//!m_fullscreen;
 
-			// Force window update
-			InvalidateRect(m_handle, NULL, FALSE);
-		});
+		// Force window update
+		InvalidateRect(m_handle, NULL, FALSE);
 	}
 
 	void WinApiWindow::SetCursorVisibility(bool visible)
 	{
-		Post([=]{m_mouse_cursor_enabled = visible;});
-	}
-
-	void WinApiWindow::Delay(int period)
-	{
-		Sleep(period);
+		m_mouse_cursor_enabled = visible;
 	}
 
 	Size WinApiWindow::GetActualSize()
@@ -363,60 +357,28 @@ namespace BearLibTerminal
 
 	void WinApiWindow::Show()
 	{
-		Post([=]
+		if (m_handle != nullptr)
 		{
-			if (m_handle != nullptr)
-			{
-				ShowWindow(m_handle, SW_SHOW);
-				SetForegroundWindow(m_handle);
-			}
-		});
+			ShowWindow(m_handle, SW_SHOW);
+			SetForegroundWindow(m_handle);
+		}
 	}
 
 	void WinApiWindow::Hide()
 	{
-		Post([=]
+		if (m_handle != nullptr)
 		{
-			if (m_handle != nullptr)
-			{
-				ShowWindow(m_handle, SW_HIDE);
-			}
-		});
+			ShowWindow(m_handle, SW_HIDE);
+		}
 	}
 
-	std::future<void> WinApiWindow::Post(std::function<void()> func)
+	int WinApiWindow::PumpEvents()
 	{
-		if (!m_handle)
-		{
-			// This is more like logic error to invoke Post before window was constructed.
-			throw std::runtime_error("Posting closure to an uninitialized window");
-		}
-
-		auto task = new std::packaged_task<void()>(std::move(func));
-		auto future = task->get_future();
-		if (PostMessage(m_handle, WM_CUSTOM_POST, (WPARAM)NULL, (LPARAM)task) == FALSE)
-		{
-			LOG(Error, "Failed to post closure on window thread (" << GetLastErrorStr() << ")");
-
-			// If the invoking side is waiting for result, this will raise std::future_error exception.
-			// Otherwise the error will be ignored.
-			delete task;
-		}
-
-		return std::move(future);
-	}
-
-	bool WinApiWindow::PumpEvents()
-	{
-		int processed = 0;
-
 		for(MSG msg; PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE); )
 		{
-			processed += 1;
-
 			if (msg.message == WM_QUIT)
 			{
-				m_proceed = false;
+				//m_proceed = false; // XXX:
 				break;
 			}
 
@@ -424,38 +386,34 @@ namespace BearLibTerminal
 			DispatchMessageW(&msg);
 		}
 
-		return processed > 0;
-	}
-
-	void WinApiWindow::ThreadFunction()
-	{
-		timeBeginPeriod(1);
-
-		while(m_proceed)
+		// Leave only the last TK_REDRAW event.
+		int redraws = 0;
+		for (auto i = m_events.rbegin(); i != m_events.rend(); i++)
 		{
-			if (!PumpEvents()) Sleep(1);
+			if (i->code == TK_REDRAW && ++redraws > 1)
+				m_events.erase(std::next(i).base()); // Witchcraft.
 		}
 
-		timeEndPeriod(1);
+		int count = m_events.size();
+		for (auto& event: m_events)
+			m_event_handler(std::move(event));
+		m_events.clear();
+		return count;
 	}
 
 	bool WinApiWindow::Construct()
 	{
-		std::lock_guard<std::mutex> guard(m_lock); // XXX: Is lock required here?
-
 		if ( !CreateWindowObject() || !CreateOpenGLContext() )
 		{
 			DestroyUnlocked();
 			return false;
 		}
 
-		m_proceed = true;
 		return true;
 	}
 
 	void WinApiWindow::Destroy()
 	{
-		std::lock_guard<std::mutex> guard(m_lock);
 		DestroyUnlocked();
 	}
 
@@ -605,10 +563,8 @@ namespace BearLibTerminal
 
 	void WinApiWindow::SetVSync(bool enabled)
 	{
-		Post([=]
-		{
-			if (m_wglSwapIntervalEXT) m_wglSwapIntervalEXT(enabled? 1: 0);
-		});
+		if (m_wglSwapIntervalEXT)
+			m_wglSwapIntervalEXT(enabled? 1: 0);
 	}
 
 	void WinApiWindow::DestroyWindowObject()
@@ -640,10 +596,7 @@ namespace BearLibTerminal
 
 	void WinApiWindow::Redraw()
 	{
-		if (Handle(TK_REDRAW) > 0)
-		{
-			SwapBuffers();
-		}
+		m_events.push_back(TK_REDRAW);
 	}
 
 	LRESULT CALLBACK WinApiWindow::SharedWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -655,6 +608,7 @@ namespace BearLibTerminal
 			p->WindowProc(uMsg, wParam, lParam);
 	}
 
+	/*
 	LRESULT WinApiWindow::HandleWmPaint(WPARAM wParam, LPARAM lParam)
 	{
 		if (!m_suppress_wm_paint_once)
@@ -666,7 +620,7 @@ namespace BearLibTerminal
 			catch (std::exception& e)
 			{
 				LOG(Fatal, L"Rendering routine has thrown an exception: " << e.what());
-				m_proceed = false;
+				//m_proceed = false; // XXX:
 			}
 		}
 		else
@@ -681,6 +635,7 @@ namespace BearLibTerminal
 
 		return FALSE;
 	}
+	//*/
 
 	static int MapNavigationScancodeToNumpad(uint8_t scancode)
 	{
@@ -874,12 +829,20 @@ namespace BearLibTerminal
 		if (uMsg == WM_CLOSE)
 		{
 			// Emulate pressing virtual VK_CLOSE button
-			Handle(Event(TK_CLOSE));
+			m_events.push_back(TK_CLOSE);
 			return FALSE;
 		}
 		else if (uMsg == WM_PAINT)
 		{
-			return HandleWmPaint(wParam, lParam);
+			// Schedule a redraw.
+			m_events.push_back(TK_REDRAW);
+
+			// Mark window area as updated.
+			RECT rect;
+			GetClientRect(m_handle, &rect);
+			ValidateRect(m_handle, &rect);
+
+			return FALSE;
 		}
 		else if (uMsg == WM_ERASEBKGND)
 		{
@@ -912,7 +875,8 @@ namespace BearLibTerminal
 
 				if (code > 0)
 				{
-					Handle(Event(code, {{code, 1}}));
+					//m_event_handler(Event{code, {{code, 1}}});
+					m_events.push_back(Event{code, {{code, 1}}});
 				}
 			}
 			else
@@ -933,7 +897,7 @@ namespace BearLibTerminal
 					Event event(code);
 					event[code] = 1; // Pressed
 					event[TK_WCHAR] = charcode;
-					Handle(event);
+					m_events.push_back(event);
 				}
 			}
 
@@ -961,14 +925,14 @@ namespace BearLibTerminal
 				if (codes.count(code))
 				{
 					// Set Alt state
-					Handle({TK_ALT, {{TK_ALT, 1}}});
+					m_events.push_back(Event{TK_ALT, {{TK_ALT, 1}}});
 
 					Event event(code|(pressed? 0: TK_KEY_RELEASED));
 					event[code] = pressed? 1: 0;
-					Handle(event);
+					m_events.push_back(event);
 
 					// Clear Alt state
-					Handle({TK_ALT|TK_KEY_RELEASED, {{TK_ALT, 0}}});
+					m_events.push_back(Event{TK_ALT|TK_KEY_RELEASED, {{TK_ALT, 0}}});
 
 					return FALSE;
 				}
@@ -989,7 +953,7 @@ namespace BearLibTerminal
 				{
 					Event event(code|(pressed? 0: TK_KEY_RELEASED));
 					event[code] = pressed? 1: 0;
-					Handle(event);
+					m_events.push_back(event);
 				}
 			}
 			else if (scancode == VK_CLEAR ||
@@ -1003,7 +967,7 @@ namespace BearLibTerminal
 				{
 					Event event(code|(pressed? 0: TK_KEY_RELEASED));
 					event[code] = pressed? 1: 0;
-					Handle(event);
+					m_events.push_back(event);
 				}
 			}
 			else if (!pressed)
@@ -1029,7 +993,7 @@ namespace BearLibTerminal
 				{
 					Event event(code|TK_KEY_RELEASED);
 					event[code] = 0;
-					Handle(event);
+					m_events.push_back(event);
 				}
 			}
 
@@ -1049,7 +1013,7 @@ namespace BearLibTerminal
 			Event event(TK_MOUSE_MOVE);
 			event[TK_MOUSE_PIXEL_X] = precise_position.x;
 			event[TK_MOUSE_PIXEL_Y] = precise_position.y;
-			Handle(event);
+			m_events.push_back(event);
 
 			return 0;
 		}
@@ -1058,7 +1022,7 @@ namespace BearLibTerminal
 			int delta = GET_WHEEL_DELTA_WPARAM(wParam) / WHEEL_DELTA;
 			Event event(TK_MOUSE_SCROLL);
 			event[TK_MOUSE_WHEEL] = delta > 0? -1: +1; // FIXME: multiple events in case of large delta
-			Handle(event);
+			m_events.push_back(event);
 
 			return 0;
 		}
@@ -1093,13 +1057,13 @@ namespace BearLibTerminal
 			Event event(code | (pressed? 0: TK_KEY_RELEASED));
 			event[code] = pressed? 1: 0;
 			event[TK_MOUSE_CLICKS] = pressed? m_consecutive_mouse_clicks: 0;
-			Handle(event);
+			m_events.push_back(event);
 		}
 		else if (uMsg == WM_ACTIVATE)
 		{
 			if (wParam == WA_ACTIVE || wParam == WA_CLICKACTIVE)
 			{
-				Handle(Event(TK_ACTIVATED));
+				m_events.push_back(TK_ACTIVATED);
 			}
 		}
 		else if (uMsg == WM_SIZE)
@@ -1116,17 +1080,29 @@ namespace BearLibTerminal
 				Event event(TK_RESIZED);
 				event[TK_WIDTH] = m_client_size.width;
 				event[TK_HEIGHT] = m_client_size.height;
-				Handle(event);
+				m_events.push_back(event);
 			}
 
 			m_suppress_wm_paint_once = true;
-			Post([=]
+
+			if (m_resizing)
 			{
-				Handle(TK_INVALIDATE);
-				Redraw();
-			});
+				// During resizing, Windows does not return control so it is necessary
+				// to send events directly to the Terminal.
+				m_event_handler(TK_INVALIDATE);
+				m_event_handler(TK_REDRAW);
+			}
+			else
+			{
+				m_events.push_back(TK_INVALIDATE);
+				m_events.push_back(TK_REDRAW);
+			}
 
 			return TRUE;
+		}
+		else if (uMsg == WM_ENTERSIZEMOVE && m_resizeable)
+		{
+			m_resizing = true;
 		}
 		else if (uMsg == WM_EXITSIZEMOVE && m_resizeable)
 		{
@@ -1156,13 +1132,12 @@ namespace BearLibTerminal
 			}
 
 			m_suppress_wm_paint_once = true;
-			Post([=]
-			{
-				Handle(TK_INVALIDATE);
-				Redraw();
-			});
 
-			Handle({TK_RESIZED, {{TK_WIDTH, m_client_size.width}, {TK_HEIGHT, m_client_size.height}}});
+			m_events.push_back(Event{TK_RESIZED, {{TK_WIDTH, m_client_size.width}, {TK_HEIGHT, m_client_size.height}}});
+			m_events.push_back(TK_INVALIDATE);
+			m_events.push_back(TK_REDRAW);
+
+			m_resizing = false;
 
 			return FALSE;
 		}
@@ -1205,7 +1180,7 @@ namespace BearLibTerminal
 				}
 			}
 
-			Handle(Event(TK_INVALIDATE));
+			m_events.push_back(TK_INVALIDATE);
 
 			return TRUE;
 		}
@@ -1229,13 +1204,6 @@ namespace BearLibTerminal
 				m_mouse_cursor_visible = true;
 				ShowCursor(true);
 			}
-		}
-		else if (uMsg == WM_CUSTOM_POST)
-		{
-			auto task = (std::packaged_task<void()>*)lParam;
-			(*task)();
-			delete task;
-			return 0;
 		}
 
 		return DefWindowProc(m_handle, uMsg, wParam, lParam);

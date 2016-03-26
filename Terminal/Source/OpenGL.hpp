@@ -34,6 +34,8 @@
 #define GL_BGRA 0x80E1
 #elif defined(__linux)
 #include <GL/gl.h>
+#elif defined(__APPLE__)
+#include <OpenGL/gl.h>
 #endif
 
 namespace BearLibTerminal

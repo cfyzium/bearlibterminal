@@ -19,8 +19,12 @@ namespace BearLibTerminal
 	template<typename T, typename char_t> bool try_parse(const std::basic_string<char_t>& s, T& out)
 	{
 		std::basic_stringstream<char_t> stream(s);
-		stream >> out;
-		return !(stream.fail() || stream.bad());
+		T temp;
+		stream >> temp;
+		if (stream.fail())
+			return false;
+		out = std::move(temp);
+		return true;
 	}
 
 	template<typename T, typename char_t> bool try_parse(const std::basic_string<char_t>& s)

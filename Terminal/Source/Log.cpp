@@ -9,13 +9,10 @@
 #include "Encoding.hpp"
 #include "Utility.hpp"
 #include "Platform.hpp"
-
+#include "Config.hpp"
 #include <fstream>
 #include <time.h>
 #include <chrono>
-
-#include <iostream>
-#include "Config.hpp"
 
 namespace BearLibTerminal
 {
@@ -53,52 +50,26 @@ namespace BearLibTerminal
 		return instance;
 	}
 
-	Log::Log():
-		m_initialized(false),
-		m_level(Level::Error),
-		m_mode(Mode::Truncate),
-		m_filename(),
-		m_truncated(false)
+	Log::Log()
 	{
 		EnsureStandardOutput();
-		Init();
+		Reset();
 	}
 
-	void Log::Init()
+	void Log::Reset()
 	{
-		std::wstring s;
-		if (!(s = GetEnvironmentVariable(L"BEARLIB_LOGFILE")).empty())
-			m_filename = s;
-
-		Level level;
-		if (try_parse(GetEnvironmentVariable(L"BEARLIB_LOGLEVEL"), level))
-			m_level = level;
-
-		Mode mode;
-		if (try_parse(GetEnvironmentVariable(L"BEARLIB_LOGMODE"), mode))
-			m_mode = mode;
-
-		m_initialized = true;
-	}
-
-	void Log::Dispose()
-	{
-		std::lock_guard<std::mutex> guard(m_lock);
-		m_filename = L"";
-		m_level = Level::Error;
-		m_mode = Mode::Truncate;
+		GetEnvironmentVariable(L"BEARLIB_LOGFILE", filename);
+		try_parse(GetEnvironmentVariable(L"BEARLIB_LOGLEVEL"), level);
+		try_parse(GetEnvironmentVariable(L"BEARLIB_LOGMODE"), mode);
 		m_truncated = false;
-		m_initialized = false;
 	}
 
 	void Log::Write(Level level, const std::wstring& what)
 	{
-		std::lock_guard<std::mutex> guard(m_lock);
-
 		std::wostringstream ss;
 		ss << FormatTime().c_str() << " [" << level << "] " << what << std::endl;
 
-		if (m_filename.empty())
+		if (filename.empty())
 		{
 			WriteStandardError(UTF8Encoding().Convert(ss.str()).c_str());
 		}
@@ -106,7 +77,7 @@ namespace BearLibTerminal
 		{
 			std::ofstream stream;
 			std::ios_base::openmode flags = std::ios_base::out;
-			if (m_mode == Mode::Truncate && !m_truncated)
+			if (mode == Mode::Truncate && !m_truncated)
 			{
 				flags |= std::ios_base::trunc;
 				m_truncated = true;
@@ -117,61 +88,40 @@ namespace BearLibTerminal
 			}
 	#if defined(_MSC_VER)
 			// MSVC has wchar_t open overload and does not work well with UTF-8
-			stream.open(m_filename.c_str(), flags);
+			stream.open(FixPathSeparators(filename).c_str(), flags);
 	#else
 			// GCC on the other hand opens UTF-8 paths properly but has no wchar_t overload
 			// (as well it shouldn't, there is no such overload in standard)
-			stream.open(UTF8Encoding().Convert(m_filename), flags);
+			stream.open(UTF8Encoding().Convert(FixPathSeparators(filename)), flags);
 	#endif
 			stream << UTF8Encoding().Convert(ss.str());
 		}
 	}
 
-	void Log::SetLevel(Level level)
+	std::wostream& operator<< (std::wostream& s, Log::Level value)
 	{
-		// Not atomic but close enough
-		m_level = level;
-	}
+		switch (value)
+		{
+		case Log::Level::Fatal:
+			s << L"fatal";
+			break;
+		case Log::Level::Error:
+			s << L"error";
+			break;
+		case Log::Level::Warning:
+			s << L"warning";
+			break;
+		case Log::Level::Info:
+			s << L"info";
+			break;
+		case Log::Level::Debug:
+			s << L"debug";
+			break;
+		case Log::Level::Trace:
+			s << L"trace";
+			break;
+		}
 
-	void Log::SetFile(const std::wstring& filename)
-	{
-		std::lock_guard<std::mutex> guard(m_lock);
-		m_filename = filename;
-#if defined(_WIN32)
-		// Windows version: change slashes to backslashes
-		for (auto& c: m_filename) if (c == L'/') c = L'\\';
-#endif
-		m_truncated = false;
-	}
-
-	void Log::SetMode(Mode mode)
-	{
-		std::lock_guard<std::mutex> guard(m_lock);
-		m_mode = mode;
-	}
-
-	std::wstring Log::GetFile() const
-	{
-		std::lock_guard<std::mutex> guard(m_lock);
-		return m_filename;
-	}
-
-	Log::Level Log::GetLevel() const
-	{
-		// Not atomic but close enough
-		return m_level;
-	}
-
-	Log::Mode Log::GetMode() const
-	{
-		std::lock_guard<std::mutex> guard(m_lock);
-		return m_mode;
-	}
-
-	std::wostream& operator<< (std::wostream& s, const Log::Level& value)
-	{
-		const wchar_t* map[] = {L"none", L"fatal", L"error", L"warning", L"info", L"debug", L"trace"};
-		s << map[(int)value];
 		return s;
 	}
 
@@ -192,18 +142,24 @@ namespace BearLibTerminal
 			value = Log::Level::Error;
 		else if (temp == L"fatal")
 			value = Log::Level::Fatal;
-		else if (temp == L"none")
-			value = Log::Level::None;
 		else
-			s.setstate(std::wistream::badbit);
+			s.setstate(std::ios_base::badbit);
 
 		return s;
 	}
 
-	std::wostream& operator<< (std::wostream& s, const Log::Mode& value)
+	std::wostream& operator<< (std::wostream& s, Log::Mode value)
 	{
-		const wchar_t* map[] = {L"truncate", L"append"};
-		s << map[(int)value];
+		switch (value)
+		{
+		case Log::Mode::Truncate:
+			s << L"truncate";
+			break;
+		case Log::Mode::Append:
+			s << L"append";
+			break;
+		}
+
 		return s;
 	}
 
@@ -217,7 +173,7 @@ namespace BearLibTerminal
 		else if (temp == L"truncate")
 			value = Log::Mode::Truncate;
 		else
-			s.setstate(std::wistream::badbit);
+			s.setstate(std::ios_base::badbit);
 
 		return s;
 	}

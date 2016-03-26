@@ -11,7 +11,6 @@
 #include "Size.hpp"
 #include "Log.hpp"
 #include <string>
-#include <atomic>
 #include <set>
 
 namespace BearLibTerminal
@@ -30,7 +29,7 @@ namespace BearLibTerminal
 		std::wstring window_icon;
 		bool window_resizeable;
 		Size window_minimum_size;
-		bool window_toggle_fullscreen;
+		bool window_fullscreen;
 
 		// Output
 		bool output_postformatting;

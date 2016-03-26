@@ -28,9 +28,6 @@
 #include "Encoding.hpp"
 #include "Utility.hpp"
 #include "Geometry.hpp"
-#include <X11/Xlib.h>
-#include <X11/Xmu/Xmu.h>
-#include <GL/glx.h>
 #include <unistd.h>
 #include <sys/time.h>
 #include <future>
@@ -48,60 +45,10 @@
 
 namespace BearLibTerminal
 {
-	struct X11Window::Private
+	void X11Window::InitKeymaps()
 	{
-		Private();
-		~Private();
-		void InitKeymaps();
-		int TranslateKeycode(KeyCode kc);
+		auto& keymaps = m_keymaps;
 
-		Display* display;
-		::Window window;
-		int screen;
-		XVisualInfo* visual;
-		GLXContext glx;
-		XIM im;
-		XIC ic;
-		Atom close_message;
-		Atom invoke_message;
-		Atom wm_state;
-		Atom wm_name;
-		Atom wm_maximized_horz;
-		Atom wm_maximized_vert;
-		XSizeHints* size_hints;
-		int keymaps[2][256];
-
-		typedef void (*PFN_GLXSWAPINTERVALEXT)(Display *dpy, GLXDrawable drawable, int interval);
-		typedef int (*PFN_GLXSWAPINTERVALMESA)(int interval);
-		PFN_GLXSWAPINTERVALEXT glXSwapIntervalEXT;
-		PFN_GLXSWAPINTERVALMESA glXSwapIntervalMESA;
-	};
-
-	X11Window::Private::Private():
-		display(NULL),
-		window(0),
-		screen(0),
-		visual(NULL),
-		glx(NULL),
-		im(NULL),
-		ic(NULL),
-		close_message(),
-		invoke_message(),
-		glXSwapIntervalEXT(nullptr),
-		glXSwapIntervalMESA(nullptr),
-		size_hints(nullptr)
-	{
-		size_hints = XAllocSizeHints();
-		InitKeymaps();
-	}
-
-	X11Window::Private::~Private()
-	{
-		if (size_hints) XFree(size_hints);
-	}
-
-	void X11Window::Private::InitKeymaps()
-	{
 		memset(keymaps, 0, sizeof(keymaps));
 
 		// Generic keyboard keys
@@ -220,34 +167,6 @@ namespace BearLibTerminal
 		keymaps[1][XK_Alt_L&0xFF] =        TK_ALT;         // e9
 	}
 
-	// XXX: Salvaged from somewhere, format it
-	// ------------------------------------------------------------------------
-
-	// attributes for a single buffered visual in RGBA format with at least
-	// 4 bits per color and a 16 bit depth buffer
-	static int glx_single_buffered_attrs[] =
-	{
-		GLX_RGBA,
-		GLX_RED_SIZE, 4,
-		GLX_GREEN_SIZE, 4,
-		GLX_BLUE_SIZE, 4,
-		GLX_DEPTH_SIZE, 16,
-		None
-	};
-
-	// attributes for a double buffered visual in RGBA format with at least
-	// 4 bits per color and a 16 bit depth buffer
-	static int glx_double_buffered_attrs[] =
-	{
-		GLX_RGBA,
-		GLX_DOUBLEBUFFER,
-		GLX_RED_SIZE, 4,
-		GLX_GREEN_SIZE, 4,
-		GLX_BLUE_SIZE, 4,
-		GLX_DEPTH_SIZE, 16,
-		None
-	};
-
 	static XIMStyle ChooseBetterStyle(XIMStyle style1, XIMStyle style2)
 	{
 		XIMStyle s,t;
@@ -287,25 +206,198 @@ namespace BearLibTerminal
 
 	// ------------------------------------------------------------------------
 
-	X11Window::X11Window():
-		m_private(new Private()),
+	X11Window::X11Window(EventHandler handler):
+		Window(handler),
 		m_last_mouse_click(0),
 		m_consecutive_mouse_clicks(1),
 		m_resizeable(false),
-		m_client_resize(false)
-	{ }
+		m_client_resize(false),
+		m_display(nullptr),
+		m_screen(0),
+		m_window(0),
+		m_colormap(0),
+		m_visual(nullptr),
+		m_glx(nullptr),
+		m_im(nullptr),
+		m_ic(nullptr),
+		//m_wm_close_message(),
+		m_glXSwapIntervalEXT(nullptr),
+		m_glXSwapIntervalMESA(nullptr),
+		m_size_hints(XAllocSizeHints()),
+		m_expose_timer(0)
+	{
+		try
+		{
+			Create();
+		}
+		catch (...)
+		{
+			Dispose();
+			throw;
+		}
+	}
+
+	void X11Window::Create()
+	{
+		XInitThreads();
+		setlocale(LC_ALL, "");
+
+		InitKeymaps();
+
+		if ((m_display = XOpenDisplay(nullptr)) == nullptr)
+			throw std::runtime_error("[X11] failed to open a display");
+		m_screen = DefaultScreen(m_display);
+
+		int glx_attrs[] =
+		{
+			GLX_RGBA,
+			GLX_DOUBLEBUFFER,
+			GLX_RED_SIZE, 4,
+			GLX_GREEN_SIZE, 4,
+			GLX_BLUE_SIZE, 4,
+			GLX_DEPTH_SIZE, 16,
+			None
+		};
+		if ((m_visual = glXChooseVisual(m_display, m_screen, glx_attrs)) == nullptr)
+			throw std::runtime_error("[X11] failed to choose a double-buffered visual");
+
+		// Log available OpenGL version
+		int major, minor;
+		glXQueryVersion(m_display, &major, &minor);
+		LOG(Info, "Available OpenGL version: " << major << "." << minor);
+
+		m_colormap = XCreateColormap
+			(
+				m_display,
+				RootWindow(m_display, m_visual->screen),
+				m_visual->visual,
+				AllocNone
+			);
+
+		XSetWindowAttributes attrs;
+		attrs.colormap = m_colormap;
+		attrs.border_pixel = 0;
+		attrs.event_mask = ExposureMask | KeyPressMask | ButtonPressMask | StructureNotifyMask; // XXX: overriden later
+
+		m_client_size = Size(640, 480);
+		m_window = XCreateWindow
+		(
+			m_display,
+			RootWindow(m_display, m_screen),
+			0, 0,
+			m_client_size.width, m_client_size.height,
+			0,
+			m_visual->depth,
+			InputOutput,
+			m_visual->visual,
+			CWBorderPixel | CWColormap | CWEventMask,
+			&attrs
+		);
+		if (m_window == 0)
+			throw std::runtime_error("[X11] failed to create an XWindow");
+
+		if ((m_glx = glXCreateContext(m_display, m_visual, 0, GL_TRUE)) == nullptr)
+			throw std::runtime_error("[X11] failed to create GLX context");
+
+		AcquireRC();
+		ProbeOpenGL();
+
+		// GLX-specific
+		std::string extensions = glXQueryExtensionsString(m_display, m_screen);
+		LOG(Trace, "OpenGL: " << extensions.c_str());
+		if (extensions.find("GLX_EXT_swap_control") != std::string::npos)
+		{
+			LOG(Trace, "OpenGL context has GLX_EXT_swap_control extension");
+			m_glXSwapIntervalEXT = (PFN_GLXSWAPINTERVALEXT)glXGetProcAddressARB((GLubyte*)"glXSwapIntervalEXT");
+		}
+		else if (extensions.find("GLX_MESA_swap_control") != std::string::npos)
+		{
+			LOG(Trace, "OpenGL context has GLX_MESA_swap_control extension");
+			m_glXSwapIntervalMESA = (PFN_GLXSWAPINTERVALMESA)glXGetProcAddressARB((GLubyte*)"glXSwapIntervalMESA");
+		}
+		SetVSync(true);
+
+		// Continue with input
+		if ((m_im = XOpenIM(m_display, nullptr, nullptr, nullptr)) == nullptr)
+			throw std::runtime_error("[X11] failed to open XIM");
+
+		// Set flags for the styles an application can support
+		XIMStyle app_supported_styles =
+			XIMPreeditNone | XIMPreeditNothing | XIMPreeditArea |
+			XIMStatusNone | XIMStatusNothing | XIMStatusArea;
+
+		// Figure out which styles the IM can support
+		XIMStyles* im_supported_styles = nullptr;
+		XGetIMValues(m_im, XNQueryInputStyle, &im_supported_styles, NULL);
+
+		// Look at each of the IM supported styles, and choise the "best" one that we can support
+		XIMStyle best_style = 0;
+		for (int i=0; i < im_supported_styles->count_styles; i++)
+		{
+			XIMStyle style = im_supported_styles->supported_styles[i];
+			if ((style & app_supported_styles) == style) // if we can handle it
+				best_style = ChooseBetterStyle(style, best_style);
+		}
+		XFree(im_supported_styles);
+
+		if (best_style == 0)
+			throw std::runtime_error("[X11] can't find supported IM interaction style");
+
+		// Input context
+		if ((m_ic = XCreateIC(m_im, XNInputStyle, best_style, XNClientWindow, m_window, nullptr)) == nullptr)
+			throw std::runtime_error("[X11] Failed to create XIC input context");
+
+		long im_event_mask = 0;
+		XGetICValues(m_ic, XNFilterEvents, &im_event_mask, NULL);
+		XSetICFocus(m_ic);
+
+		long event_mask =
+			ExposureMask |
+			KeyPressMask |
+			KeyReleaseMask |
+			StructureNotifyMask |
+			ButtonPressMask |
+			ButtonReleaseMask |
+			PointerMotionMask |
+			im_event_mask;
+
+		XSelectInput(m_display, m_window, event_mask);
+
+		m_wm_close_message = XInternAtom(m_display, "WM_DELETE_WINDOW", False);
+		XSetWMProtocols(m_display, m_window, &m_wm_close_message, 1);
+		m_wm_state = XInternAtom(m_display, "_NET_WM_STATE", False);
+		m_wm_name = XInternAtom(m_display, "_NET_WM_NAME", False);
+		m_wm_maximized_horz = XInternAtom(m_display, "_NET_WM_STATE_MAXIMIZED_HORZ", False);
+		m_wm_maximized_vert = XInternAtom(m_display, "_NET_WM_STATE_MAXIMIZED_VERT", False);
+	}
 
 	X11Window::~X11Window()
 	{
-		LOG(Trace, "~X11Window");
-		Stop();
-		LOG(Trace, "Done with window object (X11)");
+		Dispose();
 	}
 
-	bool X11Window::ValidateIcon(const std::wstring& filename)
+	void X11Window::Dispose()
 	{
-		// TODO: Learn about icons in Linux
-		return true;
+		// FIXME: release XIC
+
+		// FIXME: release XIM
+
+		ReleaseRC();
+
+		if (m_glx != nullptr)
+			glXDestroyContext(m_display, m_glx);
+
+		if (m_window != 0)
+			XDestroyWindow(m_display, m_window);
+
+		if (m_colormap != 0)
+			XFreeColormap(m_display, m_colormap);
+
+		if (m_visual != nullptr)
+			XFree(m_visual);
+
+		if (m_display != nullptr)
+			XCloseDisplay(m_display);
 	}
 
 	void X11Window::SetIcon(const std::wstring& filename)
@@ -315,15 +407,16 @@ namespace BearLibTerminal
 
 	void X11Window::SetTitle(const std::wstring& title)
 	{
-		std::lock_guard<std::mutex> guard(m_lock);
-		if ( m_private->window == 0 ) return;
+		if (m_window == 0)
+			return;
+
 		std::string u8 = UTF8Encoding().Convert(title);
 		XChangeProperty
 		(
-			m_private->display,
-			m_private->window,
-			m_private->wm_name,
-			XInternAtom(m_private->display, "UTF8_STRING",  false),
+			m_display,
+			m_window,
+			m_wm_name,
+			XInternAtom(m_display, "UTF8_STRING",  false), // XXX: cache?
 			8,
 			PropModeReplace,
 			(const unsigned char*)u8.c_str(),
@@ -335,7 +428,7 @@ namespace BearLibTerminal
 	{
 		if (size.Area() == 0) size = m_client_size;
 
-		auto hints = m_private->size_hints;
+		auto hints = m_size_hints;
 
 		if (m_resizeable)
 		{
@@ -354,26 +447,24 @@ namespace BearLibTerminal
 			hints->min_height = hints->max_height = size.height;
 		}
 
-		XSetWMNormalHints(m_private->display, m_private->window, hints);
+		XSetWMNormalHints(m_display, m_window, hints);
 	}
 
 	void X11Window::SetClientSize(const Size& size)
 	{
-		std::lock_guard<std::mutex> guard(m_lock);
-		if (m_private->window == 0) return;
-		Post([=]
+		if (m_window == 0)
+			return;
+
+		if (m_fullscreen)
 		{
-			if (m_fullscreen)
-			{
-				m_client_size = size;
-			}
-			else
-			{
-				Demaximize();
-				UpdateSizeHints(size);
-				XResizeWindow(m_private->display, m_private->window, size.width, size.height);
-			}
-		});
+			m_client_size = size;
+		}
+		else
+		{
+			Demaximize();
+			UpdateSizeHints(size);
+			XResizeWindow(m_display, m_window, size.width, size.height);
+		}
 	}
 
 	void X11Window::SetResizeable(bool resizeable)
@@ -392,102 +483,89 @@ namespace BearLibTerminal
 		XEvent xev;
 		memset(&xev, 0, sizeof(xev));
 		xev.type = ClientMessage;
-		xev.xclient.window = m_private->window;
-		xev.xclient.message_type = m_private->wm_state;
+		xev.xclient.window = m_window;
+		xev.xclient.message_type = m_wm_state;
 		xev.xclient.format = 32;
 		xev.xclient.data.l[0] = 0; // FIXME: _NET_WM_STATE_REMOVE;
-		xev.xclient.data.l[1] = m_private->wm_maximized_horz;
-		xev.xclient.data.l[2] = m_private->wm_maximized_vert;
-		XSendEvent(m_private->display, DefaultRootWindow(m_private->display), False, SubstructureNotifyMask, &xev);
+		xev.xclient.data.l[1] = m_wm_maximized_horz;
+		xev.xclient.data.l[2] = m_wm_maximized_vert;
+		XSendEvent(m_display, DefaultRootWindow(m_display), False, SubstructureNotifyMask, &xev);
 	}
 
-	void X11Window::ToggleFullscreen()
+	void X11Window::SetFullscreen(bool fullscreen)
 	{
-		Post([=]
+		if (fullscreen == m_fullscreen)
+			return;
+
+		if (!m_resizeable)
 		{
-			if (!m_resizeable)
+			XSizeHints *sizehints = XAllocSizeHints();
+			long flags = 0;
+			XGetWMNormalHints(m_display, m_window, sizehints, &flags);
+			if (fullscreen)
 			{
-				XSizeHints *sizehints = XAllocSizeHints();
-				long flags = 0;
-				XGetWMNormalHints(m_private->display, m_private->window, sizehints, &flags);
-				if (m_fullscreen)
-				{
-					// Leaving fullscreen mode
-					sizehints->flags |= PMinSize | PMaxSize;
-					sizehints->min_width = sizehints->max_width = m_client_size.width;
-					sizehints->min_height = sizehints->max_height = m_client_size.height;
-				}
-				else
-				{
-					// Entering fullscreen mode
-					sizehints->flags &= ~(PMinSize | PMaxSize);
-				}
-				XSetWMNormalHints(m_private->display, m_private->window, sizehints);
-				XFree(sizehints);
+				// Entering fullscreen mode
+				sizehints->flags &= ~(PMinSize | PMaxSize);
+			}
+			else
+			{
+				// Leaving fullscreen mode
+				sizehints->flags |= PMinSize | PMaxSize;
+				sizehints->min_width = sizehints->max_width = m_client_size.width;
+				sizehints->min_height = sizehints->max_height = m_client_size.height;
 			}
 
-			XEvent e;
-			memset(&e, 0, sizeof(e));
-			e.xclient.type = ClientMessage;
-			e.xclient.window = m_private->window;
-			e.xclient.message_type = m_private->wm_state;
-			e.xclient.format = 32;
-			e.xclient.data.l[0] = m_fullscreen? 0: 1;
-			e.xclient.data.l[1] = XInternAtom(m_private->display, "_NET_WM_STATE_FULLSCREEN", False);
-			XSendEvent(m_private->display, DefaultRootWindow(m_private->display), False, SubstructureRedirectMask | SubstructureNotifyMask, &e);
+			XSetWMNormalHints(m_display, m_window, sizehints);
+			XFree(sizehints);
+		}
 
-			m_fullscreen = !m_fullscreen;
+		XEvent e;
+		memset(&e, 0, sizeof(e));
+		e.xclient.type = ClientMessage;
+		e.xclient.window = m_window;
+		e.xclient.message_type = m_wm_state;
+		e.xclient.format = 32;
+		e.xclient.data.l[0] = fullscreen? 1: 0;
+		e.xclient.data.l[1] = XInternAtom(m_display, "_NET_WM_STATE_FULLSCREEN", False);
+		XSendEvent(m_display, DefaultRootWindow(m_display), False, SubstructureRedirectMask | SubstructureNotifyMask, &e);
 
-			Handle({TK_STATE_UPDATE, {{TK_FULLSCREEN, (int)m_fullscreen}}});
-			Handle(TK_INVALIDATE);
-			HandleRepaint();
-		});
+		m_event_handler(TK_INVALIDATE);
+
+		m_fullscreen = fullscreen;
 	}
 
 	void X11Window::SetCursorVisibility(bool visible)
 	{
-		Post([=]
+		if (visible)
 		{
-			if (visible)
-			{
-				XUndefineCursor(m_private->display, m_private->window);
-			}
-			else
-			{
-				Cursor cursor;
-				Pixmap dummy;
-				XColor black;
-				static char data[] = {0, 0, 0, 0, 0, 0, 0, 0};
-				black.red = black.green = black.blue = 0;
+			XUndefineCursor(m_display, m_window);
+		}
+		else
+		{
+			Cursor cursor;
+			Pixmap dummy;
+			XColor black;
+			static char data[] = {0, 0, 0, 0, 0, 0, 0, 0};
+			black.red = black.green = black.blue = 0;
 
-				dummy = XCreateBitmapFromData(m_private->display, m_private->window, data, 8, 8);
-				cursor = XCreatePixmapCursor(m_private->display, dummy, dummy, &black, &black, 0, 0);
-				XDefineCursor(m_private->display, m_private->window, cursor);
-				XFreeCursor(m_private->display, cursor);
-				XFreePixmap(m_private->display, dummy);
-			}
-		});
-	}
-
-	void X11Window::Delay(int period)
-	{
-		timespec t;
-		int milliseconds = period % 1000;
-		t.tv_sec = (period - milliseconds) / 1000;
-		t.tv_nsec = (long)milliseconds * 1000000;
-		nanosleep(&t, nullptr);
+			dummy = XCreateBitmapFromData(m_display, m_window, data, 8, 8);
+			cursor = XCreatePixmapCursor(m_display, dummy, dummy, &black, &black, 0, 0);
+			XDefineCursor(m_display, m_window, cursor);
+			XFreeCursor(m_display, cursor);
+			XFreePixmap(m_display, dummy);
+		}
 	}
 
 	void X11Window::Show()
 	{
-		std::lock_guard<std::mutex> guard(m_lock);
-		if ( m_private->window != 0 ) XMapWindow(m_private->display, m_private->window);
+		if (m_window != 0) // XXX: unnecessary check?
+			XMapWindow(m_display, m_window);
 	}
 
 	void X11Window::Hide()
 	{
-		std::lock_guard<std::mutex> guard(m_lock);
-		if ( m_private->window != 0 ) XUnmapWindow(m_private->display, m_private->window);
+		if (m_window != 0)
+			XUnmapWindow(m_display, m_window);
 	}
 
 	Size X11Window::GetActualSize()
@@ -498,8 +576,8 @@ namespace BearLibTerminal
 
 		XGetGeometry
 		(
-			m_private->display,
-			m_private->window,
+			m_display,
+			m_window,
 			&root,
 			&x, &y,
 			&width, &height,
@@ -510,31 +588,16 @@ namespace BearLibTerminal
 		return Size(width, height);
 	}
 
-	void X11Window::HandleRepaint()
+	int X11Window::TranslateKeycode(KeyCode kc)
 	{
-		int rc = 0;
-
-		try
+		if (kc >= 0 && kc <= 0xFF && m_keymaps[0][kc])
 		{
-			if (Handle(TK_REDRAW) > 0) SwapBuffers();
-		}
-		catch (std::exception& e)
-		{
-			LOG(Fatal, L"Rendering routine has thrown an exception: " << e.what());
-			m_proceed = false;
-		}
-	}
-
-	int X11Window::Private::TranslateKeycode(KeyCode kc)
-	{
-		if (kc >= 0 && kc <= 0xFF && keymaps[0][kc])
-		{
-			return keymaps[0][kc];
+			return m_keymaps[0][kc];
 		}
 
 		// Try to map keycode to some keyboard layout
 		int count = 0;
-		KeySym sym, *mapped = XGetKeyboardMapping(display, kc, 1, &count);
+		KeySym sym, *mapped = XGetKeyboardMapping(m_display, kc, 1, &count);
 		if (count > 0 && mapped != nullptr && mapped[0] != NoSymbol)
 		{
 			sym = mapped[0];
@@ -550,7 +613,7 @@ namespace BearLibTerminal
 
 		if (block == 0xFF)
 		{
-			return keymaps[1][sym & 0xFF];
+			return m_keymaps[1][sym & 0xFF];
 		}
 		else if (block == 0 && sym == 32)
 		{
@@ -562,52 +625,30 @@ namespace BearLibTerminal
 		}
 	}
 
-	std::future<void> X11Window::Post(std::function<void()> func)
+	int X11Window::PumpEvents()
 	{
-		auto task = new std::packaged_task<void()>(std::move(func));
-		auto future = task->get_future();
-
-		XClientMessageEvent event;
-		memset(&event, 0, sizeof(XClientMessageEvent));
-		event.type = ClientMessage;
-		event.window = m_private->window;
-		event.format = 32;
-		event.data.l[0] = (long)m_private->invoke_message;
-
-		// Bitness-agnostic address transfer. Note that while data.l is long and
-		// long is 8 bytes on Linux, X server does not keep upper 32 bits of those.
-		uint64_t p = (uint64_t)task;
-		event.data.l[1] = p & 0xFFFFFFFF; // low 32 bit
-		event.data.l[2] = (p >> 32) & 0xFFFFFFFF; // high 32 bit
-
-		XSendEvent(m_private->display, m_private->window, 0, 0, (XEvent*)&event);
-		XFlush(m_private->display);
-
-		return std::move(future);
-	}
-
-	bool X11Window::PumpEvents()
-	{
-		int events_processed = 0;
 		XEvent e;
+		int processed = 0;
 
-		while (XPending(m_private->display))
+		while (XPending(m_display))
 		{
-			XNextEvent(m_private->display, &e);
-			events_processed += 1;
+			processed += 1;
+
+			XNextEvent(m_display, &e);
 
 			if (e.type == Expose && e.xexpose.count == 0)
 			{
-				HandleRepaint();
+				if (!m_expose_timer)
+					m_expose_timer = gettime();
 			}
 			else if (e.type == XlibKeyPress || e.type == XlibKeyRelease)
 			{
 				bool pressed = e.type == XlibKeyPress;
 
-				if (!pressed && XPending(m_private->display))
+				if (!pressed && XPending(m_display))
 				{
 					XEvent next;
-					XPeekEvent(m_private->display, &next);
+					XPeekEvent(m_display, &next);
 
 					if (next.type == XlibKeyPress && next.xkey.keycode == e.xkey.keycode && next.xkey.time == e.xkey.time)
 					{
@@ -616,7 +657,7 @@ namespace BearLibTerminal
 					}
 				}
 
-				int code = m_private->TranslateKeycode(e.xkey.keycode);
+				int code = TranslateKeycode(e.xkey.keycode);
 				if (code == 0)
 				{
 					continue;
@@ -625,7 +666,7 @@ namespace BearLibTerminal
 				wchar_t buffer[255] = {0};
 				KeySym key;
 				Status status;
-				int rc = XwcLookupString(m_private->ic, &e.xkey, buffer, 255, &key, &status);
+				int rc = XwcLookupString(m_ic, &e.xkey, buffer, 255, &key, &status);
 
 				if (rc <= 0)
 				{
@@ -647,7 +688,7 @@ namespace BearLibTerminal
 					Event event(code|(pressed? 0: TK_KEY_RELEASED));
 					event[code] = pressed? 1: 0;
 					event[TK_WCHAR] = (int)buffer[0];
-					Handle(std::move(event));
+					m_event_handler(std::move(event));
 				}
 				catch (std::exception& e)
 				{
@@ -657,11 +698,14 @@ namespace BearLibTerminal
 			}
 			else if (e.type == ConfigureNotify)
 			{
-				// OnResize
+				// Ignore 'synthetic' events, they interfere with resizeable fullscreen operatrion.
+				if (e.xconfigure.send_event)
+					continue;
+
 				Size new_size(e.xconfigure.width, e.xconfigure.height);
 				if (new_size.width != m_client_size.width || new_size.height != m_client_size.height)
 				{
-					Handle(TK_INVALIDATE);
+					m_event_handler(TK_INVALIDATE);
 
 					if (!m_fullscreen)
 					{
@@ -670,10 +714,11 @@ namespace BearLibTerminal
 						Event event(TK_RESIZED);
 						event[TK_WIDTH] = new_size.width;
 						event[TK_HEIGHT] = new_size.height;
-						Handle(event);
+						m_event_handler(event);
 					}
 
-					HandleRepaint();
+					//HandleRepaint();
+					m_event_handler(TK_INVALIDATE); // XXX: EXPOSE
 				}
 			}
 			else if (e.type == MotionNotify)
@@ -682,7 +727,7 @@ namespace BearLibTerminal
 				Event event(TK_MOUSE_MOVE);
 				event[TK_MOUSE_PIXEL_X] = e.xmotion.x;
 				event[TK_MOUSE_PIXEL_Y] = e.xmotion.y;
-				Handle(std::move(event));
+				m_event_handler(std::move(event));
 			}
 			else if (e.type == ButtonPress || e.type == ButtonRelease)
 			{
@@ -727,15 +772,15 @@ namespace BearLibTerminal
 					Event event(code | (pressed? 0: TK_KEY_RELEASED));
 					event[code] = pressed? 1: 0;
 					event[TK_MOUSE_CLICKS] = pressed? m_consecutive_mouse_clicks: 0;
-					Handle(event);
+					m_event_handler(event);
 				}
 				else if (e.xbutton.button == 4 && e.type == ButtonPress)
 				{
-					Handle(Event(TK_MOUSE_SCROLL, {{TK_MOUSE_WHEEL, -1}}));
+					m_event_handler(Event(TK_MOUSE_SCROLL, {{TK_MOUSE_WHEEL, -1}}));
 				}
 				else if (e.xbutton.button == 5 && e.type == ButtonPress)
 				{
-					Handle(Event(TK_MOUSE_SCROLL, {{TK_MOUSE_WHEEL, +1}}));
+					m_event_handler(Event(TK_MOUSE_SCROLL, {{TK_MOUSE_WHEEL, +1}}));
 				}
 				else
 				{
@@ -743,266 +788,47 @@ namespace BearLibTerminal
 					continue;
 				}
 			}
-			else if (e.type == ClientMessage && e.xclient.data.l[0] == (long)m_private->invoke_message)
+			else if (e.type == ClientMessage && e.xclient.data.l[0] == (long)m_wm_close_message)
 			{
-				uint64_t low = e.xclient.data.l[1] & 0xFFFFFFFF;
-				uint64_t high = e.xclient.data.l[2] & 0xFFFFFFFF;
-				uint64_t p = (high << 32) | low;
-				auto task = (std::packaged_task<void()>*)p;
-				(*task)();
-				delete task;
-			}
-			else if (e.type == ClientMessage && e.xclient.data.l[0] == (long)m_private->close_message)
-			{
-				Handle(Event(TK_CLOSE));
+				m_event_handler(TK_CLOSE);
 			}
 		}
 
-		return events_processed > 0;
+		if (m_expose_timer > 0 && (gettime() - m_expose_timer) > (1000/30))
+		{
+			m_event_handler(TK_REDRAW);
+			m_expose_timer = 0;
+		}
+
+		return processed;
 	}
 
-	void X11Window::ThreadFunction()
+	void X11Window::AcquireRC()
 	{
-		LOG(Trace, "Entering X11-specific window thread function");
-
-		while (m_proceed)
-		{
-			if (!PumpEvents()) usleep(500);
-		}
-
-		LOG(Trace, "Leaving X11-specific window thread function");
+		glXMakeCurrent(m_display, m_window, m_glx);
 	}
 
-	bool X11Window::Construct()
+	void X11Window::ReleaseRC()
 	{
-		std::lock_guard<std::mutex> guard(m_lock);
-
-		if (!CreateWindowObject())
-		{
-			DestroyUnlocked();
-			return false;
-		}
-
-		m_proceed = true;
-		return true;
-	}
-
-	void X11Window::DestroyUnlocked()
-	{
-		DestroyWindowObject();
-	}
-
-	void X11Window::Destroy()
-	{
-		std::lock_guard<std::mutex> guard(m_lock);
-		DestroyUnlocked();
-	}
-
-	bool X11Window::CreateWindowObject()
-	{
-		XInitThreads();
-		setlocale(LC_ALL, "");
-
-		m_private->display = XOpenDisplay(NULL);
-		if ( m_private->display == NULL )
-		{
-			// TODO: LOG
-			return false;
-		}
-
-		m_private->screen = DefaultScreen(m_private->display);
-
-		m_private->visual = glXChooseVisual(m_private->display, m_private->screen, glx_double_buffered_attrs);
-
-		if ( m_private->visual == NULL )
-		{
-			// TODO: LOG
-			// Try fall back to single buffered (WTF?)
-			m_private->visual = glXChooseVisual(m_private->display, m_private->screen, glx_single_buffered_attrs);
-		}
-
-		if ( m_private->visual == NULL )
-		{
-			// TODO: LOG
-			return false;
-		}
-
-		// Log available OpenGL version
-		int major, minor;
-		glXQueryVersion(m_private->display, &major, &minor);
-		LOG(Info, "Available OpenGL version: " << major << "." << minor);
-
-		Colormap colormap = XCreateColormap
-		(
-			m_private->display,
-			RootWindow(m_private->display, m_private->visual->screen),
-			m_private->visual->visual,
-			AllocNone
-		);
-
-		XSetWindowAttributes attrs;
-		attrs.colormap = colormap;
-		attrs.border_pixel = 0;
-		attrs.event_mask = ExposureMask | KeyPressMask | ButtonPressMask | StructureNotifyMask; // XXX: overriden later
-
-		m_client_size = Size(640, 480);
-		m_private->window = XCreateWindow
-		(
-			m_private->display,
-			RootWindow(m_private->display, m_private->screen),
-			0, 0,
-			m_client_size.width, m_client_size.height,
-			0,
-			m_private->visual->depth,
-			InputOutput,
-			m_private->visual->visual,
-			CWBorderPixel | CWColormap | CWEventMask,
-			&attrs
-		);
-
-		// Continue with GL
-		m_private->glx = glXCreateContext(m_private->display, m_private->visual, 0, GL_TRUE);
-		AcquireRC();
-		ProbeOpenGL();
-
-		// GLX-specific
-		std::string extensions = glXQueryExtensionsString(m_private->display, m_private->screen);
-		LOG(Trace, "OpenGL: " << extensions.c_str());
-		if (extensions.find("GLX_EXT_swap_control") != std::string::npos)
-		{
-			LOG(Trace, "OpenGL context has GLX_EXT_swap_control extension");
-			m_private->glXSwapIntervalEXT = (Private::PFN_GLXSWAPINTERVALEXT)glXGetProcAddressARB((GLubyte*)"glXSwapIntervalEXT");
-		}
-		else if (extensions.find("GLX_MESA_swap_control") != std::string::npos)
-		{
-			LOG(Trace, "OpenGL context has GLX_MESA_swap_control extension");
-			m_private->glXSwapIntervalMESA = (Private::PFN_GLXSWAPINTERVALMESA)glXGetProcAddressARB((GLubyte*)"glXSwapIntervalMESA");
-		}
-		SetVSync(true);
-
-		// Continue with input
-		if ( (m_private->im = XOpenIM(m_private->display, NULL, NULL, NULL)) == NULL )
-		{
-			LOG(Fatal, "Failed to open IM");
-			return false;
-		}
-
-		XIMStyles *im_supported_styles;
-		XIMStyle app_supported_styles;
-		XIMStyle style;
-		XIMStyle best_style;
-
-		// Set flags for the styles an application can support
-		app_supported_styles =
-			XIMPreeditNone | XIMPreeditNothing | XIMPreeditArea |
-			XIMStatusNone | XIMStatusNothing | XIMStatusArea;
-
-		// Figure out which styles the IM can support
-		XGetIMValues(m_private->im, XNQueryInputStyle, &im_supported_styles, NULL);
-
-		// Look at each of the IM supported styles, and choise the "best" one that we can support
-		best_style = 0;
-		for( int i=0; i < im_supported_styles->count_styles; i++ )
-		{
-			style = im_supported_styles->supported_styles[i];
-			if ( (style & app_supported_styles) == style ) // if we can handle it
-			{
-				best_style = ChooseBetterStyle(style, best_style);
-			}
-		}
-		if (best_style == 0)
-		{
-			LOG(Fatal, "Can't find supported IM interaction style");
-			return false;
-		}
-
-		XFree(im_supported_styles);
-
-		// Input context
-		m_private->ic = XCreateIC(m_private->im, XNInputStyle, best_style, XNClientWindow, m_private->window, NULL);
-		if ( m_private->ic == NULL )
-		{
-			LOG(Fatal, "Failed to create input context");
-			return false;
-		}
-
-		long im_event_mask;
-		XGetICValues(m_private->ic, XNFilterEvents, &im_event_mask, NULL);
-		XSetICFocus(m_private->ic);
-
-		long event_mask =
-			ExposureMask |
-			KeyPressMask |
-			KeyReleaseMask |
-			StructureNotifyMask |
-			ButtonPressMask |
-			ButtonReleaseMask |
-			PointerMotionMask |
-			im_event_mask;
-
-		XSelectInput(m_private->display, m_private->window, event_mask);
-
-		m_private->close_message = XInternAtom(m_private->display, "WM_DELETE_WINDOW", False);
-		XSetWMProtocols(m_private->display, m_private->window, &m_private->close_message, 1);
-
-		m_private->invoke_message = XInternAtom(m_private->display, "WM_CUSTOM_INVOKE", False);
-
-		m_private->wm_state = XInternAtom(m_private->display, "_NET_WM_STATE", False);
-		m_private->wm_name = XInternAtom(m_private->display, "_NET_WM_NAME", False);
-		m_private->wm_maximized_horz = XInternAtom(m_private->display, "_NET_WM_STATE_MAXIMIZED_HORZ", False);
-		m_private->wm_maximized_vert = XInternAtom(m_private->display, "_NET_WM_STATE_MAXIMIZED_VERT", False);
-
-		return true;
-	}
-
-	void X11Window::DestroyWindowObject()
-	{
-		// TODO: Release IC
-
-		// TODO: Release IM
-
-		//glXMakeCurrent(m_private->display, None, NULL);
-		ReleaseRC();
-		glXDestroyContext(m_private->display, m_private->glx);
-		XDestroyWindow(m_private->display, m_private->window);
-
-		if ( m_private->display != NULL )
-		{
-			XCloseDisplay(m_private->display);
-			m_private->display = NULL;
-		}
-	}
-
-	bool X11Window::AcquireRC()
-	{
-		return glXMakeCurrent(m_private->display, m_private->window, m_private->glx);
-	}
-
-	bool X11Window::ReleaseRC()
-	{
-		glXMakeCurrent(m_private->display, None, NULL);
-		return true;
+		glXMakeCurrent(m_display, None, nullptr);
 	}
 
 	void X11Window::SwapBuffers()
 	{
-		glXSwapBuffers(m_private->display, m_private->window);
+		glXSwapBuffers(m_display, m_window);
 	}
 
 	void X11Window::SetVSync(bool enabled)
 	{
-		Post([=]
+		int interval = enabled? 1: 0;
+		if (m_glXSwapIntervalEXT)
 		{
-			int interval = enabled? 1: 0;
-			if (m_private->glXSwapIntervalEXT)
-			{
-				m_private->glXSwapIntervalEXT(m_private->display, m_private->window, interval);
-			}
-			else if (m_private->glXSwapIntervalMESA)
-			{
-				m_private->glXSwapIntervalMESA(interval);
-			}
-		});
+			m_glXSwapIntervalEXT(m_display, m_window, interval);
+		}
+		else if (m_glXSwapIntervalMESA)
+		{
+			m_glXSwapIntervalMESA(interval);
+		}
 	}
 }
 

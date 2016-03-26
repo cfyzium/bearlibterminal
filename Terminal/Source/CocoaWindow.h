@@ -1,6 +1,6 @@
 /*
 * BearLibTerminal
-* Copyright (C) 2014 Cfyz
+* Copyright (C) 2016 Cfyz
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -20,24 +20,42 @@
 * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#define BEARLIBTERMINAL_BUILDING_LIBRARY
-#include "BearLibTerminal.h"
-#include "Keystroke.hpp"
-#include <stdexcept>
+#ifndef BEARLIBTERMINAL_COCOAWINDOW_H
+#define BEARLIBTERMINAL_COCOAWINDOW_H
+
+#if defined(__APPLE__)
+
+#include "Window.hpp"
 
 namespace BearLibTerminal
 {
-	Event::Event(int code):
-		code(code)
-	{ }
-
-	Event::Event(int code, std::unordered_map<int, int> properties):
-		code(code),
-		properties(std::move(properties))
-	{ }
-
-	int& Event::operator[](int index)
-	{
-		return properties[index];
-	}
+    class CocoaWindow: public Window
+    {
+    public:
+        struct Impl;
+        CocoaWindow(EventHandler handler);
+        ~CocoaWindow();
+        Size GetActualSize();
+        void SetTitle(const std::wstring& title);
+        void SetIcon(const std::wstring& filename);
+        void SetClientSize(const Size& size);
+        void Show();
+        void Hide();
+        void SwapBuffers();
+        void SetVSync(bool enabled);
+        void SetSizeHints(Size increment, Size minimum_size);
+        void SetResizeable(bool resizeable);
+        void SetFullscreen(bool fullscreen);
+        void SetCursorVisibility(bool visible);
+        int PumpEvents();
+    protected:
+		void Construct();
+		void Destroy();
+        void ApplySizeHints();
+        std::unique_ptr<Impl> m_impl;
+    };
 }
+
+#endif // __APPLE__
+
+#endif // BEARLIBTERMINAL_COCOAWINDOW_H

@@ -15,6 +15,7 @@
 #include <cmath>
 #include <future>
 #include <vector>
+#include <locale.h>
 
 #include <iostream>
 #include "Config.hpp"
@@ -157,22 +158,40 @@ namespace BearLibTerminal
 
 	Terminal::Terminal():
 		m_state{kHidden},
-		m_vars{},
 		m_show_grid{false},
 		m_viewport_modified{false},
 		m_scale_step(kScaleDefault)
+#if defined(USING_SDL)
+		,
+		m_window2(nullptr),
+		m_gl_context(nullptr)
+#endif
 	{
+#if defined(__APPLE__)
+		// OS X implementation of C-string manipulation routines (e. g. swprintf)
+		// do not accept wide characters (i. e. wide strings at all) unless
+		// the character classification locale is set to UTF-8. And default one is "C".
+		if (setlocale(LC_CTYPE, "UTF-8") == nullptr)
+			LOG(Error, "Failed to set LC_CTYPE locale to UTF-8");
+#endif
+
+		// Save main thread ID so we can catch threading violations.
+		m_main_thread_id = std::this_thread::get_id();
+
+		// Elements of std::array are not default-initialized.
+		for (auto& var: m_vars)
+			var = 0;
+
 		// Synchronize log settings (logger reads them from config file but they may be left default).
-		m_options.log_filename = Log::Instance().GetFile();
-		m_options.log_level = Log::Instance().GetLevel();
-		m_options.log_mode = Log::Instance().GetMode();
+		m_options.log_filename = Log::Instance().filename;
+		m_options.log_level = Log::Instance().level;
+		m_options.log_mode = Log::Instance().mode;
 
 		// Try to create window
-		m_window = Window::Create();
-		m_window->SetEventHandler(std::bind(&Terminal::OnWindowEvent, this, std::placeholders::_1));
+		m_window = Window::Create(std::bind(&Terminal::OnWindowEvent, this, std::placeholders::_1));
 
 		// Default parameters
-		SetOptionsInternal(L"window: size=80x25, icon=default; font: default; terminal.encoding=utf8");
+		SetOptionsInternal(L"window: size=80x25, icon=default; font: default; terminal.encoding=utf8; input.filter=[keyboard, system]");
 
 		// Apply parameters from configuration file:
 		// Each group (line) is applied separately to allow some error resilience.
@@ -193,12 +212,25 @@ namespace BearLibTerminal
 
 	Terminal::~Terminal()
 	{
-		m_window->Stop();
-		m_window.reset(); // TODO: is it needed?
+		// Window will be disposed of automatically.
+	}
+
+	// NOTE: not every API function checks this, only functions dealing with configuration,
+	// input and rendering: set, refresh, has_input, read, read_str, peek and delay.
+	// NOTE: this introduces an unlikely data race which should be acceptable in this particular case.
+	#define CHECK_THREAD(name, ret) \
+	if (m_state == kClosed) { \
+		return ret; \
+	} else if (std::this_thread::get_id() != m_main_thread_id) { \
+		LOG(Fatal, "'" name "' was not called from the main thread"); \
+		m_state = kClosed; \
+		return ret; \
 	}
 
 	int Terminal::SetOptions(const std::wstring& value)
 	{
+		CHECK_THREAD("set", 0);
+
 		LOG(Info, "Trying to set \"" << value << "\"");
 		try
 		{
@@ -286,8 +318,6 @@ namespace BearLibTerminal
 
 	void Terminal::SetOptionsInternal(const std::wstring& value)
 	{
-		std::lock_guard<std::mutex> guard(m_lock);
-
 		auto groups = ParseOptions2(value);
 		Options updated = m_options;
 		std::map<uint16_t, std::unique_ptr<Tileset>> new_tilesets;
@@ -342,7 +372,7 @@ namespace BearLibTerminal
 
 		if (updated.output_vsync != m_options.output_vsync)
 		{
-			m_window->SetVSync(updated.output_vsync);
+			m_viewport_modified = true;
 		}
 
 		// All options and parameters must be validated, may try to apply them
@@ -357,10 +387,9 @@ namespace BearLibTerminal
 			throw std::runtime_error("No base font has been configured");
 		}
 
-		// Such implementation is awful. Should use some global (external library?) instance.
-		if (updated.log_filename != m_options.log_filename) Log::Instance().SetFile(updated.log_filename);
-		if (updated.log_level != m_options.log_level) Log::Instance().SetLevel(updated.log_level);
-		if (updated.log_mode != m_options.log_mode) Log::Instance().SetMode(updated.log_mode);
+		Log::Instance().filename = updated.log_filename;
+		Log::Instance().level = updated.log_level;
+		Log::Instance().mode = updated.log_mode;
 
 		if (updated.terminal_encoding != m_options.terminal_encoding)
 		{
@@ -370,6 +399,7 @@ namespace BearLibTerminal
 		if (updated.input_mouse_cursor != m_options.input_mouse_cursor)
 		{
 			m_window->SetCursorVisibility(updated.input_mouse_cursor);
+			// FIXME: NYI
 		}
 
 		// Apply on per-option basis
@@ -388,6 +418,7 @@ namespace BearLibTerminal
 
 		if (updated.window_resizeable != m_options.window_resizeable)
 		{
+			// XXX: It's not always possible to change resizeability in runtime.
 			m_window->SetResizeable(updated.window_resizeable);
 
 			if (updated.window_resizeable)
@@ -396,13 +427,6 @@ namespace BearLibTerminal
 				// This one handles client-size set before resizeable
 				updated.window_client_size = Size();
 			}
-		}
-
-		if (updated.window_resizeable && m_scale_step != kScaleDefault)
-		{
-			// No scaling in resizeable mode, at least not yet.
-			m_scale_step = kScaleDefault;
-			viewport_size_changed = true;
 		}
 
 		// If the size of cell has changed -OR- new basic tileset has been specified
@@ -485,22 +509,18 @@ namespace BearLibTerminal
 				m_world.stage.size * m_world.state.cellsize * scale_factor;
 			m_vars[TK_CLIENT_WIDTH] = viewport_size.width;
 			m_vars[TK_CLIENT_HEIGHT] = viewport_size.height;
+
 			m_window->SetSizeHints(m_world.state.cellsize*scale_factor, updated.window_minimum_size);
 			m_window->SetClientSize(viewport_size);
+
 			m_viewport_modified = true;
 		}
 
-		if (updated.window_toggle_fullscreen)
+		if (updated.window_fullscreen != m_options.window_fullscreen)
 		{
-			m_window->ToggleFullscreen();
-			updated.window_toggle_fullscreen = false;
+			// XXX: It's not always possible to change fullscreen state in runtime.
+			m_window->SetFullscreen(updated.window_fullscreen);
 		}
-
-		// Do not touch input lock. Input handlers should just take main lock if necessary.
-		/*
-		// Briefly grab input lock so that input routines do not contend for m_options
-		std::lock_guard<std::mutex> input_guard(m_input_lock);
-		//*/
 
 		m_options = updated;
 
@@ -519,7 +539,7 @@ namespace BearLibTerminal
 		C.Set(L"window.icon", m_options.window_icon);
 		C.Set(L"window.resizeable", bool_to_wstring(m_options.window_resizeable));
 		C.Set(L"window.minimum-size", size_to_wstring(m_options.window_minimum_size));
-		C.Set(L"window.fullscreen", bool_to_wstring(m_options.window_toggle_fullscreen)); // WTF
+		C.Set(L"window.fullscreen", bool_to_wstring(m_options.window_fullscreen));
 		// input
 		C.Set(L"input.precise-mouse", bool_to_wstring(m_options.input_precise_mouse));
 		//C.Set(L"input.filter", m_options.input_filter_str); // FIXME
@@ -611,11 +631,6 @@ namespace BearLibTerminal
 
 		if (group.attributes.count(L"icon"))
 		{
-			if (!m_window->ValidateIcon(group.attributes[L"icon"]))
-			{
-				throw std::runtime_error("window.icon cannot be loaded");
-			}
-
 			options.window_icon = group.attributes[L"icon"];
 		}
 
@@ -636,16 +651,9 @@ namespace BearLibTerminal
 
 		if (group.attributes.count(L"fullscreen"))
 		{
-			bool desired_state = false;
-
-			if (!try_parse(group.attributes[L"fullscreen"], desired_state))
+			if (!try_parse(group.attributes[L"fullscreen"], options.window_fullscreen))
 			{
 				throw std::runtime_error("window.fullscreen value cannot be parsed");
-			}
-
-			if (desired_state != m_window->IsFullscreen())
-			{
-				options.window_toggle_fullscreen = true;
 			}
 		}
 	}
@@ -890,25 +898,15 @@ namespace BearLibTerminal
 #else
 	void Terminal::Refresh()
 	{
+		CHECK_THREAD("refresh", );
+
 		if (m_state == kHidden)
 		{
 			m_window->Show();
 			m_state = kVisible;
 		}
 
-		if (m_state != kVisible) return;
-
-		// Synchronously copy backbuffer to frontbuffer
-		{
-			std::lock_guard<std::mutex> guard(m_lock);
-			m_world.stage.frontbuffer = m_world.stage.backbuffer;
-		}
-
-		m_window->Invoke([&]()
-		{
-			Redraw(false);
-			m_window->SwapBuffers();
-		});
+		Render(true);
 	}
 #endif
 
@@ -917,7 +915,6 @@ namespace BearLibTerminal
 		if (m_world.stage.backbuffer.background.size() != m_world.stage.size.Area())
 		{
 			LOG(Trace, "World resize");
-			std::lock_guard<std::mutex> guard(m_lock);
 			m_world.stage.Resize(m_world.stage.size);
 		}
 		else
@@ -1606,72 +1603,64 @@ namespace BearLibTerminal
 		return wrap.width > 0? total_height: total_width;
 	}
 
-	bool Terminal::HasInputInternalUnlocked()
-	{
-		return !m_input_queue.empty();
-	}
-
 	int Terminal::HasInput()
 	{
-		std::lock_guard<std::mutex> guard(m_input_lock);
-		if (m_state == kClosed) return 1;
-		return HasInputInternalUnlocked();
+		CHECK_THREAD("has_input", 0);
+
+		m_window->PumpEvents();
+
+		if (m_state == kClosed)
+			return 1;
+
+		return !m_input_queue.empty();
 	}
 
 	int Terminal::GetState(int code)
 	{
-		std::lock_guard<std::mutex> guard(m_input_lock);
 		return (code >= 0 && code < (int)m_vars.size())? m_vars[code]: 0;
 	}
 
-	Event Terminal::ReadEvent(int timeout)
+	Event Terminal::ReadEvent(int timeout) // FIXME: more precise wait
 	{
-		std::unique_lock<std::mutex> lock(m_input_lock);
-
 		if (m_state == kClosed)
-		{
-			return Event(TK_CLOSE);
-		}
+			return {TK_CLOSE};
 
-		bool timed_out = false;
+		auto started = std::chrono::system_clock::now();
 
-		if (timeout > 0)
+		do
 		{
-			timed_out = !m_input_condvar.wait_for
-			(
-				lock,
-				std::chrono::milliseconds(timeout),
-				[&](){return HasInputInternalUnlocked();}
-			);
-		}
+			m_window->PumpEvents();
 
-		if ((timeout > 0 && !timed_out) || (timeout == 0 && HasInputInternalUnlocked()))
-		{
-			Event event = m_input_queue.front();
-			ConsumeEvent(event);
-			m_input_queue.pop_front();
-			return event;
+			if (!m_input_queue.empty())
+			{
+				Event event = m_input_queue.front();
+				ConsumeEvent(event);
+				m_input_queue.pop_front();
+				return event;
+			}
+			else
+			{
+				//Delay(5);
+				std::this_thread::sleep_for(std::chrono::milliseconds{5});
+			}
 		}
-		else if (m_state == kClosed)
-		{
-			// State may change while waiting for a condvar
-			return Event(TK_CLOSE);
-		}
-		else
-		{
-			// Instance is not closed and input either timed out or was not present from the start
-			return Event(TK_INPUT_NONE);
-		}
+		while (std::chrono::system_clock::now() - started < std::chrono::milliseconds{timeout});
+
+		return {TK_INPUT_NONE};
 	}
 
 	int Terminal::Read()
 	{
+		CHECK_THREAD("read", TK_CLOSE);
+
 		return ReadEvent(std::numeric_limits<int>::max()).code;
 	}
 
 	int Terminal::Peek()
 	{
-		std::unique_lock<std::mutex> lock(m_input_lock);
+		CHECK_THREAD("peek", TK_CLOSE);
+
+		m_window->PumpEvents();
 
 		if (m_state == kClosed)
 		{
@@ -1694,6 +1683,8 @@ namespace BearLibTerminal
 	 */
 	int Terminal::ReadString(int x, int y, wchar_t* buffer, int max)
 	{
+		CHECK_THREAD("read_str", TK_INPUT_CANCELLED);
+
 		std::vector<Cell> original;
 		int composition_mode = m_world.state.composition;
 		m_world.state.composition = TK_ON;
@@ -1730,7 +1721,6 @@ namespace BearLibTerminal
 
 		auto restore_scene = [&]()
 		{
-			std::lock_guard<std::mutex> guard(m_lock);
 			for (int i = 0; i < max; i++)
 			{
 				Layer& layer = m_world.stage.backbuffer.layers[m_world.state.layer];
@@ -1791,7 +1781,16 @@ namespace BearLibTerminal
 
 	void Terminal::Delay(int period)
 	{
-		m_window->Delay(period);
+		CHECK_THREAD("delay", );
+
+		auto until = std::chrono::system_clock::now() + std::chrono::milliseconds{period};
+		std::chrono::system_clock::duration step = std::chrono::milliseconds{5};
+
+		while (std::chrono::system_clock::now() < until)
+		{
+			if (!m_window->PumpEvents())
+				std::this_thread::sleep_for(std::min(step, until - std::chrono::system_clock::now()));
+		}
 	}
 
 	const Encoding<char>& Terminal::GetEncoding() const
@@ -1802,6 +1801,7 @@ namespace BearLibTerminal
 	void Terminal::ConfigureViewport()
 	{
 		Size viewport_size = m_window->GetActualSize();
+
 		Size stage_size = m_world.stage.size * m_world.state.cellsize;
 		m_stage_area = Rectangle(stage_size);
 		m_stage_area_factor = SizeF(1, 1);
@@ -1873,6 +1873,9 @@ namespace BearLibTerminal
 		);
 
 		m_viewport_scissors_enabled = viewport_size != stage_size;
+
+		// ?..
+		m_window->SetVSync(m_options.output_vsync);
 	}
 
 	void Terminal::PrepareFreshCharacters()
@@ -1924,21 +1927,8 @@ namespace BearLibTerminal
 		m_fresh_codes.clear();
 	}
 
-	int Terminal::Redraw(bool async)
+	int Terminal::Redraw()
 	{
-		//*
-		// Rendering callback will try to acquire the lock. Failing to  do so
-		// will mean that Terminal is currently busy. Calling window implementation
-		// SHOULD be prepared to reschedule painting to a later time.
-		std::unique_lock<std::mutex> guard(m_lock, std::try_to_lock);
-		if (!guard.owns_lock())
-		{
-			return -1; // TODO: enum TODO: timed try
-		}
-		/*/
-		std::unique_lock<std::mutex> guard(m_lock);
-		//*/
-
 		// Provide tile slots for newly added codes
 		if (!m_fresh_codes.empty())
 		{
@@ -2096,32 +2086,12 @@ namespace BearLibTerminal
 		return 1;
 	}
 
-	/**
-	 * NOTE: if window initialization has succeeded, this callback will be called for sure
-	 */
-	void Terminal::HandleDestroy()
-	{
-		std::lock_guard<std::mutex> guard(m_lock);
-		m_state = kClosed;
-
-		// Dispose of graphics
-		m_world.tiles.slots.clear();
-		m_world.tilesets.clear();
-		m_world.tiles.atlas.Dispose();
-
-		// Unblock possibly blocked client thread
-		m_input_condvar.notify_all();
-	}
-
 	void Terminal::PushEvent(Event event)
 	{
 		bool must_be_consumed = false;
 		{
-			std::lock_guard<std::mutex> guard(m_lock);
 			must_be_consumed = !m_options.input_filter.empty() && !m_options.input_filter.count(event.code);
 		}
-
-		std::lock_guard<std::mutex> guard(m_input_lock);
 
 		if (must_be_consumed)
 		{
@@ -2130,47 +2100,42 @@ namespace BearLibTerminal
 		else
 		{
 			m_input_queue.push_back(event);
-			m_input_condvar.notify_all();
 		}
 	}
 
 	int Terminal::OnWindowEvent(Event event)
 	{
-		bool alt = get_locked(m_vars[TK_ALT], m_input_lock);
-
-		if (event.code == TK_DESTROY)
+		if (event.code == TK_REDRAW)
 		{
-			HandleDestroy();
+			Render(false);
 			return 0;
-		}
-		else if (event.code == TK_REDRAW)
-		{
-			return Redraw(true);
 		}
 		else if (event.code == TK_INVALIDATE)
 		{
-			std::lock_guard<std::mutex> guard(m_lock);
 			m_viewport_modified = true;
 			return 0;
 		}
+		// XXX: used to release keys on input focus gain (at least under Windows)
 		else if (event.code == TK_ACTIVATED)
 		{
 			for (int i = TK_A; i <= TK_CONTROL; i++)
 			{
-				if (m_vars[i]) // FIXME: race condition
+				if (m_vars[i])
 					PushEvent(Event(i|TK_KEY_RELEASED, {{i, 0}}));
 			}
 
 			return 0;
 		}
-		else if (event.code == TK_STATE_UPDATE)
-		{
-			ConsumeEvent(event);
-			return 0;
-		}
 		else if (event.code == TK_RESIZED)
 		{
-			std::lock_guard<std::mutex> guard(m_lock);
+			// Remove all unprocessed resize events as the latest one overrides them.
+			for (auto i = m_input_queue.begin(); i != m_input_queue.end(); )
+			{
+				if (i->code == TK_RESIZED)
+					i = m_input_queue.erase(i);
+				else
+					i++;
+			}
 
 			float scale_factor = kScaleSteps[m_scale_step];
 			Size& cellsize = m_world.state.cellsize;
@@ -2194,8 +2159,6 @@ namespace BearLibTerminal
 		}
 		else if (event.code == TK_MOUSE_MOVE)
 		{
-			std::lock_guard<std::mutex> guard(m_lock);
-
 			int& pixel_x = event[TK_MOUSE_PIXEL_X];
 			int& pixel_y = event[TK_MOUSE_PIXEL_Y];
 
@@ -2209,33 +2172,8 @@ namespace BearLibTerminal
 
 			// Cell location of mouse pointer
 			Size& cellsize = m_world.state.cellsize;
-			Point location
-			(
-				std::floor(pixel_x/(float)cellsize.width),
-				std::floor(pixel_y/(float)cellsize.height)
-			);
-
-			if (location.x < 0)
-			{
-				location.x = 0;
-				pixel_x = 0;
-			}
-			else if (location.x >= m_world.stage.size.width)
-			{
-				location.x = m_world.stage.size.width-1;
-				pixel_x = m_world.stage.size.width*cellsize.width-1;
-			}
-
-			if (location.y < 0)
-			{
-				location.y = 0;
-				pixel_y = 0;
-			}
-			else if (location.y >= m_world.stage.size.height)
-			{
-				location.y = m_world.stage.size.height-1;
-				pixel_y = m_world.stage.size.height*cellsize.height-1;
-			}
+			Point location(pixel_x / cellsize.width, pixel_y / cellsize.height);
+			location = Rectangle(m_world.stage.size).Clamp(location);
 
 			if (!m_options.input_precise_mouse && m_vars[TK_MOUSE_X] == location.x && m_vars[TK_MOUSE_Y] == location.y)
 			{
@@ -2249,33 +2187,32 @@ namespace BearLibTerminal
 				event[TK_MOUSE_Y] = location.y;
 			}
 		}
-		else if (event.code == TK_A && alt)
+		else if (event.code == TK_A && m_vars[TK_ALT])
 		{
 			// Alt+A: dump atlas textures to disk.
-			std::lock_guard<std::mutex> guard(m_lock);
 			m_world.tiles.atlas.Dump();
 			return 0;
 		}
-		else if (event.code == TK_G && alt)
+		else if (event.code == TK_G && m_vars[TK_ALT])
 		{
 			// Alt+G: toggle grid
 			m_show_grid = !m_show_grid;
-			if (Redraw(true) != -1)
-				m_window->SwapBuffers();
+			Render(false);
 			return 0;
 		}
-		else if (event.code == TK_RETURN && alt)
+		else if (event.code == TK_RETURN && m_vars[TK_ALT])
 		{
 			// Alt+ENTER: toggle fullscreen.
-			m_viewport_modified = true;
-			m_window->ToggleFullscreen();
+			m_vars[TK_FULLSCREEN] = !m_vars[TK_FULLSCREEN];
+			m_options.window_fullscreen = m_vars[TK_FULLSCREEN];
+			m_window->SetFullscreen(m_options.window_fullscreen);
 			return 0;
 		}
-		else if ((event.code == TK_MINUS || event.code == TK_EQUALS || event.code == TK_KP_MINUS || event.code == TK_KP_PLUS) && alt)
+		else if ((event.code == TK_MINUS || event.code == TK_EQUALS || event.code == TK_KP_MINUS || event.code == TK_KP_PLUS) && m_vars[TK_ALT])
 		{
-			if (get_locked(m_options.window_resizeable, m_lock))
+			if (m_vars[TK_FULLSCREEN])
 			{
-				// No scaling in resizeable mode, at least not yet.
+				// No scaling in fullscreen mode (does not make sense anyway).
 				return 0;
 			}
 
@@ -2289,14 +2226,24 @@ namespace BearLibTerminal
 				m_scale_step += 1;
 			}
 
-			m_window->SetSizeHints(m_world.state.cellsize * kScaleSteps[m_scale_step], m_options.window_minimum_size);
-			m_window->SetClientSize(m_world.state.cellsize * m_world.stage.size * kScaleSteps[m_scale_step]);
+			float scale = kScaleSteps[m_scale_step];
+
+			if (m_options.window_resizeable || m_options.window_client_size.Area() == 0)
+			{
+				// Resizeable window always snaps to cell borders.
+				m_window->SetSizeHints(m_world.state.cellsize * scale, m_options.window_minimum_size);
+				m_window->SetClientSize(m_world.state.cellsize * m_world.stage.size * scale);
+			}
+			else
+			{
+				// Overriden client-size is scaled with everything else.
+				m_window->SetClientSize(m_options.window_client_size * scale);
+			}
 
 			return 0;
 		}
 		else if ((event.code & 0xFF) == TK_ALT)
 		{
-			std::lock_guard<std::mutex> guard(m_input_lock);
 			ConsumeEvent(event);
 			return 0;
 		}
@@ -2310,8 +2257,6 @@ namespace BearLibTerminal
 	{
 		if (event.code == TK_RESIZED)
 		{
-			std::lock_guard<std::mutex> guard(m_lock);
-
 			if (m_options.window_resizeable)
 			{
 				// Stage size changed, must reallocate and reconstruct scene
@@ -2332,8 +2277,6 @@ namespace BearLibTerminal
 		}
 		else if (event.code == TK_CLOSE)
 		{
-			std::lock_guard<std::mutex> guard(m_lock);
-
 			if (m_options.input_sticky_close)
 			{
 				m_vars[TK_CLOSE] = 1;
@@ -2367,5 +2310,13 @@ namespace BearLibTerminal
 		}
 
 		m_vars[TK_EVENT] = event.code;
+	}
+
+	void Terminal::Render(bool update_scene)
+	{
+		if (update_scene)
+			m_world.stage.frontbuffer = m_world.stage.backbuffer;
+		Redraw();
+		m_window->SwapBuffers();
 	}
 }

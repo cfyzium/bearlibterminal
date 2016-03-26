@@ -123,6 +123,19 @@ namespace BearLibTerminal
 			return result;
 		}
 
+		BasicPoint<T> Clamp(BasicPoint<T> point) const
+		{
+			if (point.x < left)
+				point.x = left;
+			if (point.y < top)
+				point.y = top;
+			if (point.x >= left + width)
+				point.x = left + width - 1;
+			if (point.y >= top + height)
+				point.y = top + height - 1;
+			return point;
+		}
+
 		template<typename U> BasicRectangle<T> operator+(BasicPoint<U> offset) const
 		{
 			return BasicRectangle<T>(left + offset.x, top + offset.y, width, height);

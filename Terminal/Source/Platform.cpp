@@ -199,20 +199,21 @@ namespace BearLibTerminal
 		return Module();
 	}
 
-	static void FixPathSeparators(std::wstring& name)
+	std::wstring FixPathSeparators(std::wstring name)
 	{
 #if defined(_WIN32)
 		for (auto& c: name)
 			if (c == L'/')
 				c = L'\\';
 #endif
+		return std::move(name);
 	}
 
 	// FIXME: polymorphic stream use is not guaranteed to be safe!
 	// FIXME: MinGW and UTF-8 file name encoding.
 	std::unique_ptr<std::istream> OpenFileReading(std::wstring name)
 	{
-		FixPathSeparators(name);
+		name = FixPathSeparators(std::move(name));
 		std::unique_ptr<std::istream> result;
 #if defined(_MSC_VER)
 		result.reset(new std::ifstream(name, std::ios_base::in|std::ios_base::binary));
@@ -229,7 +230,7 @@ namespace BearLibTerminal
 
 	std::unique_ptr<std::ostream> OpenFileWriting(std::wstring name)
 	{
-		FixPathSeparators(name);
+		name = FixPathSeparators(std::move(name));
 		std::unique_ptr<std::ostream> result;
 #if defined(_MSC_VER)
 		result.reset(new std::ofstream

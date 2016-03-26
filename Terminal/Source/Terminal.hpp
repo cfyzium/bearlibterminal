@@ -30,11 +30,9 @@
 #include "Encoding.hpp"
 #include "OptionGroup.hpp"
 #include "Log.hpp"
-#include <mutex>
 #include <deque>
-#include <atomic>
-#include <condition_variable>
 #include <array>
+#include <thread>
 
 namespace BearLibTerminal
 {
@@ -79,23 +77,17 @@ namespace BearLibTerminal
 		void PutInternal(int x, int y, int dx, int dy, wchar_t code, Color* colors);
 		void PrepareFreshCharacters();
 		void ConsumeEvent(Event& event);
-		bool HasInputInternalUnlocked();
 		Event ReadEvent(int timeout);
-		int ReadStringInternalBlocking(int x, int y, wchar_t* buffer, int max);
-		int ReadStringInternalNonblocking(wchar_t* buffer, int max);
-		void HandleDestroy();
-		int Redraw(bool async);
+		void Render(bool update_scene);
+		int Redraw();
 		int OnWindowEvent(Event event);
 		void PushEvent(Event event);
 	private:
 		enum state_t {kHidden, kVisible, kClosed} m_state;
-		mutable std::mutex m_lock;
-		mutable std::mutex m_input_lock;
-		std::unique_ptr<Log> m_log; // FIXME: dependency hack
+		std::thread::id m_main_thread_id;
 		std::unique_ptr<Window> m_window;
 		std::deque<Event> m_input_queue;
-		std::condition_variable m_input_condvar;
-		std::array<std::int32_t, 0x100> m_vars;
+		std::array<int32_t, 256> m_vars;
 		std::unique_ptr<Encoding8> m_encoding;
 		World m_world;
 		Options m_options;
