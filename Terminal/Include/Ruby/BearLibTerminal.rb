@@ -1,6 +1,6 @@
 #
 # BearLibTerminal
-# Copyright (C) 2014 Cfyz
+# Copyright (C) 2014-2016 Cfyz
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -19,7 +19,7 @@
 # IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #
-# Release date: 2015-03-24
+# Release date: 2016-03-28
 
 require 'fiddle'
 require 'rbconfig'
@@ -45,6 +45,8 @@ module Terminal
 	case OS
 		when /linux/
 			Libname = "./libBearLibTerminal.so"
+		when /macosx/
+			Libname = "./libBearLibTerminal.dylib"
 		when /windows/
 			Libname = "BearLibTerminal.dll"
 	else
