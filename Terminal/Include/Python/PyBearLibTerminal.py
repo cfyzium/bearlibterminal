@@ -1,6 +1,6 @@
 #
 # BearLibTerminal
-# Copyright (C) 2013-2014 Cfyz
+# Copyright (C) 2013-2016 Cfyz
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -19,7 +19,7 @@
 # IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #
-# Release date: 2015-03-24
+# Release date: 2016-03-28
 
 import sys, ctypes, numbers
 
@@ -27,11 +27,13 @@ _version3 = sys.version_info >= (3, 0)
  
 _library = None
 _possible_library_names = [
-	'BearLibTerminal.dll',     # Generic Windows DLL
-	'./libBearLibTerminal.so', # Local Linux SO
-	'./BearLibTerminal.so',    # Local Linux SO w/o prefix
-	'libBearLibTerminal.so',   # System Linux SO
-	'BearLibTerminal.so'       # System Linux SO w/o prefix 
+	'BearLibTerminal.dll',        # Generic Windows DLL
+	'./libBearLibTerminal.so',    # Local Linux SO
+	'./libBearLibTerminal.dylib', # Local OS X dylib
+	'./BearLibTerminal.so',       # Local Linux SO w/o prefix
+	'libBearLibTerminal.so',      # System Linux SO
+	'libBearLibTerminal.dylib',   # System OS X dylib
+	'BearLibTerminal.so'          # System Linux SO w/o prefix 
 ]
 for name in _possible_library_names:
 	try:
