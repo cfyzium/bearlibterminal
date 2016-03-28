@@ -19,7 +19,7 @@
 # IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #
-# Release date: 2016-03-28
+# Release date: 2016-03-29
 
 import sys, ctypes, numbers
 
@@ -77,6 +77,16 @@ def open():
 	if _library.terminal_open() == 0:
 		return False
 	_library.terminal_set8('terminal: encoding=ascii, encoding-affects-put=false')
+	try:
+		from IPython.lib import inputhook
+		def bearlibterminal_inputhook():
+			has_input()
+			while not inputhook.stdin_ready():
+				delay(5)
+			return 0
+		inputhook.inputhook_manager.set_inputhook(bearlibterminal_inputhook)
+	except:
+		pass
 	return True
 
 close = _library.terminal_close
