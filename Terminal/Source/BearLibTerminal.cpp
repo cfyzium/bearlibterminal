@@ -33,6 +33,7 @@
 #include <string>
 #include <string.h>
 #include <iostream>
+#include <thread>
 
 namespace
 {
@@ -315,8 +316,10 @@ int terminal_peek()
 
 void terminal_delay(int period)
 {
-	if (!g_instance) return;
-	g_instance->Delay(period);
+	if (g_instance)
+		g_instance->Delay(period);
+	else
+		std::this_thread::sleep_for(std::chrono::milliseconds{period});
 }
 
 template<typename outer, typename inner> const outer* terminal_get(const outer* key, const outer* default_)

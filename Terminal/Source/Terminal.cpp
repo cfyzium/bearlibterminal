@@ -1786,10 +1786,14 @@ namespace BearLibTerminal
 		auto until = std::chrono::system_clock::now() + std::chrono::milliseconds{period};
 		std::chrono::system_clock::duration step = std::chrono::milliseconds{5};
 
-		while (std::chrono::system_clock::now() < until)
+		while (true)
 		{
-			if (!m_window->PumpEvents())
-				std::this_thread::sleep_for(std::min(step, until - std::chrono::system_clock::now()));
+			int pumped = m_window->PumpEvents();
+			auto left = until - std::chrono::system_clock::now();
+			if (left <= std::chrono::system_clock::duration::zero())
+				break;
+			if (!pumped)
+				std::this_thread::sleep_for(std::min(step, left));
 		}
 	}
 
