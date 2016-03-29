@@ -77,6 +77,7 @@ def open():
 	if _library.terminal_open() == 0:
 		return False
 	_library.terminal_set8('terminal: encoding=ascii, encoding-affects-put=false')
+	# Try to register a terminal ipython integration.
 	try:
 		from IPython.lib import inputhook
 		def bearlibterminal_inputhook():
@@ -102,25 +103,31 @@ except:
     pass
 
 close = _library.terminal_close
+close.restype = None
 
 def set(s):
 	if _version3 or isinstance(s, unicode):
-		_wset(s)
+		return _wset(s) == 1
 	else:
-		_library.terminal_set8(s)
+		return _library.terminal_set8(s) == 1
 
 def setf(s, *args):
 	return set(s.format(*args))
 
 refresh = _library.terminal_refresh
+refresh.restype = None
 
 clear = _library.terminal_clear
+clear.restype = None
 
 clear_area = _library.terminal_clear_area
+clear_area.restype = None
 
 crop = _library.terminal_crop
+crop.restype = None
 
 layer = _library.terminal_layer
+layer.restype = None
 
 def color(v):
 	if isinstance(v, numbers.Number):
@@ -135,6 +142,7 @@ def bkcolor(v):
 		_library.terminal_bkcolor(color_from_name(v))
 
 composition = _library.terminal_composition
+composition.restype = None
 
 def put(x, y, c):
 	if not isinstance(c, numbers.Number):
@@ -159,6 +167,7 @@ def pick_color(x, y, z = 0):
 	return _library.terminal_pick_color(x, y, z);
 
 pick_bkcolor = _library.terminal_pick_bkcolor
+pick_bkcolor.restype = ctypes.c_uint32
 
 def print_(x, y, s):
 	if _version3 or isinstance(s, unicode):
@@ -201,6 +210,7 @@ def read_str(x, y, s, max):
 		return rc, p.value
 
 delay = _library.terminal_delay
+delay.restype = None
 
 _library.terminal_get8.restype = ctypes.c_char_p
 _wget.restype = ctypes.c_wchar_p
