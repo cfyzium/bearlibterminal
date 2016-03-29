@@ -89,6 +89,18 @@ def open():
 		pass
 	return True
 
+# Try to register a kernel-based ipython/jupyter integration.
+try:
+    from ipykernel.eventloops import register_integration
+    @register_integration('blt')
+    def loop_blt(kernel):
+        interval = int(kernel._poll_interval * 1000) # to milliseconds
+        while True:
+            kernel.do_one_iteration()
+            delay(interval)
+except:
+    pass
+
 close = _library.terminal_close
 
 def set(s):
