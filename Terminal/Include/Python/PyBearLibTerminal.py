@@ -76,7 +76,7 @@ def color_from_name(s):
 def open():
 	if _library.terminal_open() == 0:
 		return False
-	_library.terminal_set8('terminal: encoding=ascii, encoding-affects-put=false')
+	_library.terminal_set8('terminal.encoding-affects-put=false')
 	# Try to register a terminal ipython integration.
 	try:
 		from IPython.lib import inputhook
