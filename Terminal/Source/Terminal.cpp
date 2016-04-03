@@ -565,7 +565,7 @@ namespace BearLibTerminal
 
 		if (group.attributes.count(L"encoding-affects-put"))
 		{
-			try_parse<bool>(group.attributes[L"encoding-affects-put"], options.terminal_encoding_affects_put);
+			try_parse(group.attributes[L"encoding-affects-put"], options.terminal_encoding_affects_put);
 		}
 	}
 
