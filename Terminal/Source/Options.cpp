@@ -26,6 +26,7 @@ namespace BearLibTerminal
 		input_cursor_symbol((uint16_t)'_'),
 		input_cursor_blink_rate(500),
 		input_mouse_cursor(true),
+		input_alt_functions(true),
 		log_filename(L"bearlibterminal.log"), // FIXME: dependency failure
 		log_level(Log::Level::Error),
 		log_mode(Log::Mode::Truncate)

@@ -546,8 +546,9 @@ namespace BearLibTerminal
 		C.Set(L"input.cursor-symbol", std::wstring(1, (wchar_t)m_options.input_cursor_symbol));
 		C.Set(L"input.cursor-blink-rate", to_string<wchar_t>(m_options.input_cursor_blink_rate));
 		C.Set(L"input.mouse-cursor", bool_to_wstring(m_options.input_mouse_cursor));
+		C.Set(L"input.alt-functions", bool_to_wstring(m_options.input_alt_functions));
 		// output
-		C.Set(L"input.vsync", bool_to_wstring(m_options.output_vsync));
+		C.Set(L"output.vsync", bool_to_wstring(m_options.output_vsync));
 		// log
 		C.Set(L"input.file", m_options.log_filename);
 		C.Set(L"input.level", to_string<wchar_t>(m_options.log_level));
@@ -693,6 +694,11 @@ namespace BearLibTerminal
 		if (group.attributes.count(L"mouse-cursor") && !try_parse(group.attributes[L"mouse-cursor"], options.input_mouse_cursor))
 		{
 			throw std::runtime_error("input.mouse-cursor cannot be parsed");
+		}
+
+		if (group.attributes.count(L"alt-functions") && !try_parse(group.attributes[L"alt-functions"], options.input_alt_functions))
+		{
+			throw std::runtime_error("input.alt-functions cannot be parsed");
 		}
 	}
 
@@ -2191,65 +2197,68 @@ namespace BearLibTerminal
 				event[TK_MOUSE_Y] = location.y;
 			}
 		}
-		else if (event.code == TK_A && m_vars[TK_ALT])
+		else if (m_options.input_alt_functions && m_vars[TK_ALT])
 		{
-			// Alt+A: dump atlas textures to disk.
-			m_world.tiles.atlas.Dump();
-			return 0;
-		}
-		else if (event.code == TK_G && m_vars[TK_ALT])
-		{
-			// Alt+G: toggle grid
-			m_show_grid = !m_show_grid;
-			Render(false);
-			return 0;
-		}
-		else if (event.code == TK_RETURN && m_vars[TK_ALT])
-		{
-			// Alt+ENTER: toggle fullscreen.
-			m_vars[TK_FULLSCREEN] = !m_vars[TK_FULLSCREEN];
-			m_options.window_fullscreen = m_vars[TK_FULLSCREEN];
-			m_window->SetFullscreen(m_options.window_fullscreen);
-			return 0;
-		}
-		else if ((event.code == TK_MINUS || event.code == TK_EQUALS || event.code == TK_KP_MINUS || event.code == TK_KP_PLUS) && m_vars[TK_ALT])
-		{
-			if (m_vars[TK_FULLSCREEN])
+			if (event.code == TK_A)
 			{
-				// No scaling in fullscreen mode (does not make sense anyway).
+				// Alt+A: dump atlas textures to disk.
+				m_world.tiles.atlas.Dump();
 				return 0;
 			}
-
-			// Alt+(plus/minus): adjust user window scaling.
-			if ((event.code == TK_MINUS || event.code == TK_KP_MINUS) && m_scale_step > 0)
+			else if (event.code == TK_G)
 			{
-				m_scale_step -= 1;
+				// Alt+G: toggle grid
+				m_show_grid = !m_show_grid;
+				Render(false);
+				return 0;
 			}
-			else if ((event.code == TK_EQUALS || event.code == TK_KP_PLUS) && m_scale_step < kScaleSteps.size()-1)
+			else if (event.code == TK_RETURN)
 			{
-				m_scale_step += 1;
+				// Alt+ENTER: toggle fullscreen.
+				m_vars[TK_FULLSCREEN] = !m_vars[TK_FULLSCREEN];
+				m_options.window_fullscreen = m_vars[TK_FULLSCREEN];
+				m_window->SetFullscreen(m_options.window_fullscreen);
+				return 0;
 			}
-
-			float scale = kScaleSteps[m_scale_step];
-
-			if (m_options.window_resizeable || m_options.window_client_size.Area() == 0)
+			else if (event.code == TK_MINUS || event.code == TK_EQUALS || event.code == TK_0 ||
+			         event.code == TK_KP_MINUS || event.code == TK_KP_PLUS || event.code == TK_KP_0)
 			{
-				// Resizeable window always snaps to cell borders.
-				m_window->SetSizeHints(m_world.state.cellsize * scale, m_options.window_minimum_size);
-				m_window->SetClientSize(m_world.state.cellsize * m_world.stage.size * scale);
-			}
-			else
-			{
-				// Overriden client-size is scaled with everything else.
-				m_window->SetClientSize(m_options.window_client_size * scale);
-			}
+				if (m_vars[TK_FULLSCREEN])
+				{
+					// No scaling in fullscreen mode (does not make sense anyway).
+					return 0;
+				}
 
-			return 0;
-		}
-		else if ((event.code & 0xFF) == TK_ALT)
-		{
-			ConsumeEvent(event);
-			return 0;
+				// Alt+(plus/minus/zero): adjust user window scaling.
+				if ((event.code == TK_MINUS || event.code == TK_KP_MINUS) && m_scale_step > 0)
+				{
+					m_scale_step -= 1;
+				}
+				else if ((event.code == TK_EQUALS || event.code == TK_KP_PLUS) && m_scale_step < kScaleSteps.size()-1)
+				{
+					m_scale_step += 1;
+				}
+				else if ((event.code == TK_0 || event.code == TK_KP_0) && m_scale_step != 1)
+				{
+					m_scale_step = 1;
+				}
+
+				float scale = kScaleSteps[m_scale_step];
+
+				if (m_options.window_resizeable || m_options.window_client_size.Area() == 0)
+				{
+					// Resizeable window always snaps to cell borders.
+					m_window->SetSizeHints(m_world.state.cellsize * scale, m_options.window_minimum_size);
+					m_window->SetClientSize(m_world.state.cellsize * m_world.stage.size * scale);
+				}
+				else
+				{
+					// Overriden client-size is scaled with everything else.
+					m_window->SetClientSize(m_options.window_client_size * scale);
+				}
+
+				return 0;
+			}
 		}
 
 		PushEvent(std::move(event));

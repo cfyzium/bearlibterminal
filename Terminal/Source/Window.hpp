@@ -33,7 +33,6 @@
 #include <functional>
 
 // For internal usage
-#define TK_ALT           0x72
 #define TK_REDRAW        0x1001
 #define TK_INVALIDATE    0x1002
 #define TK_ACTIVATED     0x1004

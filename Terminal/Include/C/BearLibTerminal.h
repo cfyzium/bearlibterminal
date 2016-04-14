@@ -133,6 +133,7 @@
 #define TK_KP_PERIOD        0x63 /* '.' on numpad */
 #define TK_SHIFT            0x70
 #define TK_CONTROL          0x71
+#define TK_ALT              0x72
 
 /*
  * Mouse events/states

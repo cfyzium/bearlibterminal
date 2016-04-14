@@ -130,6 +130,7 @@ namespace BearLib
         TK_KP_PERIOD        = 0x63,
         TK_SHIFT            = 0x70,
         TK_CONTROL          = 0x71,
+        TK_ALT              = 0x72,
     
         // Mouse events/states
         TK_MOUSE_LEFT       = 0x80, // Buttons

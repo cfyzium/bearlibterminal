@@ -124,6 +124,7 @@ const
   TK_KP_PERIOD       = $63;
   TK_SHIFT           = $70;
   TK_CONTROL         = $71;
+  TK_ALT             = $72;
 
   // Mouse events/states
   TK_MOUSE_LEFT       = $80; // Buttons

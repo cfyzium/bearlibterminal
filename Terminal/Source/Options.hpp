@@ -42,6 +42,7 @@ namespace BearLibTerminal
 		int input_cursor_blink_rate;
 		bool input_mouse_cursor;
 		std::set<int> input_filter;
+		bool input_alt_functions;
 
 		// Log
 		std::wstring log_filename;

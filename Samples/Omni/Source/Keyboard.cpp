@@ -162,7 +162,9 @@ void TestKeyboard()
 		{ TK_SHIFT, 28, 10, 6, 1, " SHIFT" },
 		// Fifth row
 		{ TK_CONTROL, 1, 12, 4, 1, "CTRL" },
+		{ TK_ALT, 9, 12, 3, 1, "ALT" },
 		{ TK_SPACE, 13, 12, 5, 1, "SPACE" },
+		{ TK_ALT, 19, 12, 3, 1, "ALT"},
 		{ TK_CONTROL, 30, 12, 4, 1, "CTRL" },
 		// Navigation
 		{ TK_INSERT, 36, 4, 4, 1, "INS" },
@@ -199,8 +201,6 @@ void TestKeyboard()
 	{
 		{ 0, 1, 8, 5, 1, "CAPS " },
 		{ 0, 6, 12, 2, 1, "LW" },
-		{ 0, 9, 12, 3, 1, "ALT" },
-		{ 0, 19, 12, 3, 1, "ALT" },
 		{ 0, 23, 12, 2, 1, "RW" },
 		{ 0, 26, 12, 3, 1, "CTX" },
 		{ 0, 48, 1, 5, 1, "PRSCR" },
