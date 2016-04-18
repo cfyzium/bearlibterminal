@@ -244,83 +244,105 @@ namespace BearLibTerminal
 		}
 	}
 
-	void Terminal::ApplyTilesets(std::map<uint16_t, std::unique_ptr<Tileset>>& new_tilesets)
-	{
-		for (auto& i: new_tilesets)
-		{
-			auto j = m_world.tilesets.find(i.first);
-
-			if (i.second)
-			{
-				// Add/update tileset
-				if (j == m_world.tilesets.end())
-				{
-					// New tileset: add to registry and save
-					m_world.tilesets[i.first] = std::move(i.second);
-					m_world.tilesets[i.first]->Save();
-					LOG(Debug, "Saved new tileset for base code " << i.first);
-				}
-				else
-				{
-					// Update an already existing one
-					if (typeid(*i.second) == typeid(*j->second))
-					{
-						// Same type, reload
-						j->second->Reload(std::move(*i.second));
-						LOG(Debug, "Reloaded the tileset with base code " << i.first);
-					}
-					else
-					{
-						// Different types, replace
-						j->second->Remove();
-						LOG(Debug, "Unloaded old tileset for base code " << i.first);
-
-						j->second = std::move(i.second);
-						j->second->Save();
-						LOG(Debug, "Saved new tileset for base code " << i.first);
-					}
-				}
-			}
-			else
-			{
-				// Empty pointer, remove tileset
-				if (i.first > 0)
-				{
-					if (j != m_world.tilesets.end())
-					{
-						// Remove the tileset
-						m_world.tilesets[i.first]->Remove();
-						m_world.tilesets.erase(i.first);
-						LOG(Debug, "Unloaded the tileset for base code " << i.first);
-					}
-				}
-				else
-				{
-					LOG(Warning, "Tileset with base code 0 cannot be unloaded");
-				}
-			}
-		}
-	}
-
 	void Terminal::UpdateDynamicTileset(Size size)
 	{
-		auto& tileset = m_world.tilesets[kUnicodeReplacementCharacter];
-		if (tileset) tileset->Remove();
-
+		RemoveTileset(0xFFFF);
 		OptionGroup options;
 		options.name = L"0xFFFF";
 		options.attributes[L""] = L"dynamic";
 		options.attributes[L"size"] = to_string<wchar_t>(size);
+		AddTileset(Tileset::Create(options));
+	}
 
-		tileset = Tileset::Create(m_world.tiles, options);
-		tileset->Save();
+	std::map<std::wstring, int> g_fonts;
+
+	int AllocateFontIndex(std::wstring name)
+	{
+		// Clean up.
+		for (auto i = g_fonts.begin(); i != g_fonts.end(); )
+		{
+			char32_t font_offset = i->second * 0x1000000;
+			auto j = g_tilesets.lower_bound(font_offset);
+			if ((j->first & 0xFF000000) != font_offset)
+			{
+				// The first tileset with offset >= font_offset does not belong to this font.
+				// Meaning there is no tilesets belonging to this font.
+				i = g_fonts.erase(i);
+			}
+			else
+			{
+				i++;
+			}
+		}
+
+		// Look up first available index.
+		for (int i = 0; ; i++)
+		{
+			if (std::find_if(g_fonts.begin(), g_fonts.end(), [i](std::pair<std::wstring, int> kv){return kv.second == i;}) == g_fonts.end())
+			{
+				LOG(Info, "New font '" << name << "' -> index " << i);
+				g_fonts[name] = i;
+				return i;
+			}
+		}
+
+		return -1;
+	}
+
+	char32_t ParseTilesetOffset(std::wstring name)
+	{
+		char32_t font_offset = 0;
+		std::wstring font_name = L"main";
+		size_t space_pos = name.find(L' ');
+		if (space_pos != std::wstring::npos && space_pos < name.length())
+		{
+			font_name = name.substr(0, space_pos);
+			name = name.substr(space_pos);
+		}
+		auto i = g_fonts.find(font_name);
+		if (i != g_fonts.end())
+			font_offset = i->second * 0x01000000;
+		else
+			font_offset = AllocateFontIndex(font_name) * 0x01000000;
+		return font_offset + parse<char32_t>(name);
+	}
+
+	TileInfo* GetTileInfo(char32_t code)
+	{
+		auto i = g_codespace.find(code);
+		if (i != g_codespace.end())
+			return i->second.get();
+
+		for (auto j = g_tilesets.rbegin(); j != g_tilesets.rend(); ++j)
+		{
+			if (j->second->Provides(code))
+			{
+				auto tile = j->second->Get(code);
+				g_codespace[code] = tile;
+				g_atlas.Add(tile);
+				return tile.get();
+			}
+		}
+
+		char32_t relative_code = code & 0x00FFFFFF;
+		if (relative_code < 0x2500 || relative_code > 0x259F)
+			relative_code = kUnicodeReplacementCharacter;
+
+		auto fallback = g_tilesets.find(0xFFFF); // Dynamic tileset.
+		if (fallback == g_tilesets.end())
+			return nullptr;
+
+		auto tile = fallback->second->Get(relative_code);
+		g_codespace[code] = tile;
+		g_atlas.Add(tile);
+		return tile.get();
 	}
 
 	void Terminal::SetOptionsInternal(const std::wstring& value)
 	{
 		auto groups = ParseOptions2(value);
 		Options updated = m_options;
-		std::map<uint16_t, std::unique_ptr<Tileset>> new_tilesets;
+		std::unordered_map<char32_t, std::shared_ptr<Tileset>> new_tilesets;
 
 		// Validate options
 		for (auto& group: groups)
@@ -361,11 +383,17 @@ namespace BearLibTerminal
 			}
 			else
 			{
-				uint16_t base_code = 0; // Basic font base_code is 0
-				if (group.name == L"font" || try_parse(group.name, base_code))
+				char32_t offset = ParseTilesetOffset(group.name);
+				if (group.attributes[L""] == L"none")
 				{
-					new_tilesets[base_code] = Tileset::Create(m_world.tiles, group);
-					LOG(Debug, "Successfully loaded a tileset for base code " << base_code);
+					// Remove tileset.
+					new_tilesets[offset].reset();
+				}
+				else
+				{
+					// Add new tileset.
+					group.name = to_string<wchar_t>(offset);
+					new_tilesets[offset] = Tileset::Create(group);
 				}
 			}
 		}
@@ -376,16 +404,18 @@ namespace BearLibTerminal
 		}
 
 		// All options and parameters must be validated, may try to apply them
-		if (!new_tilesets.empty())
+		for (auto& kv: new_tilesets)
 		{
-			ApplyTilesets(new_tilesets);
+			RemoveTileset(kv.first);
+			if (kv.second)
+				AddTileset(kv.second);
 		}
+		g_atlas.Defragment();
+		g_atlas.CleanUp();
 
 		// Primary sanity check: if there is no base font, lots of things are gonna fail
-		if (!m_world.tilesets.count(0))
-		{
-			throw std::runtime_error("No base font has been configured");
-		}
+		if (!g_tilesets.count(0))
+			throw std::runtime_error("No main font has been configured");
 
 		Log::Instance().filename = updated.log_filename;
 		Log::Instance().level = updated.log_level;
@@ -442,7 +472,8 @@ namespace BearLibTerminal
 			{
 				// NOTE: by now, tileset container MUST have 0th tileset since
 				// one is added in ctor and cannot be fully removed afterwards.
-				m_world.state.cellsize = m_world.tilesets[0]->GetBoundingBoxSize();
+				//m_world.state.cellsize = m_world.tilesets[0]->GetBoundingBoxSize();
+				m_world.state.cellsize = g_tilesets[0]->GetBoundingBoxSize();
 			}
 
 			// Cache half cellsize
@@ -1003,15 +1034,13 @@ namespace BearLibTerminal
 		m_vars[TK_COMPOSITION] = mode;
 	}
 
-	void Terminal::PutInternal(int x, int y, int dx, int dy, wchar_t code, Color* colors)
+	void Terminal::PutInternal(int x, int y, int dx, int dy, char32_t code, Color* colors)
 	{
 		if (x < 0 || y < 0 || x >= m_world.stage.size.width || y >= m_world.stage.size.height) return;
 
-		uint16_t u16code = (uint16_t)code;
-		if (m_world.tiles.slots.find(u16code) == m_world.tiles.slots.end())
-		{
-			m_fresh_codes.push_back(u16code);
-		}
+		// Prepare tile if necessary.
+		if (g_codespace.find(code) == g_codespace.end())
+			GetTileInfo(code);
 
 		// NOTE: layer must be already allocated by SetLayer
 		int index = y*m_world.stage.size.width+x;
@@ -1028,7 +1057,7 @@ namespace BearLibTerminal
 			Leaf& leaf = cell.leafs.back();
 
 			// Character
-			leaf.code = u16code;
+			leaf.code = code;
 
 			// Offset
 			leaf.dx = dx;
@@ -1083,7 +1112,7 @@ namespace BearLibTerminal
 
 		int cell_index = y * m_world.stage.size.width + x;
 		auto& cell = m_world.stage.backbuffer.layers[m_world.state.layer].cells[cell_index];
-		wchar_t code = (index >= 0 && index < (int)cell.leafs.size())? (int)cell.leafs[index].code: 0;
+		wchar_t code = (index >= 0 && index < (int)cell.leafs.size())? (int)(cell.leafs[index].code & 0x00FFFFFF): 0;
 
 		// Must take into account possible terminal.encoding codepage.
 		int translated = m_encoding->Convert(code);
@@ -1205,8 +1234,7 @@ namespace BearLibTerminal
 
 	int Terminal::Print(int x0, int y0, std::wstring str, bool raw, bool measure_only)
 	{
-		uint16_t base = 0;
-		const Encoding<char>* codepage = nullptr;
+		char32_t font_offset = 0;
 		bool combine = false;
 		Point offset = Point(0, 0);
 		Size wrap = Size(0, 0);
@@ -1220,51 +1248,21 @@ namespace BearLibTerminal
 		std::list<Line> lines;
 		lines.emplace_back();
 
-		auto GetTileSpacing = [&](wchar_t code) -> Size // TODO: GetResponsibleTileset?
+		auto GetTileSpacing = [&](char32_t code) -> Size
 		{
-			for (auto i = m_world.tilesets.rbegin(); ; i++)
-			{
-				if (i->first <= code)
-				{
-					return i->second->GetSpacing();
-				}
-			}
+			if (auto tile = GetTileInfo(code))
+				return tile->spacing;
 
 			return Size(1, 1);
 		};
 
-		auto GetTileRelativeIndex = [&](wchar_t code) -> int
+		auto AppendSymbol = [&](char32_t wcode)
 		{
-			for (auto i = m_world.tilesets.rbegin(); ; i++)
-			{
-				if (i->first <= code)
-				{
-					return code - i->first;
-				}
-			}
+			char32_t code = font_offset + wcode;
 
-			return 0;
-		};
-
-		auto AppendSymbol = [&](wchar_t code)
-		{
 			if (code == 0)
 			{
 				return;
-			}
-
-			if (codepage)
-			{
-				code = codepage->Convert(code);
-			}
-
-			if (code > 0)
-			{
-				code += base;
-			}
-			else
-			{
-				code = kUnicodeReplacementCharacter;
 			}
 
 			if (combine)
@@ -1313,7 +1311,7 @@ namespace BearLibTerminal
 
 				std::wstring name = str.substr(i, params_pos-i);
 				std::wstring params = (params_pos < closing_bracket_pos)? str.substr(params_pos+1, closing_bracket_pos-(params_pos+1)): std::wstring();
-				uint16_t arbitrary_code = 0;
+				char32_t arbitrary_code = 0;
 
 				std::function<void()> tag;
 
@@ -1348,61 +1346,14 @@ namespace BearLibTerminal
 				{
 					combine = true;
 				}
-				else if (name == L"font" || name == L"base")
+				else if (name == L"font")
 				{
-					size_t colon_pos = params.find(L':');
-					std::wstring codepage_name;
-					if (colon_pos != std::wstring::npos && colon_pos > 0 && colon_pos < params.length()-1)
-					{
-						codepage_name = params.substr(colon_pos+1);
-						params = params.substr(0, colon_pos);
-					}
-
-					if (!try_parse(params, base))
-					{
-						base = 0;
-						codepage = nullptr;
-						continue;
-					}
-
-					if (codepage_name.empty())
-					{
-						// Use tileset codepage
-						auto i = m_world.tilesets.find(base);
-						if (i != m_world.tilesets.end())
-						{
-							codepage = i->second->GetCodepage();
-						}
-						else
-						{
-							codepage = nullptr;
-						}
-					}
-					else
-					{
-						auto cached = m_codepage_cache.find(codepage_name);
-						if (cached != m_codepage_cache.end())
-						{
-							codepage = cached->second.get();
-						}
-						else
-						{
-							if (auto p = GetUnibyteEncoding(codepage_name))
-							{
-								codepage = p.get();
-								m_codepage_cache[codepage_name] = std::move(p);
-							}
-							else
-							{
-								codepage = nullptr;
-							}
-						}
-					}
+					auto i = g_fonts.find(params);
+					font_offset = (i == g_fonts.end()? 0: i->second * 0x01000000);
 				}
-				else if (name == L"/font" || name == L"/base")
+				else if (name == L"/font")
 				{
-					base = 0;
-					codepage = nullptr;
+					font_offset = 0;
 				}
 				else if (name == L"wrap" || name == L"bbox")
 				{
@@ -1504,7 +1455,8 @@ namespace BearLibTerminal
 						int offset = last_line_break + 1;
 						int leave = offset;
 
-						if (line.symbols[last_line_break].code > 0 && GetTileRelativeIndex(line.symbols[last_line_break].code) == (int)L' ')
+						//if (line.symbols[last_line_break].code > 0 && GetTileRelativeIndex(line.symbols[last_line_break].code) == (int)L' ')
+						if ((line.symbols[last_line_break].code & 0x00FFFFFF) == L' ')
 						{
 							leave -= 1;
 						}
@@ -1519,7 +1471,8 @@ namespace BearLibTerminal
 					}
 					else
 					{
-						int relative_index = GetTileRelativeIndex(s.code);
+						//int relative_index = GetTileRelativeIndex(s.code);
+						int relative_index = (s.code & 0x00FFFFFF); // TODO: const mask
 						if (relative_index == (int)L' ' || relative_index == (int)L'-')
 						{
 							last_line_break = j;
@@ -1588,7 +1541,7 @@ namespace BearLibTerminal
 					{
 						if (s.code > 0)
 						{
-							PutInternal(x, y, offset.x, offset.y, (wchar_t)s.code, nullptr);
+							PutInternal(x, y, offset.x, offset.y, s.code, nullptr);
 							w = x;
 							x += s.spacing.width;
 						}
@@ -1888,63 +1841,145 @@ namespace BearLibTerminal
 		m_window->SetVSync(m_options.output_vsync);
 	}
 
-	void Terminal::PrepareFreshCharacters()
+	void DrawTile(const Leaf& leaf, const TileInfo& tile, int x, int y, int w2, int h2)
 	{
-		for (auto code: m_fresh_codes)
+		// TODO: Think up of some optimization?
+		// There are a lot of calculations done.
+
+		int left, top;
+
+		w2 *= tile.spacing.width;
+		h2 *= tile.spacing.height;
+
+		switch (tile.alignment)
 		{
-			if (m_world.tiles.slots.find(code) != m_world.tiles.slots.end())
-			{
-				// Might be already prepared on previous iteration.
-				continue;
-			}
-
-			bool provided = false;
-
-			// Box Drawing (2500–257F) and Block Elements (2580–259F) are searched in different order
-			bool is_dynamic = (code >= 0x2500 && code <= 0x257F) || (code >= 0x2580 && code <= 0x259F);
-
-			for (auto i = m_world.tilesets.rbegin(); i != m_world.tilesets.rend(); i++)
-			{
-				if (is_dynamic)
-				{
-					// While searching for dynamic character provider, skip:
-					// * dynamic tileset at 0xFFFD base code
-					// * truetype basic tileset at 0x0000 code
-
-					bool unsuitable =
-						(i->first == kUnicodeReplacementCharacter) ||
-						((i->first == 0x0000 && i->second->GetType() == Tileset::Type::TrueType));
-
-					if (unsuitable)
-						continue;
-				}
-
-				if (i->second->Provides(code))
-				{
-					i->second->Prepare(code);
-					provided = true;
-					break;
-				}
-			}
-
-			// If nothing was found, use dynamic tileset as a last resort
-			if (!provided && m_world.tilesets[kUnicodeReplacementCharacter]->Provides(code))
-			{
-				m_world.tilesets[kUnicodeReplacementCharacter]->Prepare(code);
-			}
+		case TileAlignment::Center:
+			left = x + tile.offset.x + w2 + leaf.dx;
+			top = y + tile.offset.y + h2 + leaf.dy;
+			break;
+		case TileAlignment::TopRight:
+			left = x + tile.offset.x + 2*w2 - tile.useful_space.width + leaf.dx;
+			top = y + tile.offset.y + leaf.dy;
+			break;
+		case TileAlignment::BottomLeft:
+			left = x + tile.offset.x + leaf.dx;
+			top = y + tile.offset.y + 2*h2 - tile.useful_space.height + leaf.dy;
+			break;
+		case TileAlignment::BottomRight:
+			left = x + tile.offset.x + 2*w2 - tile.useful_space.width + leaf.dx;
+			top = y + tile.offset.y + 2*h2 - tile.useful_space.height + leaf.dy;
+			break;
+		case TileAlignment::TopLeft:
+		default:
+			// Same as TopLeft
+			left = x + tile.offset.x + leaf.dx;
+			top = y + tile.offset.y + leaf.dy;
+			break;
 		}
 
-		m_fresh_codes.clear();
+		int right = left + tile.useful_space.width;
+		int bottom = top + tile.useful_space.height;
+
+		if (leaf.flags & Leaf::CornerColored)
+		{
+			/*
+			// Single-quad version (incorrect interpolation)
+			// Top-left
+			glColor4ub(leaf.color[0].r, leaf.color[0].g, leaf.color[0].b, leaf.color[0].a);
+			glTexCoord2f(texture_coords.tu1, texture_coords.tv1);
+			glVertex2i(left, top);
+
+			// Bottom-left
+			glColor4ub(leaf.color[1].r, leaf.color[1].g, leaf.color[1].b, leaf.color[1].a);
+			glTexCoord2f(texture_coords.tu1, texture_coords.tv2);
+			glVertex2i(left, bottom);
+
+			// Bottom-right
+			glColor4ub(leaf.color[2].r, leaf.color[2].g, leaf.color[2].b, leaf.color[2].a);
+			glTexCoord2f(texture_coords.tu2, texture_coords.tv2);
+			glVertex2i(right, bottom);
+
+			// Top-right
+			glColor4ub(leaf.color[3].r, leaf.color[3].g, leaf.color[3].b, leaf.color[3].a);
+			glTexCoord2f(texture_coords.tu2, texture_coords.tv1);
+			glVertex2i(right, top);
+			/*/
+
+			// 2-quad version
+			// Center color
+			int cr = (leaf.color[0].r + leaf.color[1].r + leaf.color[2].r + leaf.color[3].r)/4;
+			int cg = (leaf.color[0].g + leaf.color[1].g + leaf.color[2].g + leaf.color[3].g)/4;
+			int cb = (leaf.color[0].b + leaf.color[1].b + leaf.color[2].b + leaf.color[3].b)/4;
+			int ca = (leaf.color[0].a + leaf.color[1].a + leaf.color[2].a + leaf.color[3].a)/4;
+			// Center texture coords
+			float cu = (tile.texture_coords.tu1 + tile.texture_coords.tu2)/2.0f;
+			float cv = (tile.texture_coords.tv1 + tile.texture_coords.tv2)/2.0f;
+			// Center coordinate
+			float cx = (left + right)/2.0f;
+			float cy = (top + bottom)/2.0f;
+
+			// First quad
+			// Top-left
+			glColor4ub(leaf.color[0].r, leaf.color[0].g, leaf.color[0].b, leaf.color[0].a);
+			glTexCoord2f(tile.texture_coords.tu1, tile.texture_coords.tv1);
+			glVertex2i(left, top);
+			// Bottom-left
+			glColor4ub(leaf.color[1].r, leaf.color[1].g, leaf.color[1].b, leaf.color[1].a);
+			glTexCoord2f(tile.texture_coords.tu1, tile.texture_coords.tv2);
+			glVertex2i(left, bottom);
+			// Center
+			glColor4ub(cr, cg, cb, ca);
+			glTexCoord2f(cu, cv);
+			glVertex2i(cx, cy);
+			// Top-right
+			glColor4ub(leaf.color[3].r, leaf.color[3].g, leaf.color[3].b, leaf.color[3].a);
+			glTexCoord2f(tile.texture_coords.tu2, tile.texture_coords.tv1);
+			glVertex2i(right, top);
+
+			// Second squad
+			// Bottom-right
+			glColor4ub(leaf.color[2].r, leaf.color[2].g, leaf.color[2].b, leaf.color[2].a);
+			glTexCoord2f(tile.texture_coords.tu2, tile.texture_coords.tv2);
+			glVertex2i(right, bottom);
+			// Top-right
+			glColor4ub(leaf.color[3].r, leaf.color[3].g, leaf.color[3].b, leaf.color[3].a);
+			glTexCoord2f(tile.texture_coords.tu2, tile.texture_coords.tv1);
+			glVertex2i(right, top);
+			// Center
+			glColor4ub(cr, cg, cb, ca);
+			glTexCoord2f(cu, cv);
+			glVertex2i(cx, cy);
+			// Bottom-left
+			glColor4ub(leaf.color[1].r, leaf.color[1].g, leaf.color[1].b, leaf.color[1].a);
+			glTexCoord2f(tile.texture_coords.tu1, tile.texture_coords.tv2);
+			glVertex2i(left, bottom);
+			//*/
+		}
+		else
+		{
+			// Single-colored version
+			glColor4ub(leaf.color[0].r, leaf.color[0].g, leaf.color[0].b, leaf.color[0].a);
+
+			// Top-left
+			glTexCoord2f(tile.texture_coords.tu1, tile.texture_coords.tv1);
+			glVertex2i(left, top);
+
+			// Bottom-left
+			glTexCoord2f(tile.texture_coords.tu1, tile.texture_coords.tv2);
+			glVertex2i(left, bottom);
+
+			// Bottom-right
+			glTexCoord2f(tile.texture_coords.tu2, tile.texture_coords.tv2);
+			glVertex2i(right, bottom);
+
+			// Top-right
+			glTexCoord2f(tile.texture_coords.tu2, tile.texture_coords.tv1);
+			glVertex2i(right, top);
+		}
 	}
 
 	int Terminal::Redraw()
 	{
-		// Provide tile slots for newly added codes
-		if (!m_fresh_codes.empty())
-		{
-			PrepareFreshCharacters();
-		}
-
 		if (m_viewport_modified)
 		{
 			ConfigureViewport();
@@ -1993,14 +2028,14 @@ namespace BearLibTerminal
 		}
 		glEnd();
 
-		m_world.tiles.atlas.Refresh();
 		Texture::Enable();
 
 		int w2 = m_world.state.half_cellsize.width;
 		int h2 = m_world.state.half_cellsize.height;
 		bool layer_scissors_applied = false;
 
-		uint64_t current_texture_id = 0;
+		AtlasTexture* current_texture = nullptr;
+
 		glBegin(GL_QUADS);
 		glColor4f(1, 1, 1, 1);
 		for (auto& layer: m_world.stage.frontbuffer.layers)
@@ -2027,24 +2062,20 @@ namespace BearLibTerminal
 				{
 					for (auto& leaf: layer.cells[i].leafs)
 					{
-						auto j = m_world.tiles.slots.find(leaf.code);
+						auto i = g_codespace.find(leaf.code);
+						if (i == g_codespace.end())
+							continue;
+						auto tile = i->second.get();
 
-						if (j == m_world.tiles.slots.end())
-						{
-							// Replacement character MUST be provided by the ever-present dynamic tileset.
-							j = m_world.tiles.slots.find(kUnicodeReplacementCharacter);
-						}
-
-						auto& slot = *(j->second);
-						if (slot.texture_id != current_texture_id)
+						if (tile->texture != current_texture)
 						{
 							glEnd();
-							slot.BindTexture();
-							current_texture_id = slot.texture_id;
+							tile->texture->Bind();
+							current_texture = tile->texture;
 							glBegin(GL_QUADS);
 						}
 
-						slot.Draw(leaf, left, top, w2, h2);
+						DrawTile(leaf, *tile, left, top, w2, h2);
 					}
 
 					i += 1;
@@ -2199,13 +2230,13 @@ namespace BearLibTerminal
 		}
 		else if (m_options.input_alt_functions && m_vars[TK_ALT])
 		{
-			if (event.code == TK_A)
+			/*if (event.code == TK_A)
 			{
 				// Alt+A: dump atlas textures to disk.
 				m_world.tiles.atlas.Dump();
 				return 0;
 			}
-			else if (event.code == TK_G)
+			else*/ if (event.code == TK_G)
 			{
 				// Alt+G: toggle grid
 				m_show_grid = !m_show_grid;

@@ -65,7 +65,6 @@ namespace BearLibTerminal
 		const Encoding8& GetEncoding() const;
 	private:
 		void SetOptionsInternal(const std::wstring& params);
-		void ApplyTilesets(std::map<uint16_t, std::unique_ptr<Tileset>>& tilesets);
 		void UpdateDynamicTileset(Size size);
 		void ValidateWindowOptions(OptionGroup& group, Options& options);
 		void ValidateInputOptions(OptionGroup& group, Options& options);
@@ -74,8 +73,7 @@ namespace BearLibTerminal
 		void ValidateLoggingOptions(OptionGroup& group, Options& options);
 		bool ParseInputFilter(const std::wstring& s, std::set<int>& out);
 		void ConfigureViewport();
-		void PutInternal(int x, int y, int dx, int dy, wchar_t code, Color* colors);
-		void PrepareFreshCharacters();
+		void PutInternal(int x, int y, int dx, int dy, char32_t code, Color* colors);
 		void ConsumeEvent(Event& event);
 		Event ReadEvent(int timeout);
 		void Render(bool update_scene);
@@ -91,7 +89,7 @@ namespace BearLibTerminal
 		std::unique_ptr<Encoding8> m_encoding;
 		World m_world;
 		Options m_options;
-		std::list<uint16_t> m_fresh_codes;
+		std::list<char32_t> m_fresh_codes;
 		std::map<std::wstring, std::unique_ptr<Encoding8>> m_codepage_cache;
 		bool m_show_grid;
 		bool m_viewport_modified;

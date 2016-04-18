@@ -16,8 +16,8 @@ void TestTilesets()
 	// Load tilesets
 	terminal_set("U+E100: ../Media/Runic.png, size=8x16");
 	terminal_set("U+E200: ../Media/Tiles.png, size=32x32, align=top-left");
-	terminal_set("U+E300: ../Media/fontawesome-webfont.ttf, size=24x24, bbox=3x2, codepage=../Media/fontawesome-codepage.txt");
-	terminal_set("U+E400: ../Media/Zodiac-S.ttf, size=24x24, bbox=3x2, codepage=437");
+	terminal_set("U+E300: ../Media/fontawesome-webfont.ttf, size=24x24, spacing=3x2, codepage=../Media/fontawesome-codepage.txt");
+	terminal_set("zodiac font: ../Media/Zodiac-S.ttf, size=24x36, spacing=3x3, codepage=437");
 
 	terminal_clear();
 	terminal_color("white");
@@ -62,14 +62,13 @@ void TestTilesets()
 		terminal_put(2+3+i*5, 15, 0xE300+i);
 	}
 
-	terminal_print(2+3, 18, "...or like this:");
-	terminal_print(2+3, 19, "[base=0xE400]D    F    G    S    C");
+	terminal_print(2+3, 18, "...or like this:\n[font=zodiac]D F G S C");
 
 	terminal_refresh();
 
 	for (int key=0; key!=TK_CLOSE && key!=TK_ESCAPE; key=terminal_read());
 
 	// Clean up
-	terminal_set("U+E100: none; U+E200: none; U+E300: none; U+E400: none");
+	terminal_set("U+E100: none; U+E200: none; U+E300: none; zodiac font: none");
 	terminal_composition(TK_OFF);
 }

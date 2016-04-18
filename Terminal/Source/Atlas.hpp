@@ -17,47 +17,12 @@
 #include <memory>
 #include <list>
 #include <set>
+#include <map>
+#include <unordered_map>
+#include "OptionGroup.hpp"
 
 namespace BearLibTerminal
 {
-	struct Leaf
-	{
-		Leaf();
-		Color color[4];
-		int16_t dx, dy;
-		int16_t code;
-		uint8_t flags;
-		uint8_t reserved;
-		static const uint8_t CornerColored = 0x01;
-	};
-
-	struct State;
-
-	struct Slot
-	{
-		virtual ~Slot() { }
-		Slot();
-		virtual void BindTexture() = 0;
-		virtual void Draw(const Leaf& leaf, int x, int y, int w2, int h2) = 0;
-		uint64_t texture_id;
-	};
-
-	struct Tile
-	{
-		enum class Alignment {Unknown, Center, TopLeft, TopRight, BottomLeft, BottomRight};
-		Tile();
-		virtual ~Tile() { }
-		virtual void Update(const Bitmap& bitmap) = 0;
-		Alignment alignment;
-		Point offset;
-		Size bounds;
-	};
-
-	std::wostream& operator<<(std::wostream& s, const Tile::Alignment& value);
-	std::wistream& operator>>(std::wistream& s, Tile::Alignment& value);
-
-	class AtlasTexture;
-
 	struct TexCoords
 	{
 		TexCoords();
@@ -65,69 +30,71 @@ namespace BearLibTerminal
 		float tu1, tv1, tu2, tv2;
 	};
 
-	struct TileSlot: Slot, Tile, std::enable_shared_from_this<TileSlot>
+	enum class TileAlignment
 	{
-		AtlasTexture* texture;
-		Rectangle space;
-		Rectangle texture_region;
-		TexCoords texture_coords;
-
-		TileSlot();
-		void BindTexture();
-		void Draw(const Leaf& leaf, int x, int y, int w2, int h2);
-		void Update(const Bitmap& bitmap);
+		Unknown,
+		Center,
+		TopLeft,
+		TopRight,
+		BottomLeft,
+		BottomRight
 	};
 
-	struct UpdateRequest
+	std::wostream& operator<<(std::wostream& s, const TileAlignment& value);
+	std::wistream& operator>>(std::wistream& s, TileAlignment& value);
+
+	class Tileset;
+
+	class AtlasTexture;
+
+	struct TileInfo
 	{
-		Rectangle area;
-		Bitmap data;
+		TileInfo();
+		Tileset* tileset;
+		AtlasTexture* texture;
+		Bitmap bitmap;
+		Rectangle useful_space;
+		Rectangle total_space;
+		TexCoords texture_coords;
+		Point offset;
+		Size spacing;
+		TileAlignment alignment;
+		bool is_animated;
 	};
 
 	class AtlasTexture
 	{
 	public:
-		enum class Type {Tile, Sprite};
-
-		AtlasTexture(Type type, Size initial_size);
-		Type GetType() const;
-		std::shared_ptr<TileSlot> Add(const Bitmap& bitmap, Rectangle region);
-		void Update(std::shared_ptr<TileSlot> slot, const Bitmap& bitmap);
-		void Remove(std::shared_ptr<TileSlot> slot);
+		AtlasTexture(Size initial_size);
 		bool IsEmpty() const;
-		void Refresh();
+		bool Add(std::shared_ptr<TileInfo> tile);
+		void Remove(std::shared_ptr<TileInfo> tile, bool copy_bitmap_back=false);
 		void Bind();
-		void Dispose();
-		Bitmap GetCanvasMap();
+		void Defragment();
 
 	private:
 		bool TryGrow();
-		void PostprocessSpaces();
-		void MergeSpaces();
-		TexCoords CalcTexCoords(Rectangle region);
-
-		Type m_type;
+		TexCoords CalcTexCoords(const Rectangle& region);
 		Texture m_texture;
 		Bitmap m_canvas;
-		bool m_is_dirty;
+		std::list<Rectangle> m_dirty_regions;
 		std::list<Rectangle> m_spaces;
-		std::list<std::shared_ptr<TileSlot>> m_slots;
-		std::list<UpdateRequest> m_update_requests;
+		std::list<std::shared_ptr<TileInfo>> m_tiles;
 	};
 
 	class Atlas
 	{
 	public:
-		std::shared_ptr<TileSlot> Add(const Bitmap& bitmap, Rectangle region);
-		void Remove(std::shared_ptr<TileSlot> slot);
-		void Refresh();
-		void Dispose();
-		void Dump();
+		void Add(std::shared_ptr<TileInfo> tile);
+		void Remove(std::shared_ptr<TileInfo> tile);
+		void Defragment();
+		void CleanUp();
 
 	private:
-		std::list<AtlasTexture> m_textures;
-		std::list<AtlasTexture> m_scheduled_for_removal;
+		std::list<std::shared_ptr<AtlasTexture>> m_textures;
 	};
+
+	extern Atlas g_atlas;
 }
 
 #endif /* ATLAS_HPP_ */

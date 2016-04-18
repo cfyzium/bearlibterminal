@@ -38,7 +38,7 @@ namespace BearLibTerminal
 		// Input
 		bool input_precise_mouse;
 		bool input_sticky_close;
-		uint16_t input_cursor_symbol;
+		char32_t input_cursor_symbol;
 		int input_cursor_blink_rate;
 		bool input_mouse_cursor;
 		std::set<int> input_filter;

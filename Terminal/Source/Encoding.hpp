@@ -74,7 +74,7 @@ namespace BearLibTerminal
 		std::wstring GetName() const;
 	};
 
-	static const uint16_t kUnicodeReplacementCharacter = 0xFFFD;
+	static const char32_t kUnicodeReplacementCharacter = 0xFFFD;
 
 	template<typename T> struct Encodings
 	{ };

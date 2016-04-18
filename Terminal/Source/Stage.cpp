@@ -10,6 +10,14 @@
 
 namespace BearLibTerminal
 {
+	Leaf::Leaf():
+		dx(0),
+		dy(0),
+		code(0),
+		flags(0),
+		reserved(0)
+	{ }
+
 	Layer::Layer(Size size):
 		cells(size.Area())
 	{ }

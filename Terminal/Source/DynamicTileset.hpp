@@ -12,19 +12,13 @@
 
 namespace BearLibTerminal
 {
-	class DynamicTileset: public StronglyTypedReloadableTileset<DynamicTileset>
+	class DynamicTileset: public Tileset
 	{
 	public:
-		DynamicTileset(TileContainer& container, OptionGroup& group);
-		void Remove();
-		bool Save();
-		void Reload(DynamicTileset&& tileset);
+		DynamicTileset(char32_t offset, OptionGroup& options);
 		Size GetBoundingBoxSize();
-		Size GetSpacing();
-		const Encoding<char>* GetCodepage();
-		Type GetType();
-		bool Provides(uint16_t code);
-		void Prepare(uint16_t code);
+		bool Provides(char32_t code);
+		std::shared_ptr<TileInfo> Get(char32_t code);
 	private:
 		Size m_tile_size;
 	};

@@ -34,15 +34,18 @@ namespace BearLibTerminal
 		}
 	}
 
-	bool try_parse(const std::wstring& s, uint16_t& out)
+	bool try_parse(const std::wstring& s, char32_t& out)
 	{
-		if (s.empty()) return false;
+		if (s.empty())
+			return false;
 
 		if (s.length() > 2 && ((s[0] == L'0' && (s[1] == L'x' || s[1] == L'X')) || (s[0] == L'U' && s[1] == L'+')))
 		{
 			std::wistringstream stream(s.substr(2));
 			stream >> std::hex;
-			stream >> out;
+			uint32_t temp;
+			stream >> temp;
+			out = temp;
 			return !(stream.fail() || stream.bad());
 		}
 		else if (s.length() == 3 && s[0] == L'\'' && s[2] == L'\'')
@@ -53,7 +56,9 @@ namespace BearLibTerminal
 		else
 		{
 			std::wistringstream stream(s);
-			stream >> out;
+			uint32_t temp;
+			stream >> temp;
+			out = temp;
 			return !(stream.fail() || stream.bad());
 		}
 	}

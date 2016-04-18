@@ -39,7 +39,7 @@ namespace BearLibTerminal
 		void Reset();
 		static Log& Instance();
 		std::wstring filename;
-		Level level;
+		Level level {Level::Trace};
 		Mode mode;
 
 	private:

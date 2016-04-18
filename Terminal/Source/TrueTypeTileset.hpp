@@ -16,29 +16,22 @@
 
 namespace BearLibTerminal
 {
-	class TrueTypeTileset: public StronglyTypedReloadableTileset<TrueTypeTileset>
+	class TrueTypeTileset: public Tileset
 	{
 	public:
-		TrueTypeTileset(TileContainer& container, OptionGroup& group);
-		~TrueTypeTileset();
-		void Dispose();
-		void Remove();
-		bool Save();
-		void Reload(TrueTypeTileset&& tileset);
+		TrueTypeTileset(char32_t offset, OptionGroup& options);
+		bool Provides(char32_t code);
+		std::shared_ptr<TileInfo> Get(char32_t code);
 		Size GetBoundingBoxSize();
-		Size GetSpacing();
-		const Encoding<char>* GetCodepage();
-		Type GetType();
-		bool Provides(uint16_t code);
-		void Prepare(uint16_t code);
+
 	private:
-		uint16_t m_base_code;
+		FT_UInt GetGlyphIndex(char32_t code);
 		Size m_tile_size;
-		Size m_bbox_size;
-		std::unique_ptr<Encoding<char>> m_codepage;
-		Tile::Alignment m_alignment;
-		FT_Library m_font_library;
-		FT_Face m_font_face;
+		Size m_spacing;
+		TileAlignment m_alignment;
+		std::unique_ptr<Encoding8> m_codepage;
+		std::shared_ptr<FT_Library> m_font_library;
+		std::shared_ptr<FT_Face> m_font_face;
 		FT_Render_Mode m_render_mode;
 		bool m_monospace;
 	};

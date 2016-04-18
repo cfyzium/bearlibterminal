@@ -16,6 +16,7 @@
 
 namespace BearLibTerminal
 {
+	/*
 	Tileset::Tileset(TileContainer& container):
 		m_container(container)
 	{ }
@@ -70,5 +71,106 @@ namespace BearLibTerminal
 		}
 
 		throw std::runtime_error("Tileset::Create: failed to recognize requested tileset type");
+	}
+	//*/
+
+	std::unordered_map<char32_t, std::shared_ptr<TileInfo>> g_codespace;
+
+	std::map<char32_t, std::shared_ptr<Tileset>> g_tilesets;
+
+	Tileset::Tileset(char32_t offset):
+		m_offset(offset)
+	{ }
+
+	Tileset::~Tileset()
+	{ }
+
+	char32_t Tileset::GetOffset() const
+	{
+		return m_offset;
+	}
+
+	bool Tileset::Provides(char32_t code)
+	{
+		return m_cache.find(code) != m_cache.end();
+	}
+
+	std::shared_ptr<TileInfo> Tileset::Get(char32_t code)
+	{
+		auto i = m_cache.find(code);
+		if (i == m_cache.end())
+			return std::shared_ptr<TileInfo>{};
+		return i->second;
+	}
+
+	std::shared_ptr<Tileset> Tileset::Create(OptionGroup& options)
+	{
+		char32_t base_offset = 0;
+		if (options.name != L"font" && !try_parse(options.name, base_offset))
+			throw std::runtime_error("BitmapTileset: failed to parse tileset offset");
+
+		if (!options.attributes.count(L"name") || options.attributes[L"name"].empty())
+			options.attributes[L"name"] = options.attributes[L""];
+
+		if (options.attributes[L"name"] == L"dynamic")
+		{
+			return std::make_shared<DynamicTileset>(base_offset, options);
+		}
+		else if (options.attributes[L"name"].find(L".ttf") != std::wstring::npos)
+		{
+			return std::make_shared<TrueTypeTileset>(base_offset, options);
+		}
+
+		if (options.attributes[L"name"] == L"default")
+		{
+			options.attributes[L"size"] = L"8x16";
+			options.attributes[L"codepage"] = L"tileset-default";
+		}
+
+		return std::make_shared<BitmapTileset>(base_offset, options); // FIXME
+	}
+
+	void AddTileset(std::shared_ptr<Tileset> tileset)
+	{
+		char32_t offset = tileset->GetOffset();
+		g_tilesets[offset] = tileset;
+
+		for (auto i = g_codespace.begin(); i != g_codespace.end(); )
+		{
+			if (i->first >= offset && i->second->tileset->GetOffset() < offset && tileset->Provides(i->first))
+			{
+				i->second->texture->Remove(i->second, true);
+				i = g_codespace.erase(i);
+			}
+			else
+			{
+				i++;
+			}
+		}
+	}
+
+	void RemoveTileset(std::shared_ptr<Tileset> tileset)
+	{
+		for (auto i = g_codespace.begin(); i != g_codespace.end(); )
+		{
+			if (i->second->tileset == tileset.get())
+			{
+				i->second->texture->Remove(i->second);
+				i = g_codespace.erase(i);
+			}
+			else
+			{
+				i++;
+			}
+		}
+
+		g_tilesets.erase(tileset->GetOffset());
+	}
+
+	void RemoveTileset(char32_t offset)
+	{
+		auto i = g_tilesets.find(offset);
+		if (i != g_tilesets.end())
+			RemoveTileset(i->second);
 	}
 }

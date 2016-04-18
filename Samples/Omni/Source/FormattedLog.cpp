@@ -38,7 +38,7 @@ std::vector<std::string> colors =
 	"gray"
 };
 
-std::vector<int> alternative_fonts = { };
+std::vector<std::string> alternative_fonts = { };
 
 static std::string GenerateRandomMessage()
 {
@@ -169,12 +169,12 @@ void TestFormattedLog()
 {
 	terminal_set("window: resizeable=true, minimum-size=20x8; font: default");
 	terminal_set("input.precise-mouse=true");
-	terminal_set("0xE100: ../Media/Tigrex3drunes_16x16_437.PNG, spacing=2x1, transparent=auto");
-	terminal_set("0xE200: ../Media/Aesomatica_16x16_437.png, spacing=2x1, transparent=#FF00FF");
-	terminal_set("0xE300: ../Media/Cheepicus_16x16_437.png, spacing=2x1, transparent=auto");
-	alternative_fonts.push_back(0xE100);
-	alternative_fonts.push_back(0xE200);
-	alternative_fonts.push_back(0xE300);
+	terminal_set("runic font: ../Media/Tigrex3drunes_16x16_437.PNG, spacing=2x1, transparent=auto");
+	terminal_set("stone font: ../Media/Aesomatica_16x16_437.png, spacing=2x1, transparent=#FF00FF");
+	terminal_set("curvy font: ../Media/Cheepicus_16x16_437.png, spacing=2x1, transparent=auto");
+	alternative_fonts.push_back("runic");
+	alternative_fonts.push_back("stone");
+	alternative_fonts.push_back("curvy");
 
 	Reset();
 
@@ -301,6 +301,6 @@ void TestFormattedLog()
 	}
 
 	terminal_set("window: resizeable=false");
-	terminal_set("U+E100: none; U+E200: none; U+E300: none");
+	terminal_set("runic font: none; stone font: none; curvy font: none");
 	terminal_set("input.precise-mouse=false;");
 }
