@@ -65,7 +65,9 @@ namespace BearLibTerminal
 		return instance;
 	}
 
-	Log::Log()
+	Log::Log():
+		level{Level::Error},
+		mode{Mode::Truncate}
 	{
 		EnsureStandardOutput();
 		Reset();
