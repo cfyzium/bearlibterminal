@@ -98,6 +98,7 @@ namespace BearLibTerminal
 		int m_scale_step;
 		Rectangle m_stage_area;
 		SizeF m_stage_area_factor;
+		bool m_alt_pressed; // For alt-functions interception.
 	};
 }
 

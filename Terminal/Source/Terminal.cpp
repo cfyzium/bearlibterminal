@@ -176,7 +176,8 @@ namespace BearLibTerminal
 		m_state{kHidden},
 		m_show_grid{false},
 		m_viewport_modified{false},
-		m_scale_step(kScaleDefault)
+		m_scale_step(kScaleDefault),
+		m_alt_pressed(false)
 #if defined(USING_SDL)
 		,
 		m_window2(nullptr),
@@ -2244,7 +2245,12 @@ namespace BearLibTerminal
 				event[TK_MOUSE_Y] = location.y;
 			}
 		}
-		else if (m_options.input_alt_functions && m_vars[TK_ALT])
+		else if ((event.code & 0xFF) == TK_ALT && m_options.input_alt_functions)
+		{
+			m_alt_pressed = event.properties[TK_ALT];
+		}
+
+		if (m_options.input_alt_functions && m_alt_pressed)
 		{
 			/*if (event.code == TK_A)
 			{
