@@ -169,9 +169,9 @@ void TestFormattedLog()
 {
 	terminal_set("window: resizeable=true, minimum-size=20x8; font: default");
 	terminal_set("input.precise-mouse=true");
-	terminal_set("runic font: ../Media/Tigrex3drunes_16x16_437.PNG, spacing=2x1, transparent=auto");
-	terminal_set("stone font: ../Media/Aesomatica_16x16_437.png, spacing=2x1, transparent=#FF00FF");
-	terminal_set("curvy font: ../Media/Cheepicus_16x16_437.png, spacing=2x1, transparent=auto");
+	terminal_set("runic font: ../Media/Tigrex3drunes_16x16_437.PNG, size=16x16, codepage=437, spacing=2x1, transparent=auto");
+	terminal_set("stone font: ../Media/Aesomatica_16x16_437.png, size=16x16, codepage=437, spacing=2x1, transparent=#FF00FF");
+	terminal_set("curvy font: ../Media/Cheepicus_16x16_437.png, size=16x16, codepage=437, spacing=2x1, transparent=auto");
 	alternative_fonts.push_back("runic");
 	alternative_fonts.push_back("stone");
 	alternative_fonts.push_back("curvy");

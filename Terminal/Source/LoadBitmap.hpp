@@ -24,11 +24,13 @@
 #define BEARLIBTERMINAL_LOADBITMAP_HPP
 
 #include <istream>
+#include <vector>
+#include <stdint.h>
 #include "Bitmap.hpp"
 
 namespace BearLibTerminal
 {
-	Bitmap LoadBitmap(std::istream& stream);
+	Bitmap LoadBitmap(const std::vector<uint8_t>& data);
 }
 
 #endif // BEARLIBTERMINAL_LOADBITMAP_HPP

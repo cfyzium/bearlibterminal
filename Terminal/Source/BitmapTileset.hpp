@@ -24,13 +24,15 @@
 #define BITMAPTILESET_HPP_
 
 #include "Tileset.hpp"
+#include <vector>
+#include <stdint.h>
 
 namespace BearLibTerminal
 {
 	class BitmapTileset: public Tileset
 	{
 	public:
-		BitmapTileset(char32_t offset, OptionGroup& options);
+		BitmapTileset(char32_t offset, std::vector<uint8_t> data, OptionGroup& options);
 		Size GetBoundingBoxSize();
 
 	private:

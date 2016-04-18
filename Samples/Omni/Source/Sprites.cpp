@@ -22,7 +22,7 @@ void TestSprites()
 		color_from_argb(128, 64, 64, 192),
 		color_from_argb(128, 192, 192, 64)
 	};
-	terminal_setf("U+E003: %#p, size=2x2, resize=128x128, resize-filter=bicubic", &c);
+	terminal_setf("U+E003: %#p, raw-size=2x2, resize=128x128, resize-filter=bicubic", &c);
 
 	terminal_clear();
 

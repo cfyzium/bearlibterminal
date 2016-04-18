@@ -25,73 +25,39 @@
 #include "TrueTypeTileset.hpp"
 #include "DynamicTileset.hpp"
 #include "Utility.hpp"
+#include "Resource.hpp"
+#include "Geometry.hpp"
 #include "Log.hpp"
 #include <stdexcept>
 #include <set>
 
 namespace BearLibTerminal
 {
-	/*
-	Tileset::Tileset(TileContainer& container):
-		m_container(container)
-	{ }
-
-	Tileset::~Tileset()
-	{ }
-
-	std::unique_ptr<Tileset> Tileset::Create(TileContainer& container, OptionGroup& options)
-	{
-		uint16_t base_code = 0;
-
-		if (options.name != L"font" && !try_parse(options.name, base_code))
-		{
-			throw std::runtime_error("Tileset::Create: failed to parse font base code");
-		}
-
-		if (!options.attributes.count(L"name"))
-			options.attributes[L"name"] = options.attributes[L""];
-		std::wstring name = options.attributes[L"name"];
-		if (name.empty())
-		{
-			throw std::runtime_error("Tileset::Create: main value attribute is missing or empty");
-		}
-
-		if (name == L"none")
-		{
-			return std::unique_ptr<Tileset>();
-		}
-
-		if (name == L"default")
-		{
-			options.attributes[L"size"] = L"8x16";
-			options.attributes[L"codepage"] = L"tileset-default";
-		}
-
-		bool is_bitmap = std::set<std::wstring>{L"bmp", L"png", L"jpg", L"jpeg"}.count(to_lower(file_extension(name)));
-		bool is_address = name.find(L".") == std::wstring::npos && try_parse<uint64_t>(name);
-
-		if (is_bitmap || is_address || name == L"default")
-		{
-			LOG(Debug, L"Tileset resource name \"" << name << L"\" is recognized as a name of a bitmap resource");
-			return std::unique_ptr<Tileset>(new BitmapTileset(container, options));
-		}
-		else if (to_lower(file_extension(name)) == L"ttf")
-		{
-			LOG(Debug, L"Tileset resource name \"" << name << L"\" is recognized as a name of a TrueType resource");
-			return std::unique_ptr<Tileset>(new TrueTypeTileset(container, options));
-		}
-		else if (name == L"dynamic")
-		{
-			return std::unique_ptr<Tileset>(new DynamicTileset(container, options));
-		}
-
-		throw std::runtime_error("Tileset::Create: failed to recognize requested tileset type");
-	}
-	//*/
-
 	std::unordered_map<char32_t, std::shared_ptr<TileInfo>> g_codespace;
 
 	std::map<char32_t, std::shared_ptr<Tileset>> g_tilesets;
+
+	std::string GuessResourceFormat(const std::vector<uint8_t>& data)
+	{
+		auto compare = [&data](const char* magic, size_t size) -> bool
+		{
+			if (data.size() < size)
+				return false;
+
+			return strncmp((const char*)&data[0], magic, size) == 0;
+		};
+
+		if (compare("\x89PNG", 4)) // PNG
+			return "png";
+		else if (compare("BM", 2)) // BMP
+			return "bmp";
+		else if (compare("\xFF\xD8\xFF", 3)) // JPEG
+			return "jpg";
+		else if (compare("\x00\x01\x00\x00\x00", 5)) // TTF
+			return "ttf";
+		else
+			return std::string{};
+	}
 
 	Tileset::Tileset(char32_t offset):
 		m_offset(offset)
@@ -120,29 +86,53 @@ namespace BearLibTerminal
 
 	std::shared_ptr<Tileset> Tileset::Create(OptionGroup& options)
 	{
-		char32_t base_offset = 0;
-		if (options.name != L"font" && !try_parse(options.name, base_offset))
-			throw std::runtime_error("BitmapTileset: failed to parse tileset offset");
+		char32_t offset = parse<char32_t>(options.name);
 
-		if (!options.attributes.count(L"name") || options.attributes[L"name"].empty())
-			options.attributes[L"name"] = options.attributes[L""];
+		std::wstring resource = options.attributes[L""];
+		if (resource.empty())
+			throw std::runtime_error("Tileset::Create: main attribute is missing from tileset options");
 
-		if (options.attributes[L"name"] == L"dynamic")
+		if (resource == L"dynamic")
 		{
-			return std::make_shared<DynamicTileset>(base_offset, options);
-		}
-		else if (options.attributes[L"name"].find(L".ttf") != std::wstring::npos)
-		{
-			return std::make_shared<TrueTypeTileset>(base_offset, options);
+			return std::make_shared<DynamicTileset>(offset, options);
 		}
 
-		if (options.attributes[L"name"] == L"default")
+		if (resource == L"default")
 		{
 			options.attributes[L"size"] = L"8x16";
 			options.attributes[L"codepage"] = L"tileset-default";
 		}
 
-		return std::make_shared<BitmapTileset>(base_offset, options); // FIXME
+		bool is_raw_bitmap = options.attributes.count(L"raw-size");
+
+		// Ascertain the raw bitmap address is in general format.
+		if (is_raw_bitmap)
+		{
+			size_t colon_pos = resource.find(L":");
+			if (colon_pos == std::wstring::npos)
+			{
+				Size raw_size;
+				if (!try_parse(options.attributes[L"raw-size"], raw_size))
+					throw std::runtime_error("Tileset::Create: failed to parse 'raw-size' attribute");
+				resource += L":" + to_string<wchar_t>(raw_size.Area() * 4);
+			}
+		}
+
+		auto data = Resource::Open(resource, L"tileset-");
+		std::string format = GuessResourceFormat(data);
+
+		if (is_raw_bitmap || format == "png" || format == "bmp" || format == "jpg")
+		{
+			return std::make_shared<BitmapTileset>(offset, std::move(data), options);
+		}
+		else if (format == "ttf")
+		{
+			return std::make_shared<TrueTypeTileset>(offset, std::move(data), options);
+		}
+		else
+		{
+			throw std::runtime_error("Tileset::Create: resource format is not supported");
+		}
 	}
 
 	void AddTileset(std::shared_ptr<Tileset> tileset)

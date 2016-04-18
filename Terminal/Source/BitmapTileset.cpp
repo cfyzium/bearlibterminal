@@ -36,13 +36,9 @@
 
 namespace BearLibTerminal
 {
-	BitmapTileset::BitmapTileset(char32_t offset, OptionGroup& options):
+	BitmapTileset::BitmapTileset(char32_t offset, std::vector<uint8_t> data, OptionGroup& options):
 		Tileset(offset)
 	{
-		std::wstring name = options.attributes[L"name"]; // FIXME: come up with better name for the default/main attribute of a group
-		if (name.empty())
-			throw std::runtime_error("BitmapTileset: missing or empty main value attribute");
-
 		std::unique_ptr<Encoding8> codepage;
 
 		// Try to guess tile size and tileset codepage, it will be rewritten if supplied.
@@ -117,39 +113,11 @@ namespace BearLibTerminal
 		if (options.attributes.count(L"align") && !try_parse(options.attributes[L"align"], alignment))
 			throw std::runtime_error("BitmapTileset: failed to parse 'alignment' attribute");
 
-		/*
-		uint64_t address = 0;
-		if (name.find(L".") == std::wstring::npos && try_parse(name, address))
-		{
-			LOG(Debug, "Bitmap tileset name \"" << name << "\" is a memory address");
+		Size raw_size;
+		if (options.attributes.count(L"raw-size") && !try_parse(options.attributes[L"raw-size"], raw_size))
+			throw std::runtime_error("BitmapTileset: failed to parse 'raw-size' attribute");
 
-			Size raw_size;
-			if (group.attributes.count(L"raw-size") && !try_parse(group.attributes[L"raw-size"], raw_size))
-			{
-				throw std::runtime_error("BitmapTileset: failed to parse 'raw-size' attribute");
-			}
-
-			if (!raw_size.Area() && m_tile_size.Area())
-			{
-				raw_size = m_tile_size;
-			}
-
-			if (!raw_size.Area())
-			{
-				throw std::runtime_error("BitmapTileset: cannot guess bitmap dimensions for raw bitmap resource");
-			}
-
-			const Color* pixels = (const Color*)address;
-			m_cache = Bitmap(raw_size, pixels);
-		}
-		else
-		{
-			m_cache = LoadBitmap(*Resource::Open(name, L"tileset-"));
-		}
-		//*/
-
-		Bitmap image = LoadBitmap(*Resource::Open(name, L"tileset-"));
-
+		Bitmap image = raw_size.Area()? Bitmap(raw_size, (const Color*)&data[0]): LoadBitmap(data);
 		if (!image.GetSize().Area())
 			throw std::runtime_error("BitmapTileset: loaded image is empty");
 

@@ -23,6 +23,8 @@
 #ifndef TRUETYPETILESET_HPP_
 #define TRUETYPETILESET_HPP_
 
+#include <vector>
+#include <stdint.h>
 #include "Tileset.hpp"
 #include "Encoding.hpp"
 
@@ -34,7 +36,7 @@ namespace BearLibTerminal
 	class TrueTypeTileset: public Tileset
 	{
 	public:
-		TrueTypeTileset(char32_t offset, OptionGroup& options);
+		TrueTypeTileset(char32_t offset, std::vector<uint8_t> data, OptionGroup& options);
 		bool Provides(char32_t code);
 		std::shared_ptr<TileInfo> Get(char32_t code);
 		Size GetBoundingBoxSize();
@@ -45,6 +47,7 @@ namespace BearLibTerminal
 		Size m_spacing;
 		TileAlignment m_alignment;
 		std::unique_ptr<Encoding8> m_codepage;
+		std::vector<uint8_t> m_font_data;
 		std::shared_ptr<FT_Library> m_font_library;
 		std::shared_ptr<FT_Face> m_font_face;
 		FT_Render_Mode m_render_mode;

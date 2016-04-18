@@ -23,11 +23,13 @@
 #include "Resource.hpp"
 #include "Encoding.hpp"
 #include "Platform.hpp"
+#include "Utility.hpp"
 #include "Base64.hpp"
 #include "Log.hpp"
 #include <sstream>
 #include <fstream>
 #include <map>
+#include <string.h>
 
 namespace BearLibTerminal
 {
@@ -57,27 +59,49 @@ namespace BearLibTerminal
 		{L"codepage-tcod", BuiltinResource(kCodepageTCOD, false)}
 	};
 
-	std::unique_ptr<std::istream> Resource::Open(std::wstring name, std::wstring prefix)
+	std::vector<uint8_t> Resource::Open(std::wstring name, std::wstring prefix)
 	{
 		LOG(Debug, "Requested resource \"" << name << "\" with possible prefix \"" << prefix << "\"");
-		auto i = kBuiltinResources.find(prefix+name);
+
+		auto i = kBuiltinResources.find(prefix + name);
+		size_t colon_pos = std::wstring::npos;
+
 		if (i != kBuiltinResources.end())
 		{
-			// Has built-in
 			LOG(Debug, "Resource \"" << prefix << name << "\" is built-in");
-			if (!i->second.base64encoded)
+
+			if (i->second.base64encoded)
 			{
-				return std::unique_ptr<std::istream>(new std::istringstream(i->second.data));
+				return Base64::Decode(i->second.data);
 			}
 			else
 			{
-				auto decoded = Base64::Decode(i->second.data);
-				return std::unique_ptr<std::istream>(new std::istringstream(std::string((char*)decoded.data(), decoded.size())));
+				auto data = (const uint8_t*)i->second.data.data();
+				return std::vector<uint8_t>(data, data + i->second.data.length());
 			}
+		}
+		else if ((colon_pos = name.find(L":")) != std::wstring::npos)
+		{
+			// Memory source.
+			LOG(Debug, "Loading resource from memory '" << name << "'");
+
+			uint64_t address = 0;
+			if (!try_parse(name.substr(0, colon_pos), address))
+				throw std::runtime_error("Resource::Open: failed to parse memory address (" + UTF8Encoding().Convert(name) + ")");
+
+			size_t size = 0;
+			if (!try_parse(colon_pos < name.length()? name.substr(colon_pos+1): std::wstring{}, size))
+				throw std::runtime_error("Resource::Open: failed to parse memory size (" + UTF8Encoding().Convert(name) + ")");
+
+			// TODO: sanity checks.
+
+			std::vector<uint8_t> result(size);
+			memcpy(&result[0], (uint8_t*)address, size);
+			return std::move(result);
 		}
 		else
 		{
-			return OpenFileReading(name);
+			return ReadFile(name);
 		}
 	}
 }

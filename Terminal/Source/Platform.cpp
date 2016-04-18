@@ -247,6 +247,28 @@ namespace BearLibTerminal
 		return result;
 	}
 
+	std::vector<uint8_t> ReadFile(std::wstring name)
+	{
+		name = FixPathSeparators(std::move(name));
+		//std::unique_ptr<std::istream> result;
+#if defined(_MSC_VER)
+		std::ifstream file{name, std::ios_base::in|std::ios_base::binary};
+#else
+		std::ifstream file{UTF8Encoding().Convert(name), std::ios_base::in|std::ios_base::binary};
+#endif
+		if (file.fail())
+			throw std::runtime_error("file \"" + UTF8Encoding().Convert(name) + "\" cannot be opened");
+
+		file.seekg(0, std::ios_base::end);
+		size_t size = file.tellg();
+		file.seekg(0, std::ios_base::beg);
+		std::vector<uint8_t> result(size);
+		file.read((char*)&result[0], size);
+
+		LOG(Debug, "Loaded resource from '" << name << "' (" << size << " bytes)");
+		return std::move(result);
+	}
+
 	bool FileExists(std::wstring name)
 	{
 #if defined(_WIN32)

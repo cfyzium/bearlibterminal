@@ -30,16 +30,14 @@
 
 namespace BearLibTerminal
 {
-	TrueTypeTileset::TrueTypeTileset(char32_t offset, OptionGroup& options):
+	TrueTypeTileset::TrueTypeTileset(char32_t offset, std::vector<uint8_t> data, OptionGroup& options):
 		Tileset(offset),
 		m_alignment(TileAlignment::Center),
+		m_font_data(std::move(data)),
 		m_font_library(nullptr),
 		m_font_face(nullptr),
 		m_render_mode(FT_RENDER_MODE_NORMAL)
 	{
-		if (options.attributes[L"name"].empty())
-			throw std::runtime_error("TrueTypeTileset: missing or empty main value attribute");
-
 		if (options.attributes.count(L"spacing") && !try_parse(options.attributes[L"spacing"], m_spacing))
 			throw std::runtime_error("TrueTypeTileset: failed to parse 'spacing' attribute");
 
@@ -92,10 +90,9 @@ namespace BearLibTerminal
 		if (FT_Init_FreeType(m_font_library.get()))
 			throw std::runtime_error("TrueTypeTileset: can't initialize Freetype");
 
-		std::string filename_u8 = UTF8Encoding().Convert(options.attributes[L"name"]);
 		m_font_face = std::shared_ptr<FT_Face>(new FT_Face, [](FT_Face* p){FT_Done_Face(*p);});
-		if (FT_New_Face(*m_font_library, filename_u8.c_str(), 0, m_font_face.get()))
-			throw std::runtime_error("TrueTypeTileset: can't load font from file \"" + filename_u8 + "\"");
+		if (FT_New_Memory_Face(*m_font_library, &m_font_data[0], m_font_data.size(), 0, m_font_face.get()))
+			throw std::runtime_error("TrueTypeTileset: can't load font from buffer");
 
 		int hres = 64;
 		FT_Matrix matrix =

@@ -27,7 +27,9 @@
 #include <memory>
 #include <istream>
 #include <ostream>
+#include <vector>
 #include <list>
+#include <stdint.h>
 
 namespace BearLibTerminal
 {
@@ -59,6 +61,8 @@ namespace BearLibTerminal
 	std::unique_ptr<std::istream> OpenFileReading(std::wstring name);
 
 	std::unique_ptr<std::ostream> OpenFileWriting(std::wstring name);
+
+	std::vector<uint8_t> ReadFile(std::wstring name);
 
 	std::wstring GetEnvironmentVariable(const std::wstring& name, const std::wstring& default_ = std::wstring());
 

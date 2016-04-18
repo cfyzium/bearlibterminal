@@ -35,20 +35,15 @@ namespace BearLibTerminal
 
 namespace BearLibTerminal
 {
-	Bitmap LoadBitmap(std::istream& stream)
+	Bitmap LoadBitmap(const std::vector<uint8_t>& data)
 	{
-		// Probe for resource file format
-		unsigned char magic_bytes[4];
-		stream.read((char*)magic_bytes, 4);
+		if (data.size() < 4)
+			throw std::runtime_error("LoadBitmap: invalid data size");
 
-		// There must not be any errors, even EOF
-		if (!stream.good())
-		{
-			throw std::runtime_error("invalid resource stream name");
-		}
+		unsigned char magic_bytes[4] = {data[0], data[1], data[2], data[3]};
 
-		// Revert stream to original state
-		for (size_t i = 0; i < 4; i++) stream.putback(magic_bytes[3-i]);
+		// FIXME: rewrite bitmap loading routines. Maybe just use stb_image?
+		std::istringstream stream{std::string((const char*)&data[0], data.size())};
 
 		if (!strncmp((const char*)magic_bytes, "\x89PNG", 4))
 		{

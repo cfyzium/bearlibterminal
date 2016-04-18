@@ -26,13 +26,15 @@
 #include <istream>
 #include <string>
 #include <memory>
+#include <vector>
+#include <stdint.h>
 
 namespace BearLibTerminal
 {
 	class Resource
 	{
 	public:
-		static std::unique_ptr<std::istream> Open(std::wstring name, std::wstring prefix=L"");
+		static std::vector<uint8_t> Open(std::wstring name, std::wstring prefix = L"");
 	};
 }
 

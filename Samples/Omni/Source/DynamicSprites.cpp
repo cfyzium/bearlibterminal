@@ -116,7 +116,7 @@ void TestDynamicSprites()
 
 		terminal_setf
 		(
-			"U+E100: %#p, size=%dx%d, resize=%dx%d, resize-filter=nearest",
+			"U+E100: %#p, raw-size=%dx%d, resize=%dx%d, resize-filter=nearest",
 			(void*)minimap.data(),
 			map_width, map_height,
 			map_width*4, map_height*4

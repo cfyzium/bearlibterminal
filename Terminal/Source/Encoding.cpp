@@ -417,12 +417,10 @@ namespace BearLibTerminal
 		}
 		else
 		{
-			auto stream = Resource::Open(name, L"codepage-");
-			if (!stream)
-			{
-				throw std::runtime_error("failed to locate codepage resource for \"" + UTF8Encoding().Convert(name) + "\"");
-			}
-			return std::unique_ptr<Encoding8>(new CustomCodepage(name, *stream));
+			auto data = Resource::Open(name, L"codepage-");
+			// FIXME: load from string directly.
+			std::istringstream stream{std::string{(const char*)&data[0], data.size()}};
+			return std::unique_ptr<Encoding8>(new CustomCodepage(name, stream));
 		}
 	}
 }
