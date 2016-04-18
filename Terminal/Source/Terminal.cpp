@@ -156,6 +156,7 @@ namespace BearLibTerminal
 			{L"kp-period", TK_KP_PERIOD},
 			{L"shift", TK_SHIFT},
 			{L"control", TK_CONTROL},
+			{L"alt", TK_ALT},
 			{L"mouse-left", TK_MOUSE_LEFT},
 			{L"mouse-right", TK_MOUSE_RIGHT},
 			{L"mouse-middle", TK_MOUSE_MIDDLE},
@@ -793,7 +794,7 @@ namespace BearLibTerminal
 					}
 					else if (name == L"keyboard")
 					{
-						for (int i = TK_A; i <= TK_CONTROL; i++)
+						for (int i = TK_A; i <= TK_ALT; i++)
 							add(i, release_too);
 					}
 					else if (name == L"arrows")
@@ -2174,7 +2175,7 @@ namespace BearLibTerminal
 		// XXX: used to release keys on input focus gain (at least under Windows)
 		else if (event.code == TK_ACTIVATED)
 		{
-			for (int i = TK_A; i <= TK_CONTROL; i++)
+			for (int i = TK_A; i <= TK_ALT; i++)
 			{
 				if (m_vars[i])
 					PushEvent(Event(i|TK_KEY_RELEASED, {{i, 0}}));
