@@ -760,6 +760,7 @@ namespace BearLibTerminal
 			{VK_UP,         TK_UP},
 			{VK_SHIFT,      TK_SHIFT},
 			{VK_CONTROL,    TK_CONTROL},
+			{VK_MENU,       TK_ALT},
 			{VK_NUMPAD0,    TK_KP_0},
 			{VK_NUMPAD1,    TK_KP_1},
 			{VK_NUMPAD2,    TK_KP_2},
@@ -917,36 +918,12 @@ namespace BearLibTerminal
 			bool extended = (lParam & (1<<24)) > 0;
 			bool pressed = (uMsg == WM_KEYDOWN) || (uMsg == WM_SYSKEYDOWN);
 
-			if (uMsg == WM_SYSKEYDOWN || uMsg == WM_SYSKEYUP)
-			{
-				int code = MapWindowsScancodeToTerminal(scancode);
-				std::set<int> codes = {TK_F10, TK_ALT, TK_RETURN, TK_A, TK_G, TK_MINUS, TK_EQUALS};
-
-				if (codes.count(code))
-				{
-					// Set Alt state
-					m_events.push_back(Event{TK_ALT, {{TK_ALT, 1}}});
-
-					Event event(code|(pressed? 0: TK_KEY_RELEASED));
-					event[code] = pressed? 1: 0;
-					m_events.push_back(event);
-
-					// Clear Alt state
-					m_events.push_back(Event{TK_ALT|TK_KEY_RELEASED, {{TK_ALT, 0}}});
-
-					return FALSE;
-				}
-				else
-				{
-					return DefWindowProc(m_handle, uMsg, wParam, lParam);
-				}
-			}
-
 			if (scancode == VK_CONTROL ||
 			    scancode == VK_SHIFT ||
 			    scancode == VK_PAUSE ||
 			   (scancode >= VK_F1 && scancode <= VK_F12) || // Functional keys
-			   (scancode >= VK_NUMPAD0 && scancode <= VK_DIVIDE)) // Numpad keys
+			   (scancode >= VK_NUMPAD0 && scancode <= VK_DIVIDE) || // Numpad keys
+			   (uMsg == WM_SYSKEYDOWN || uMsg == WM_SYSKEYUP)) // Alt and its combinations
 			{
 				int code = MapWindowsScancodeToTerminal(scancode);
 				if (code > 0)
