@@ -27,6 +27,7 @@
 #include <iostream>
 #import <Cocoa/Cocoa.h>
 #include "Encoding.hpp"
+#include "OpenGL.hpp"
 
 #define TERMINAL_BUILDING_LIBRARY
 #include "BearLibTerminal.h"
@@ -397,6 +398,8 @@ namespace BearLibTerminal
         
         [m_impl->m_window setContentView:m_impl->m_view];
         [[m_impl->m_view openGLContext] makeCurrentContext];
+        
+        ProbeOpenGL();
         
         SetVSync(true);
 		
