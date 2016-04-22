@@ -311,17 +311,26 @@ namespace BearLibTerminal
 		char32_t font_offset = 0;
 		std::wstring font_name = L"main";
 		size_t space_pos = name.find(L' ');
-		if (space_pos != std::wstring::npos && space_pos < name.length())
+		if (space_pos != std::wstring::npos && space_pos < name.length()-1)
 		{
 			font_name = name.substr(0, space_pos);
-			name = name.substr(space_pos);
+			name = name.substr(space_pos+1);
 		}
+
 		auto i = g_fonts.find(font_name);
 		if (i != g_fonts.end())
 			font_offset = i->second * 0x01000000;
 		else
 			font_offset = AllocateFontIndex(font_name) * 0x01000000;
-		return font_offset + parse<char32_t>(name);
+
+		if (name == L"font")
+			return font_offset;
+
+		char32_t tileset_offset = 0;
+		if (!try_parse(name, tileset_offset))
+			throw std::runtime_error("Failed to parse tileset offset from '" + UTF8Encoding().Convert(name) + "'");
+
+		return font_offset + tileset_offset;
 	}
 
 	TileInfo* GetTileInfo(char32_t code)
