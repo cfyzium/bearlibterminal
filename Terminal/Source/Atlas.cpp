@@ -131,7 +131,9 @@ namespace BearLibTerminal
 
 	AtlasTexture::AtlasTexture(Size initial_size):
 		m_canvas(initial_size, Color{})
-	{ }
+	{
+		m_spaces.emplace_back(initial_size);
+	}
 
 	bool AtlasTexture::IsEmpty() const
 	{
