@@ -23,7 +23,7 @@
 #include "Log.hpp"
 
 #if defined(_WIN32)
-#include <Windows.h>
+#include <windows.h>
 #elif defined(__linux)
 #include <sys/time.h>
 #endif
