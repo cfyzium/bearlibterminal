@@ -406,4 +406,9 @@ namespace BearLibTerminal
 	{
 		m_textures.remove_if([](std::shared_ptr<AtlasTexture>& item){return item->IsEmpty();});
 	}
+
+	void Atlas::Clear()
+	{
+		m_textures.clear();
+	}
 }

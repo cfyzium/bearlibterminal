@@ -229,6 +229,10 @@ namespace BearLibTerminal
 
 	Terminal::~Terminal()
 	{
+		g_codespace.clear();
+		g_tilesets.clear();
+		g_atlas.Clear();
+
 		// Window will be disposed of automatically.
 	}
 
