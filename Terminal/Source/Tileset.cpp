@@ -88,9 +88,11 @@ namespace BearLibTerminal
 	{
 		char32_t offset = parse<char32_t>(options.name);
 
-		std::wstring resource = options.attributes[L""];
+		std::wstring resource = options.attributes[L"_"];
 		if (resource.empty())
+		{
 			throw std::runtime_error("Tileset::Create: main attribute is missing from tileset options");
+		}
 
 		if (resource == L"dynamic")
 		{
