@@ -27,7 +27,6 @@
 #include "Palette.hpp"
 #include "Config.hpp"
 #include "Log.hpp"
-#include "Utility.hpp"
 #include <map>
 #include <memory>
 #include <string>

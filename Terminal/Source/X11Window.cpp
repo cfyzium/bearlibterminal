@@ -33,6 +33,7 @@
 #include <future>
 #include <iostream>
 #include <limits.h>
+#include <string.h>
 
 #define BEARLIBTERMINAL_BUILDING_LIBRARY
 #include "BearLibTerminal.h"
@@ -308,12 +309,12 @@ namespace BearLibTerminal
 		if (extensions.find("GLX_EXT_swap_control") != std::string::npos)
 		{
 			LOG(Trace, "OpenGL context has GLX_EXT_swap_control extension");
-			m_glXSwapIntervalEXT = (PFN_GLXSWAPINTERVALEXT)glXGetProcAddressARB((GLubyte*)"glXSwapIntervalEXT");
+			m_glXSwapIntervalEXT = (PFN_GLXSWAPINTERVALEXT)glXGetProcAddress((GLubyte*)"glXSwapIntervalEXT");
 		}
 		else if (extensions.find("GLX_MESA_swap_control") != std::string::npos)
 		{
 			LOG(Trace, "OpenGL context has GLX_MESA_swap_control extension");
-			m_glXSwapIntervalMESA = (PFN_GLXSWAPINTERVALMESA)glXGetProcAddressARB((GLubyte*)"glXSwapIntervalMESA");
+			m_glXSwapIntervalMESA = (PFN_GLXSWAPINTERVALMESA)glXGetProcAddress((GLubyte*)"glXSwapIntervalMESA");
 		}
 		SetVSync(true);
 

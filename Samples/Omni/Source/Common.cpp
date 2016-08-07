@@ -8,7 +8,7 @@
 #include "Common.hpp"
 
 #if defined(_WIN32)
-#include <Windows.h>
+#include <windows.h>
 uint64_t GetTime()
 {
 	return timeGetTime();

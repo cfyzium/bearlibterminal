@@ -104,6 +104,7 @@ namespace BearLibTerminal
 		void Remove(std::shared_ptr<TileInfo> tile);
 		void Defragment();
 		void CleanUp();
+		void Clear();
 
 	private:
 		std::list<std::shared_ptr<AtlasTexture>> m_textures;

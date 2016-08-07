@@ -95,7 +95,7 @@ namespace BearLibTerminal
 			// a.b.c   --> [a.b] c      ini.custom.property
 			// a.b.c.d --> [a.b] c.d    ini.bearlibterminal.window.title
 
-			std::wstring section_name;
+			std::wstring section_name = L"_";
 
 			size_t first_period_pos = name.find(L'.');
 			if (first_period_pos == std::wstring::npos)

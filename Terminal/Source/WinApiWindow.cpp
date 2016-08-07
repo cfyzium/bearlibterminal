@@ -35,7 +35,7 @@
 #include "Geometry.hpp"
 #include "Utility.hpp"
 
-#include <Mmsystem.h>
+#include <mmsystem.h>
 
 #if !defined(MAPVK_VSC_TO_VK)
 #define MAPVK_VSC_TO_VK 1

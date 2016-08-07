@@ -19,31 +19,42 @@
 # IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #
-# Release date: 2016-03-29
+# Release date: 2016-07-06
 
 import sys, ctypes, numbers
 
 _version3 = sys.version_info >= (3, 0)
- 
-_library = None
-_possible_library_names = [
-	'BearLibTerminal.dll',        # Generic Windows DLL
-	'./libBearLibTerminal.so',    # Local Linux SO
-	'./libBearLibTerminal.dylib', # Local OS X dylib
-	'./BearLibTerminal.so',       # Local Linux SO w/o prefix
-	'libBearLibTerminal.so',      # System Linux SO
-	'libBearLibTerminal.dylib',   # System OS X dylib
-	'BearLibTerminal.so'          # System Linux SO w/o prefix 
-]
-for name in _possible_library_names:
-	try:
-		_library = ctypes.CDLL(name)
-		break
-	except OSError:
-		continue
 
-if _library is None:
-	raise RuntimeError("BearLibTerminal library cannot be loaded.")
+def _load_library():
+	from os import path
+	
+	# Figure out where the library binary should be
+	try:
+		# Try to search near the wrapper module
+		module_path = __file__
+	except NameError:
+		# If there is no module (e. g. it a standalone app)
+		# look in the CWD (usually near the executable file)
+		module_path = sys.argv[0]
+	library_path = path.dirname(path.abspath(module_path))
+	
+	# Construct a platform-specific name of the library binary file
+	if 'win32' in sys.platform:
+		library_name = 'BearLibTerminal.dll'
+	elif 'linux' in sys.platform:
+		library_name = 'libBearLibTerminal.so'
+	elif 'darwin' in sys.platform:
+		library_name = 'libBearLibTerminal.dylib'
+	else:
+		raise RuntimeError('Unsupported platform: ' + sys.platform)
+	
+	# Now actually try to load the library binary
+	try:
+		return ctypes.CDLL(library_path + path.sep + library_name)
+	except OSError:
+		raise RuntimeError('BearLibTerminal library cannot be loaded (looked for ' + library_name + ' in ' + library_path + ')')
+
+_library = _load_library()
 
 # wchar_t size may vary
 if ctypes.sizeof(ctypes.c_wchar()) == 4:

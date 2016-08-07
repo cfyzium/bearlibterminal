@@ -219,7 +219,7 @@ namespace BearLibTerminal
 			// TODO: use some more readable "split" function
 			std::wstring group = pair.first.substr(0, pair.first.find(L'.'));
 			std::wstring property = group.length() >= pair.first.length()-1?
-				L"name": pair.first.substr(group.length()+1);
+				L"_": pair.first.substr(group.length()+1);
 			groups[group] += group + L"." + property + L"=" + pair.second + L";";
 		}
 		for (auto& pair: groups)
@@ -229,6 +229,10 @@ namespace BearLibTerminal
 
 	Terminal::~Terminal()
 	{
+		g_codespace.clear();
+		g_tilesets.clear();
+		g_atlas.Clear();
+
 		// Window will be disposed of automatically.
 	}
 
@@ -266,7 +270,7 @@ namespace BearLibTerminal
 		RemoveTileset(0xFFFF);
 		OptionGroup options;
 		options.name = L"0xFFFF";
-		options.attributes[L""] = L"dynamic";
+		options.attributes[L"_"] = L"dynamic";
 		options.attributes[L"size"] = to_string<wchar_t>(size);
 		AddTileset(Tileset::Create(options));
 	}
@@ -410,7 +414,7 @@ namespace BearLibTerminal
 			else
 			{
 				char32_t offset = ParseTilesetOffset(group.name);
-				if (group.attributes[L""] == L"none")
+				if (group.attributes[L"_"] == L"none")
 				{
 					// Remove tileset.
 					new_tilesets[offset].reset();
