@@ -192,7 +192,7 @@ namespace BearLibTerminal
 						std::wstring key = i.first;
 						std::wstring value = i.second;
 
-						key = key.empty()? name: (name + L"." + key);
+						key = (key == L"_")? name: (name + L"." + key);
 
 						Property& property = section.m_properties[key];
 						property.m_value = value;
@@ -319,7 +319,7 @@ namespace BearLibTerminal
 
 		// Prepare property value for merging
 		std::map<std::string, std::string> pieces;
-		std::string piece_name;
+		std::string piece_name = "_";
 		{
 			size_t period_pos = property_name.find(".");
 			if (period_pos != std::string::npos)
@@ -493,7 +493,7 @@ namespace BearLibTerminal
 		{
 			std::ostringstream ss;
 			ss << property_name;
-			if (pieces.size() == 1 && pieces.begin()->first.empty())
+			if (pieces.size() == 1 && pieces.begin()->first == "_")
 			{
 				// One entry and its subname is empty --> "foo=bar"
 				ss << "=";
@@ -505,7 +505,7 @@ namespace BearLibTerminal
 				for (auto i = pieces.begin(); i != pieces.end(); i++)
 				{
 					ss << (i == pieces.begin()? ": ": ", ");
-					if (i->first.empty())
+					if (i->first == "_")
 					{
 						append_escaped(ss, i->second);
 					}
