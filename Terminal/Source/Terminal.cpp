@@ -722,17 +722,11 @@ namespace BearLibTerminal
 
 	void Terminal::ValidateInputOptions(OptionGroup& group, Options& options)
 	{
-		// Possible options: nonblocking, events, precise_mouse, sticky_close, cursor_symbol, cursor_blink_rate
+		// Possible options: nonblocking, events, precise_mouse, cursor_symbol, cursor_blink_rate
 
 		if (group.attributes.count(L"precise-mouse") && !try_parse(group.attributes[L"precise-mouse"], options.input_precise_mouse))
 		{
 			throw std::runtime_error("input.precise-mouse cannot be parsed");
-		}
-
-		// TODO: deprecated
-		if (group.attributes.count(L"sticky-close") && !try_parse(group.attributes[L"sticky-close"], options.input_sticky_close))
-		{
-			throw std::runtime_error("input.sticky-close cannot be parsed");
 		}
 
 		if (group.attributes.count(L"filter") && !ParseInputFilter(group.attributes[L"filter"], options.input_filter))
@@ -2352,13 +2346,6 @@ namespace BearLibTerminal
 			else
 			{
 				return;
-			}
-		}
-		else if (event.code == TK_CLOSE)
-		{
-			if (m_options.input_sticky_close)
-			{
-				m_vars[TK_CLOSE] = 1;
 			}
 		}
 
