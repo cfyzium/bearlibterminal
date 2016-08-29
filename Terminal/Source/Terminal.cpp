@@ -178,11 +178,6 @@ namespace BearLibTerminal
 		m_viewport_modified{false},
 		m_scale_step(kScaleDefault),
 		m_alt_pressed(false)
-#if defined(USING_SDL)
-		,
-		m_window2(nullptr),
-		m_gl_context(nullptr)
-#endif
 	{
 #if defined(__APPLE__)
 		// OS X implementation of C-string manipulation routines (e. g. swprintf)
