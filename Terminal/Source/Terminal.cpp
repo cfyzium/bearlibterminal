@@ -1587,7 +1587,7 @@ namespace BearLibTerminal
 
 		m_window->PumpEvents();
 
-		if (m_state == kClosed)
+		if (m_state != kVisible)
 			return 1;
 
 		return !m_input_queue.empty();
@@ -1600,7 +1600,7 @@ namespace BearLibTerminal
 
 	Event Terminal::ReadEvent(int timeout) // FIXME: more precise wait
 	{
-		if (m_state == kClosed)
+		if (m_state != kVisible)
 			return {TK_CLOSE};
 
 		auto started = std::chrono::system_clock::now();
@@ -1640,7 +1640,7 @@ namespace BearLibTerminal
 
 		m_window->PumpEvents();
 
-		if (m_state == kClosed)
+		if (m_state != kVisible)
 		{
 			return TK_CLOSE;
 		}
