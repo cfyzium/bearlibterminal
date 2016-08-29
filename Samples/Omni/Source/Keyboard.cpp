@@ -47,7 +47,7 @@ static void FillRectangle(int x, int y, int w, int h, color_t color)
 void TestKeyboard()
 {
 	terminal_set("window.title='Omni: basic keyboard input'");
-	terminal_set("input.events=keypress+keyrelease");
+	terminal_set("input.filter={keyboard+, system}");
 	terminal_composition(TK_ON);
 
 	//
@@ -301,5 +301,5 @@ void TestKeyboard()
 	}
 
 	terminal_composition(TK_OFF);
-	terminal_set("input.events=keypress");
+	terminal_setf("input.filter={keyboard, system}");
 }
