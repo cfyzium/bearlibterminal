@@ -203,7 +203,7 @@ namespace BearLibTerminal
 		m_window = Window::Create(std::bind(&Terminal::OnWindowEvent, this, std::placeholders::_1));
 
 		// Default parameters
-		SetOptionsInternal(L"window: size=80x25, icon=default; font: default; terminal.encoding=utf8; input.filter={keyboard, system}");
+		SetOptionsInternal(L"window: size=80x25, icon=default; font: default; terminal.encoding=utf8; input.filter={keyboard}");
 
 		// Apply parameters from configuration file:
 		// Each group (line) is applied separately to allow some error resilience.
@@ -786,14 +786,9 @@ namespace BearLibTerminal
 
 				if (!name.empty())
 				{
-					if (name == L"false")
+					if (name == L"false" || name == L"none")
 					{
 						result.clear();
-					}
-					else if (name == L"system")
-					{
-						add(TK_CLOSE, release_too);
-						add(TK_RESIZED, release_too);
 					}
 					else if (name == L"keyboard")
 					{
@@ -848,6 +843,12 @@ namespace BearLibTerminal
 			}
 
 			start = end+1;
+		}
+
+		if (!result.empty())
+		{
+			result.insert(TK_CLOSE);
+			result.insert(TK_RESIZED);
 		}
 
 		out = result;

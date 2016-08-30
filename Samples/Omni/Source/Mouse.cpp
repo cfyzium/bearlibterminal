@@ -17,7 +17,7 @@ double_click_area = {1, 11, 17, 4}; // FIXME: common rectangle struct
 void TestMouse()
 {
 	terminal_set("window.title='Omni: mouse input'");
-	terminal_set("input.filter={keyboard, mouse+, system}");
+	terminal_set("input.filter={keyboard, mouse+}");
 	terminal_composition(TK_ON);
 
 	bool precise_mouse = false;
@@ -178,5 +178,5 @@ void TestMouse()
 
 	terminal_color("white");
 	terminal_composition(TK_OFF);
-	terminal_set("input: precise-mouse=false, mouse-cursor=true, filter={keyboard, system}");
+	terminal_set("input: precise-mouse=false, mouse-cursor=true, filter={keyboard}");
 }

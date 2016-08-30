@@ -98,5 +98,5 @@ void TestInputFiltering()
 		while (proceed && terminal_has_input());
 	}
 
-	terminal_set("input.filter=[]");
+	terminal_set("input.filter={keyboard}");
 }
