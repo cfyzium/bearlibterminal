@@ -13,7 +13,7 @@ void TestWindowResize()
 
 	const int symbol = 0x2588;
 
-	for (bool proceed=true; proceed;)
+	while (true)
 	{
 		terminal_clear();
 		int w = terminal_state(TK_WIDTH);
@@ -31,20 +31,12 @@ void TestWindowResize()
 		terminal_printf(3, 2, "Terminal size is %dx%d", w, h);
 		terminal_refresh();
 
-		do
-		{
-			int key = terminal_read();
+		int key = terminal_read();
 
-			if (key == TK_CLOSE || key == TK_ESCAPE)
-			{
-				proceed = false;
-			}
-			else if (key == TK_RESIZED)
-			{
-				break;// ?..
-			}
+		if (key == TK_CLOSE || key == TK_ESCAPE)
+		{
+			break;
 		}
-		while (proceed && terminal_has_input());
 	}
 
 	terminal_set("window: resizeable=false");

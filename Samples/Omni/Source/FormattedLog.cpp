@@ -168,7 +168,7 @@ void ScrollToPixel(int py)
 void TestFormattedLog()
 {
 	terminal_set("window: resizeable=true, minimum-size=20x8; font: default");
-	terminal_set("input.precise-mouse=true");
+	terminal_set("input: filter='keyboard, mouse+', precise-mouse=true");
 	terminal_set("runic font: ../Media/Tigrex3drunes_16x16_437.PNG, size=16x16, codepage=437, spacing=2x1, transparent=auto");
 	terminal_set("stone font: ../Media/Aesomatica_16x16_437.png, size=16x16, codepage=437, spacing=2x1, transparent=#FF00FF");
 	terminal_set("curvy font: ../Media/Cheepicus_16x16_437.png, size=16x16, codepage=437, spacing=2x1, transparent=auto");
@@ -192,7 +192,7 @@ void TestFormattedLog()
 	// Initial update
 	UpdateGeometry();
 
-	for (bool proceed=true; proceed;)
+	while (true)
 	{
 		terminal_clear();
 		terminal_color("white");
@@ -246,61 +246,61 @@ void TestFormattedLog()
 		// Render
 		terminal_refresh();
 
-		do
+		int key = terminal_read();
+
+		if (key == TK_CLOSE || key == TK_ESCAPE)
 		{
-			int key = terminal_read();
-			if (key == TK_CLOSE || key == TK_ESCAPE)
+			break;
+		}
+		else if (key == TK_UP)
+		{
+			frame_offset = std::max(0, frame_offset-1);
+		}
+		else if (key == TK_DOWN)
+		{
+			frame_offset = std::min(total_messages_height-frame_height, frame_offset+1);
+		}
+		else if (key == TK_MOUSE_SCROLL)
+		{
+			// Mouse wheel scroll
+			frame_offset += mouse_scroll_step * terminal_state(TK_MOUSE_WHEEL);
+			frame_offset = std::max(0, std::min(total_messages_height-frame_height, frame_offset));
+		}
+		else if (key == TK_MOUSE_LEFT && terminal_state(TK_MOUSE_X) == scrollbar_column)
+		{
+			int py = terminal_state(TK_MOUSE_PIXEL_Y);
+			if (py >= scrollbar_offset && py <= scrollbar_offset + (scrollbar_height * terminal_state(TK_CELL_HEIGHT)))
 			{
-				proceed = false;
-				break;
+				// Clicked on the scrollbar handle: start dragging
+				dragging_scrollbar = true;
+				dragging_scrollbar_offset = py - scrollbar_offset;
 			}
-			else if (key == TK_UP)
+			else
 			{
-				frame_offset = std::max(0, frame_offset-1);
-			}
-			else if (key == TK_DOWN)
-			{
-				frame_offset = std::min(total_messages_height-frame_height, frame_offset+1);
-			}
-			else if (key == TK_MOUSE_SCROLL)
-			{
-				// Mouse wheel scroll
-				frame_offset += mouse_scroll_step * terminal_state(TK_MOUSE_WHEEL);
-				frame_offset = std::max(0, std::min(total_messages_height-frame_height, frame_offset));
-			}
-			else if (key == TK_MOUSE_LEFT && terminal_state(TK_MOUSE_X) == scrollbar_column)
-			{
-				int py = terminal_state(TK_MOUSE_PIXEL_Y);
-				if (py >= scrollbar_offset && py <= scrollbar_offset + (scrollbar_height * terminal_state(TK_CELL_HEIGHT)))
-				{
-					// Clicked on the scrollbar handle: start dragging
-					dragging_scrollbar = true;
-					dragging_scrollbar_offset = py - scrollbar_offset;
-				}
-				else
-				{
-					// Clicked outside of the handle: jump to position
-					ScrollToPixel(terminal_state(TK_MOUSE_PIXEL_Y) - scrollbar_height * terminal_state(TK_CELL_HEIGHT) / 2);
-				}
-			}
-			else if (key == (TK_MOUSE_LEFT|TK_KEY_RELEASED))
-			{
-				dragging_scrollbar = false;
-			}
-			else if (key == TK_MOUSE_MOVE && dragging_scrollbar)
-			{
-				ScrollToPixel(terminal_state(TK_MOUSE_PIXEL_Y) - dragging_scrollbar_offset);
-			}
-			else if (key == TK_RESIZED)
-			{
-				UpdateGeometry();
-				break;
+				// Clicked outside of the handle: jump to position
+				ScrollToPixel(terminal_state(TK_MOUSE_PIXEL_Y) - scrollbar_height * terminal_state(TK_CELL_HEIGHT) / 2);
 			}
 		}
-		while (terminal_has_input());
+		else if (key == (TK_MOUSE_LEFT|TK_KEY_RELEASED))
+		{
+			dragging_scrollbar = false;
+		}
+		else if (key == TK_MOUSE_MOVE)
+		{
+			if (dragging_scrollbar)
+				ScrollToPixel(terminal_state(TK_MOUSE_PIXEL_Y) - dragging_scrollbar_offset);
+
+			while (terminal_peek() == TK_MOUSE_MOVE)
+				terminal_read();
+		}
+		else if (key == TK_RESIZED)
+		{
+			UpdateGeometry();
+			break;
+		}
 	}
 
 	terminal_set("window: resizeable=false");
 	terminal_set("runic font: none; stone font: none; curvy font: none");
-	terminal_set("input.precise-mouse=false;");
+	terminal_set("input: filter='keyboard', precise-mouse=false;");
 }

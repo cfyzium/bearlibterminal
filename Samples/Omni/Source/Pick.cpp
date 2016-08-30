@@ -39,7 +39,7 @@ void TestPick()
 
 	terminal_color("white");
 
-	for (bool proceed=true; proceed;)
+	while (true)
 	{
 		int x = terminal_state(TK_MOUSE_X);
 		int y = terminal_state(TK_MOUSE_Y);
@@ -69,14 +69,11 @@ void TestPick()
 
 		terminal_refresh();
 
-		do
+		int key = terminal_read();
+
+		if (key == TK_CLOSE || key == TK_ESCAPE)
 		{
-			int key = terminal_read();
-			if (key == TK_CLOSE || key == TK_ESCAPE)
-			{
-				proceed = false;
-			}
+			break;
 		}
-		while (proceed && terminal_has_input());
 	}
 }

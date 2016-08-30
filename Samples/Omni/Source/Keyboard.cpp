@@ -218,8 +218,7 @@ void TestKeyboard()
 	const color_t grid_color = 0xFF606060;
 	const color_t note_text_color = 0xFF008000;
 
-	bool proceed = true;
-	while (proceed)
+	while (true)
 	{
 		terminal_clear();
 
@@ -289,15 +288,12 @@ void TestKeyboard()
 
 		terminal_refresh();
 
-		do
+		int key = terminal_read();
+
+		if (key == TK_CLOSE || (key == TK_ESCAPE && terminal_state(TK_SHIFT)))
 		{
-			int key = terminal_read();
-			if (key == TK_CLOSE || (key == TK_ESCAPE && terminal_state(TK_SHIFT)))
-			{
-				proceed = false; break;
-			}
+			break;
 		}
-		while (terminal_has_input());
 	}
 
 	terminal_composition(TK_OFF);

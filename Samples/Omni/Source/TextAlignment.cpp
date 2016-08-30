@@ -61,7 +61,7 @@ void TestTextAlignment()
 
 	UpdateGeometry();
 
-	for (bool proceed=true; proceed;)
+	while (true)
 	{
 		terminal_clear();
 
@@ -124,35 +124,32 @@ void TestTextAlignment()
 
 		terminal_refresh();
 
-		do
+		int key = terminal_read();
+
+		if (key == TK_CLOSE || key == TK_ESCAPE)
 		{
-			int key = terminal_read();
-			if (key == TK_CLOSE || key == TK_ESCAPE)
-			{
-				proceed = false;
-			}
-			else if (key == TK_LEFT)
-			{
-				horisontal = horisontal_shift[(int)horisontal-1];
-			}
-			else if (key == TK_RIGHT)
-			{
-				horisontal = horisontal_shift[(int)horisontal+1];
-			}
-			else if (key == TK_UP)
-			{
-				vertical = vertical_shift[(int)vertical-1];
-			}
-			else if (key == TK_DOWN)
-			{
-				vertical = vertical_shift[(int)vertical+1];
-			}
-			else if (key == TK_RESIZED)
-			{
-				UpdateGeometry();
-			}
+			break;
 		}
-		while (proceed && terminal_has_input());
+		else if (key == TK_LEFT)
+		{
+			horisontal = horisontal_shift[(int)horisontal-1];
+		}
+		else if (key == TK_RIGHT)
+		{
+			horisontal = horisontal_shift[(int)horisontal+1];
+		}
+		else if (key == TK_UP)
+		{
+			vertical = vertical_shift[(int)vertical-1];
+		}
+		else if (key == TK_DOWN)
+		{
+			vertical = vertical_shift[(int)vertical+1];
+		}
+		else if (key == TK_RESIZED)
+		{
+			UpdateGeometry();
+		}
 	}
 
 	terminal_composition(TK_OFF);
