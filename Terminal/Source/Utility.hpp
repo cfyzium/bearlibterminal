@@ -27,6 +27,7 @@
 #include <mutex>
 #include <algorithm>
 #include <memory>
+#include <vector>
 
 namespace BearLibTerminal
 {
@@ -138,6 +139,8 @@ namespace BearLibTerminal
 		else
 			return std::basic_string<char_t>();
 	}
+
+	std::vector<std::wstring> split(const std::wstring& s, wchar_t delimiter);
 
 	uint64_t gettime();
 

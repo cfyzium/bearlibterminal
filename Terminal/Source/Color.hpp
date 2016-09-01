@@ -43,8 +43,7 @@ namespace BearLibTerminal
 			b(blue), g(green), r(red), a(0xFF)
 		{ }
 
-		Color(std::uint32_t bgra)//:\
-			b(), g(), r(), a()
+		Color(std::uint32_t bgra)
 		{
 			*(std::uint32_t*)this = bgra;
 		}
@@ -68,6 +67,23 @@ namespace BearLibTerminal
 		{
 			return Color(r+other.r, g+other.g, b+other.b, a+other.a);
 		}
+	};
+
+	struct HSV
+	{
+		HSV():
+			h(0), s(0), v(0), a(255)
+		{ }
+
+		HSV(uint8_t h, uint8_t s, uint8_t v):
+			h(h), s(s), v(v), a(255)
+		{ }
+
+		HSV(uint8_t a, uint8_t h, uint8_t s, uint8_t v):
+			h(h), s(s), v(v), a(a)
+		{ }
+
+		uint8_t h, s, v, a;
 	};
 }
 

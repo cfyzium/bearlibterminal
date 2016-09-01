@@ -354,17 +354,17 @@ color_t color_from_name8(const int8_t* name)
 {
 	if (!g_instance || !name) return -1;
 	auto& encoding = g_instance->GetEncoding();
-	return BearLibTerminal::Palette::Instance[encoding.Convert((const char*)name)];
+	return BearLibTerminal::Palette::Instance.Get(encoding.Convert((const char*)name));
 }
 
 color_t color_from_name16(const int16_t* name)
 {
 	if (!g_instance || !name) return -1;
-	return BearLibTerminal::Palette::Instance[BearLibTerminal::UCS2Encoding().Convert((const char16_t*)name)];
+	return BearLibTerminal::Palette::Instance.Get(BearLibTerminal::UCS2Encoding().Convert((const char16_t*)name));
 }
 
 color_t color_from_name32(const int32_t* name)
 {
 	if (!g_instance || !name) return -1;
-	return BearLibTerminal::Palette::Instance[BearLibTerminal::UCS4Encoding().Convert((const char32_t*)name)];
+	return BearLibTerminal::Palette::Instance.Get(BearLibTerminal::UCS4Encoding().Convert((const char32_t*)name));
 }

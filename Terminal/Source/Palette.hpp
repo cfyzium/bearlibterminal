@@ -24,7 +24,7 @@
 #define BEARLIBTERMINAL_PALETTE_HPP
 
 #include <string>
-#include <map>
+#include <unordered_map>
 #include "Color.hpp"
 
 namespace BearLibTerminal
@@ -33,11 +33,12 @@ namespace BearLibTerminal
 	{
 	public:
 		Palette();
-		Color operator[] (const std::wstring& name);
+		Color Get(std::wstring name);
+		void Set(std::wstring name, Color base);
 		static Palette Instance;
 
 	protected:
-		std::map<std::wstring, Color> m_items;
+		std::unordered_map<std::wstring, Color> m_colors;
 	};
 }
 

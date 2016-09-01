@@ -368,6 +368,7 @@ namespace BearLibTerminal
 		auto groups = ParseOptions2(value);
 		Options updated = m_options;
 		std::unordered_map<char32_t, std::shared_ptr<Tileset>> new_tilesets;
+		std::unordered_map<std::wstring, Color> palette_update;
 
 		// Validate options
 		for (auto& group: groups)
@@ -406,6 +407,15 @@ namespace BearLibTerminal
 					Config::Instance().Set(group.name + L"." + i.first, i.second);
 				}
 			}
+			else if (group.name == L"palette")
+			{
+				Palette copy = Palette::Instance;
+				for (auto kv: group.attributes)
+				{
+					Color base = palette_update[kv.first] = copy.Get(kv.second);
+					copy.Set(kv.first, base);
+				}
+			}
 			else
 			{
 				char32_t offset = ParseTilesetOffset(group.name);
@@ -441,6 +451,10 @@ namespace BearLibTerminal
 		// Primary sanity check: if there is no base font, lots of things are gonna fail
 		if (!g_tilesets.count(0))
 			throw std::runtime_error("No main font has been configured");
+
+		// Apply palette
+		for (auto kv: palette_update)
+			Palette::Instance.Set(kv.first, kv.second);
 
 		Log::Instance().filename = updated.log_filename;
 		Log::Instance().level = updated.log_level;
@@ -1337,7 +1351,7 @@ namespace BearLibTerminal
 
 				if ((name == L"color" || name == L"c") && !params.empty())
 				{
-					color_t color = Palette::Instance[params];
+					color_t color = Palette::Instance.Get(params);
 					tag = [&, color]{m_world.state.color = color;};
 				}
 				else if (name == L"/color" || name == L"/c")
@@ -1346,7 +1360,7 @@ namespace BearLibTerminal
 				}
 				else if ((name == L"bkcolor" || name == L"b") && !params.empty())
 				{
-					color_t color = Palette::Instance[params];
+					color_t color = Palette::Instance.Get(params);
 					tag = [&, color]{m_world.state.bkcolor = color;};
 				}
 				else if (name == L"/bkcolor" || name == L"/b")
