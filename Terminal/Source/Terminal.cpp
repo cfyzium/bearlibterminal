@@ -172,6 +172,19 @@ namespace BearLibTerminal
 		return i == mapping.end()? 0: i->second;
 	}
 
+	static std::wstring Escape(const std::wstring& s)
+	{
+		std::wstring result = L"'";
+		for (auto c: s)
+		{
+			result += c;
+			if (c == L'\'')
+				result += c;
+		}
+		result += L"'";
+		return result;
+	}
+
 	Terminal::Terminal():
 		m_state{kHidden},
 		m_show_grid{false},
@@ -215,10 +228,17 @@ namespace BearLibTerminal
 			std::wstring group = pair.first.substr(0, pair.first.find(L'.'));
 			std::wstring property = group.length() >= pair.first.length()-1?
 				L"_": pair.first.substr(group.length()+1);
-			groups[group] += group + L"." + property + L"=" + pair.second + L";";
+			groups[group] += group + L"." + property + L"=" + Escape(pair.second) + L";";
 		}
 		for (auto& pair: groups)
 			SetOptions(pair.second);
+		LOG(Info, "Applying palette from configuration file");
+		for (auto& pair: Config::Instance().List(L"ini.palette"))
+		{
+			Color value = Palette::Instance.Get(pair.second);
+			LOG(Info, "* '" << pair.first << "' = '" << pair.second << "' (a=" << (int)value.a << ", r=" << (int)value.r << ", g=" << (int)value.g << ", b=" << (int)value.b << ")");
+			Palette::Instance.Set(pair.first, value);
+		}
 		LOG(Info, "Terminal initialization complete");
 	}
 
@@ -409,11 +429,9 @@ namespace BearLibTerminal
 			}
 			else if (group.name == L"palette")
 			{
-				Palette copy = Palette::Instance;
 				for (auto kv: group.attributes)
 				{
-					Color base = palette_update[kv.first] = copy.Get(kv.second);
-					copy.Set(kv.first, base);
+					palette_update[kv.first] = Palette::Instance.Get(kv.second);
 				}
 			}
 			else

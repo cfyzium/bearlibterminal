@@ -72,7 +72,7 @@ namespace BearLibTerminal
 					closing_quote = 0;
 				}
 			}
-			else if (isquote(*p) && !closing_quote)
+			else if (isquote(*p) && !closing_quote && value.empty())
 			{
 				// Start of quoted string.
 				closing_quote = get_closing_quote(*p);

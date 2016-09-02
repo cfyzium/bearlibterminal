@@ -181,22 +181,14 @@ namespace BearLibTerminal
 				}
 
 				Section& section = m_sections[current_section];
-
-				std::wstring name = trim(line.substr(0, pos));
-				line[pos] = L':';
-
 				for (const auto& group: ParseOptions2(line, true))
 				{
 					for (auto& i: group.attributes)
 					{
-						std::wstring key = i.first;
+						std::wstring key = (i.first == L"_")? group.name: (group.name + L"." + i.first);
 						std::wstring value = i.second;
-
-						key = (key == L"_")? name: (name + L"." + key);
-
 						Property& property = section.m_properties[key];
 						property.m_value = value;
-
 						LOG(Trace, L"'" << key << L"' = '" << value << L"'");
 					}
 				}
@@ -442,10 +434,6 @@ namespace BearLibTerminal
 					// Remove duplicates.
 					lines.pop_back();
 				}
-
-				// Overwriting name separator will make the line suitable for
-				// universal parsing by ParseOptions function.
-				line[pos] = ':';
 
 				for (const auto& group: ParseOptions2(UTF8Encoding().Convert(line), true))
 				{
