@@ -80,6 +80,8 @@ namespace BearLibTerminal
 		int Redraw();
 		int OnWindowEvent(Event event);
 		void PushEvent(Event event);
+		bool IsEventFiltered(int code);
+		bool HasFilteredInput();
 	private:
 		enum state_t {kHidden, kVisible, kClosed} m_state;
 		std::thread::id m_main_thread_id;

@@ -1614,6 +1614,22 @@ namespace BearLibTerminal
 		return wrap.width > 0? total_height: total_width;
 	}
 
+	bool Terminal::IsEventFiltered(int code)
+	{
+		return m_options.input_filter.empty() || m_options.input_filter.count(code);
+	}
+
+	bool Terminal::HasFilteredInput()
+	{
+		for (auto& e: m_input_queue)
+		{
+			if (IsEventFiltered(e.code))
+				return true;
+		}
+
+		return false;
+	}
+
 	int Terminal::HasInput()
 	{
 		CHECK_THREAD("has_input", 0);
@@ -1623,7 +1639,7 @@ namespace BearLibTerminal
 		if (m_state != kVisible)
 			return 1;
 
-		return !m_input_queue.empty();
+		return HasFilteredInput();
 	}
 
 	int Terminal::GetState(int code)
@@ -1642,12 +1658,18 @@ namespace BearLibTerminal
 		{
 			m_window->PumpEvents();
 
-			if (!m_input_queue.empty())
+			if (HasFilteredInput())
 			{
-				Event event = m_input_queue.front();
-				ConsumeEvent(event);
-				m_input_queue.pop_front();
-				return event;
+				while (!m_input_queue.empty())
+				{
+					Event e = m_input_queue.front();
+					m_input_queue.pop_front();
+					ConsumeEvent(e);
+					if (IsEventFiltered(e.code))
+						return e;
+				}
+
+				return 0;
 			}
 			else
 			{
@@ -1677,15 +1699,18 @@ namespace BearLibTerminal
 		{
 			return TK_CLOSE;
 		}
-		else if (m_input_queue.empty())
+		else if (HasFilteredInput())
 		{
-			return TK_INPUT_NONE;
+			for (auto& e: m_input_queue)
+			{
+				ConsumeEvent(e);
+				if (IsEventFiltered(e.code))
+					return e.code;
+			}
 		}
 		else
 		{
-			Event event = m_input_queue.front();
-			ConsumeEvent(event);
-			return event.code;
+			return TK_INPUT_NONE;
 		}
 	}
 
@@ -2181,14 +2206,11 @@ namespace BearLibTerminal
 
 	void Terminal::PushEvent(Event event)
 	{
-		bool must_be_consumed = false;
+		// If mouse events are not read, there is no need to keep more than the last one.
+		if (!m_input_queue.empty() && m_input_queue.back().code == TK_MOUSE_MOVE && !IsEventFiltered(TK_MOUSE_MOVE))
 		{
-			must_be_consumed = !m_options.input_filter.empty() && !m_options.input_filter.count(event.code);
-		}
-
-		if (must_be_consumed)
-		{
-			ConsumeEvent(event);
+			// Replace mouse event with this update.
+			m_input_queue.back() = event;
 		}
 		else
 		{
