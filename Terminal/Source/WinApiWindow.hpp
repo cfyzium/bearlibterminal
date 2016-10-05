@@ -42,6 +42,10 @@
 
 namespace BearLibTerminal
 {
+	// Windows Vista+ functionality, i. e. not available universally and cannot be linked against.
+	typedef HRESULT WINAPI (*PFNDWMGETWINDOWATTRIBUTE)(HWND, DWORD, PVOID, DWORD);
+	const DWORD DWMWA_EXTENDED_FRAME_BOUNDS = 9;
+
 	class WinApiWindow: public Window
 	{
 	public:
@@ -71,6 +75,7 @@ namespace BearLibTerminal
 		void DestroyWindowObject();
 		void DestroyOpenGLContext();
 		void Redraw();
+		void ClipToScreen(int width, int height, bool center);
 		static LRESULT CALLBACK SharedWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 		LRESULT WindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam);
 		LRESULT HandleWmPaint(WPARAM wParam, LPARAM lParam);
@@ -87,9 +92,11 @@ namespace BearLibTerminal
 		bool m_mouse_cursor_visible;
 		std::list<Event> m_events;
 		bool m_resizing;
+		bool m_has_been_shown;
 
 		typedef BOOL (WINAPI *PFN_WGLSWAPINTERVALEXT)(int interval);
 		PFN_WGLSWAPINTERVALEXT m_wglSwapIntervalEXT;
+		PFNDWMGETWINDOWATTRIBUTE m_DwmGetWindowAttribute;
 	};
 }
 

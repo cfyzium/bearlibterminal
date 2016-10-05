@@ -34,6 +34,7 @@
 #include "Resource.hpp"
 #include "Geometry.hpp"
 #include "Utility.hpp"
+#include "Platform.hpp"
 
 #include <mmsystem.h>
 
@@ -87,7 +88,9 @@ namespace BearLibTerminal
 		m_mouse_cursor_enabled(true),
 		m_mouse_cursor_visible(true),
 		m_wglSwapIntervalEXT(nullptr),
-		m_resizing(false)
+		m_resizing(false),
+		m_has_been_shown(false),
+		m_DwmGetWindowAttribute(nullptr)
 	{
 		// Raising timing resolution for Delay function.
 		timeBeginPeriod(1);
@@ -222,18 +225,87 @@ namespace BearLibTerminal
 			DWORD style = GetWindowLongW(m_handle, GWL_STYLE);
 			RECT rectangle = {0, 0, size.width, size.height};
 			AdjustWindowRect(&rectangle, style, FALSE);
-			SetWindowPos
-			(
-				m_handle,
-				HWND_NOTOPMOST,
-				0, 0,
+			ClipToScreen(
 				rectangle.right-rectangle.left,
 				rectangle.bottom-rectangle.top,
-				SWP_NOMOVE
+				false
 			);
 		}
 
 		m_client_size = size;
+	}
+
+	void WinApiWindow::ClipToScreen(int width, int height, bool center)
+	{
+		typedef HRESULT WINAPI (*PFNDWMGETWINDOWATTRIBUTE) ( //DwmGetWindowAttribute(
+		        HWND  hwnd,
+		        DWORD dwAttribute,
+				PVOID pvAttribute,
+		        DWORD cbAttribute
+		);
+
+		// Current window area.
+		RECT rect;
+		GetWindowRect(m_handle, &rect);
+
+		RECT extra = {0, 0, 0, 0};
+		if (m_DwmGetWindowAttribute)
+		{
+			RECT extended;
+			m_DwmGetWindowAttribute(m_handle, DWMWA_EXTENDED_FRAME_BOUNDS, &extended, sizeof(extended));
+			extra.left = rect.left - extended.left;
+			extra.top = rect.top - extended.top;
+			extra.right = extended.right - rect.right;
+			extra.bottom = extended.bottom - rect.bottom;
+		}
+
+		// Look up the nearest monitor.
+		HMONITOR hMonitor = MonitorFromRect(&rect, MONITOR_DEFAULTTONEAREST);
+
+		// And retrieve this monitor dimensions.
+		MONITORINFO minfo;
+		minfo.cbSize = sizeof(minfo);
+		GetMonitorInfoW(hMonitor, &minfo);
+
+		int left = rect.left;
+		int top = rect.top;
+
+		if (width == 0 || height == 0)
+		{
+			width = rect.right - rect.left;
+			height = rect.bottom - rect.top;
+		}
+
+		if (center)
+		{
+			// Place at the center of the current monitor.
+			left = minfo.rcWork.left + (minfo.rcWork.right - minfo.rcWork.left - width) / 2;
+			top = minfo.rcWork.top + (minfo.rcWork.bottom - minfo.rcWork.top - height) / 2;
+		}
+		else
+		{
+			// Make sure window does not go over the monitor borders.
+			left = std::min<int>(left, minfo.rcWork.right - width - extra.right);
+			top = std::min<int>(top, minfo.rcWork.bottom - height - extra.bottom);
+		}
+
+		// But it is no good to go over the top-left corner regardless.
+		left = std::max<int>(left, minfo.rcWork.left + extra.left);
+		top = std::max<int>(top, minfo.rcWork.top + extra.top);
+
+		unsigned flags = SWP_NOZORDER | SWP_NOACTIVATE;
+		if (left == rect.left && top == rect.top)
+			flags |= SWP_NOMOVE;
+		if (width == rect.right - rect.left && height == rect.bottom - rect.top)
+			flags |= SWP_NOSIZE;
+
+		SetWindowPos(
+			m_handle,
+			HWND_NOTOPMOST,
+			left, top,
+			width, height,
+			flags
+		);
 	}
 
 	void WinApiWindow::SetResizeable(bool resizeable)
@@ -359,6 +431,12 @@ namespace BearLibTerminal
 	{
 		if (m_handle != nullptr)
 		{
+			if (!m_has_been_shown)
+			{
+				ClipToScreen(0, 0, true);
+				m_has_been_shown = true;
+			}
+
 			ShowWindow(m_handle, SW_SHOW);
 			SetForegroundWindow(m_handle);
 		}
@@ -475,6 +553,17 @@ namespace BearLibTerminal
 
 		// Hook custom WndProc
 		SetWindowLongPtrW(m_handle, GWLP_USERDATA, (LONG_PTR)(void*)this);
+
+		// Look up some optional functions
+		try
+		{
+			Module dwmapi{L"Dwmapi.dll"};
+			m_DwmGetWindowAttribute = (PFNDWMGETWINDOWATTRIBUTE)dwmapi["DwmGetWindowAttribute"];
+		}
+		catch (...)
+		{
+			// Not an error, the library may not be present, e. g. on XP.
+		}
 
 		return true;
 	}
