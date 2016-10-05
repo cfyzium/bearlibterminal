@@ -34,6 +34,7 @@
 #include <iostream>
 #include <limits.h>
 #include <string.h>
+#include <X11/Xatom.h>
 
 #define BEARLIBTERMINAL_BUILDING_LIBRARY
 #include "BearLibTerminal.h"
@@ -370,6 +371,19 @@ namespace BearLibTerminal
 		m_wm_name = XInternAtom(m_display, "_NET_WM_NAME", False);
 		m_wm_maximized_horz = XInternAtom(m_display, "_NET_WM_STATE_MAXIMIZED_HORZ", False);
 		m_wm_maximized_vert = XInternAtom(m_display, "_NET_WM_STATE_MAXIMIZED_VERT", False);
+
+		Atom type = XInternAtom(m_display, "_NET_WM_WINDOW_TYPE", False);
+		Atom value = XInternAtom(m_display, "_NET_WM_WINDOW_TYPE_DIALOG", False);
+		XChangeProperty(
+			m_display,
+			m_window,
+			type,
+			XA_ATOM,
+			32,
+			PropModeReplace,
+			reinterpret_cast<unsigned char*>(&value),
+			1
+		);
 	}
 
 	X11Window::~X11Window()
