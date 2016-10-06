@@ -366,8 +366,6 @@ namespace BearLibTerminal
         [CocoaTerminalApplication sharedApplication];
         NSApp.delegate = [[CocoaTerminalApplicationDelegate alloc] initWithImpl:m_impl.get()];
         NSApp.activationPolicy = NSApplicationActivationPolicyRegular;
-        [NSApp activateIgnoringOtherApps:YES];
-        
         [NSApp run];
         
         NSUInteger styleMask =
@@ -408,6 +406,14 @@ namespace BearLibTerminal
         // Zoom and fullscreen buttons: hidden by default.
         [m_impl->m_window standardWindowButton:NSWindowZoomButton].hidden = YES;
         [m_impl->m_window standardWindowButton:NSWindowFullScreenButton].hidden = YES;
+		
+        // Menu
+        NSMenu* bar = [[NSMenu alloc] init];
+        [NSApp setMainMenu:bar];
+        NSMenuItem* appMenuItem = [bar addItemWithTitle:@"" action:NULL keyEquivalent:@""];
+        NSMenu* appMenu = [[NSMenu alloc] init];
+        [appMenu addItemWithTitle:@"Quit" action:@selector(terminate:) keyEquivalent:@"q"];
+        [appMenuItem setSubmenu:appMenu];
     }
 	
     void CocoaWindow::Destroy()
@@ -595,11 +601,13 @@ namespace BearLibTerminal
 
 - (NSApplicationTerminateReply)applicationShouldTerminate: (NSApplication*)sender
 {
+    m_impl->m_handler(TK_CLOSE);
     return NSTerminateCancel;
 }
 
 - (void)applicationDidFinishLaunching: (NSNotification*)notification
 {
+    [NSApp activateIgnoringOtherApps:YES];
     [NSApp stop:nil];
 }
 
