@@ -995,6 +995,7 @@ namespace BearLibTerminal
 			m_state = kVisible;
 		}
 
+		m_window->PumpEvents();
 		Render(true);
 	}
 #endif
