@@ -204,7 +204,7 @@ def has_input():
 state = _library.terminal_state
 
 def check(state):
-	return _library.terminal_state(state) == 1
+	return _library.terminal_state(state) > 0
 
 read = _library.terminal_read
 
