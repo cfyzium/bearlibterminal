@@ -2207,16 +2207,7 @@ namespace BearLibTerminal
 
 	void Terminal::PushEvent(Event event)
 	{
-		// If mouse events are not read, there is no need to keep more than the last one.
-		if (!m_input_queue.empty() && m_input_queue.back().code == TK_MOUSE_MOVE && !IsEventFiltered(TK_MOUSE_MOVE))
-		{
-			// Replace mouse event with this update.
-			m_input_queue.back() = event;
-		}
-		else
-		{
-			m_input_queue.push_back(event);
-		}
+		m_input_queue.push_back(event);
 	}
 
 	int Terminal::OnWindowEvent(Event event)
@@ -2290,17 +2281,36 @@ namespace BearLibTerminal
 			Size& cellsize = m_world.state.cellsize;
 			Point location(pixel_x / cellsize.width, pixel_y / cellsize.height);
 			location = Rectangle(m_world.stage.size).Clamp(location);
+			event[TK_MOUSE_X] = location.x;
+			event[TK_MOUSE_Y] = location.y;
 
-			if (!m_options.input_precise_mouse && m_vars[TK_MOUSE_X] == location.x && m_vars[TK_MOUSE_Y] == location.y)
+			// If application do not read events fast enough, do not flood it with mouse moves.
+			if (!m_input_queue.empty() && m_input_queue.back().code == TK_MOUSE_MOVE)
 			{
-				// This event do not change mouse cell position, ignore.
+				// Replace the last, yet unread event with the most recent one.
+				m_input_queue.back() = event;
 				return 0;
 			}
-			else
+
+			// Ignore mouse movement events that do not change coarse cursor location.
+			if (!m_options.input_precise_mouse)
 			{
-				// Make event update both pixel and cell positions.
-				event[TK_MOUSE_X] = location.x;
-				event[TK_MOUSE_Y] = location.y;
+				Point last_location{m_vars[TK_MOUSE_X], m_vars[TK_MOUSE_Y]};
+
+				// Search for last mouse movement event in the queue.
+				for (auto i = m_input_queue.rbegin(); i != m_input_queue.rend(); i++)
+				{
+					if (i->code == TK_MOUSE_MOVE)
+					{
+						last_location = Point{(*i)[TK_MOUSE_X], (*i)[TK_MOUSE_Y]};
+						break;
+					}
+				}
+
+				if (location == last_location)
+				{
+					return 0;
+				}
 			}
 		}
 		else if ((event.code & 0xFF) == TK_ALT && m_options.input_alt_functions)
