@@ -296,11 +296,10 @@ void TestFormattedLog()
 		else if (key == TK_RESIZED)
 		{
 			UpdateGeometry();
-			break;
 		}
 	}
 
 	terminal_set("window: resizeable=false");
 	terminal_set("runic font: none; stone font: none; curvy font: none");
-	terminal_set("input: filter='keyboard', precise-mouse=false;");
+	terminal_set("input: precise-mouse=false;");
 }

@@ -5,6 +5,7 @@
 void TestPick()
 {
 	terminal_set("window.title='Omni: examining cell contents'");
+	terminal_set("input.filter={keyboard, mouse}"); // Enable mouse events.
 
 	terminal_clear();
 	terminal_color("white");
