@@ -156,7 +156,7 @@ composition = _library.terminal_composition
 composition.restype = None
 
 def put(x, y, c):
-	if not isinstance(c, numbers.Number):
+	if type(c) is not int:
 		c = ord(c)
 	_library.terminal_put(x, y, c)
 
