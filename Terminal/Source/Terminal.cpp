@@ -995,8 +995,9 @@ namespace BearLibTerminal
 			m_state = kVisible;
 		}
 
+		m_world.stage.frontbuffer = m_world.stage.backbuffer;
 		m_window->PumpEvents();
-		Render(true);
+		Render();
 	}
 #endif
 
@@ -2214,7 +2215,7 @@ namespace BearLibTerminal
 	{
 		if (event.code == TK_REDRAW)
 		{
-			Render(false);
+			Render();
 			return 0;
 		}
 		else if (event.code == TK_INVALIDATE)
@@ -2330,7 +2331,7 @@ namespace BearLibTerminal
 			{
 				// Alt+G: toggle grid
 				m_show_grid = !m_show_grid;
-				Render(false);
+				Render();
 				return 0;
 			}
 			else if (event.code == TK_RETURN)
@@ -2439,10 +2440,8 @@ namespace BearLibTerminal
 		m_vars[TK_EVENT] = event.code;
 	}
 
-	void Terminal::Render(bool update_scene)
+	void Terminal::Render()
 	{
-		if (update_scene)
-			m_world.stage.frontbuffer = m_world.stage.backbuffer;
 		Redraw();
 		m_window->SwapBuffers();
 	}
