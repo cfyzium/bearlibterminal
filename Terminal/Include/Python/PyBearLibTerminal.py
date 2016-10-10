@@ -228,7 +228,9 @@ _library.terminal_get8.restype = ctypes.c_char_p
 _wget.restype = ctypes.c_wchar_p
 
 def get(s, default_value=None):
-	if _version3 or isinstance(s, unicode):
+	if _version3:
+		return _wget(s, default_value)
+	elif isinstance(s, unicode):
 		return unicode(_wget(s, default_value));
 	else:
 		return str(_library.terminal_get8(s, default_value))
