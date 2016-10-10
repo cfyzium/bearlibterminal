@@ -21,9 +21,10 @@
 #
 # Release date: 2016-07-06
 
-import sys, ctypes, numbers
+import sys, ctypes
 
 _version3 = sys.version_info >= (3, 0)
+_integer = int if _version3 else (int, long)
 
 def _load_library():
 	from os import path
@@ -141,13 +142,13 @@ layer = _library.terminal_layer
 layer.restype = None
 
 def color(v):
-	if isinstance(v, numbers.Number):
+	if isinstance(v, _integer):
 		_library.terminal_color(v)
 	else:
 		_library.terminal_color(color_from_name(v))
 
 def bkcolor(v):
-	if isinstance(v, numbers.Number):
+	if isinstance(v, _integer):
 		_library.terminal_bkcolor(v)
 	else:
 		_library.terminal_bkcolor(color_from_name(v))
@@ -156,12 +157,12 @@ composition = _library.terminal_composition
 composition.restype = None
 
 def put(x, y, c):
-	if type(c) is not int:
+	if not isinstance(c, _integer):
 		c = ord(c)
 	_library.terminal_put(x, y, c)
 
 def put_ext(x, y, dx, dy, c, corners=None):
-	if not isinstance(c, numbers.Number):
+	if not isinstance(c, _integer):
 		c = ord(c)
 	if corners is None:
 		_library.terminal_put_ext(x, y, dx, dy, c, None)
