@@ -47,6 +47,27 @@
 
 namespace BearLibTerminal
 {
+	void ChangeWindowProperty(Display* display, ::Window window, Atom type, Atom value)
+	{
+		XChangeProperty(display, window, type, XA_ATOM, 32, PropModeReplace, reinterpret_cast<unsigned char*>(&value), 1);
+	}
+
+	void ChangeWindowProperty(Display* display, ::Window window, std::string type, std::string value)
+	{
+		Atom type_atom = XInternAtom(display, type.c_str(), False);
+		Atom value_atom = XInternAtom(display, value.c_str(), False);
+		ChangeWindowProperty(display, window, type_atom, value_atom);
+	}
+
+	void SendExposeEvent(Display* display, ::Window window)
+	{
+		XEvent e = {0};
+		e.xexpose.window = window;
+		e.xexpose.type = Expose;
+		e.xexpose.count = 0;
+		XSendEvent(display, window, False, ExposureMask, &e);
+	}
+
 	void X11Window::InitKeymaps()
 	{
 		auto& keymaps = m_keymaps;
@@ -372,18 +393,7 @@ namespace BearLibTerminal
 		m_wm_maximized_horz = XInternAtom(m_display, "_NET_WM_STATE_MAXIMIZED_HORZ", False);
 		m_wm_maximized_vert = XInternAtom(m_display, "_NET_WM_STATE_MAXIMIZED_VERT", False);
 
-		Atom type = XInternAtom(m_display, "_NET_WM_WINDOW_TYPE", False);
-		Atom value = XInternAtom(m_display, "_NET_WM_WINDOW_TYPE_DIALOG", False);
-		XChangeProperty(
-			m_display,
-			m_window,
-			type,
-			XA_ATOM,
-			32,
-			PropModeReplace,
-			reinterpret_cast<unsigned char*>(&value),
-			1
-		);
+		ChangeWindowProperty(m_display, m_window, "_NET_WM_WINDOW_TYPE", "_NET_WM_WINDOW_TYPE_DIALOG");
 	}
 
 	X11Window::~X11Window()
@@ -534,6 +544,12 @@ namespace BearLibTerminal
 			XFree(sizehints);
 		}
 
+		ChangeWindowProperty(m_display, m_window, "_NET_WM_WINDOW_TYPE",
+			(fullscreen? "_NET_WM_WINDOW_TYPE_NORMAL": "_NET_WM_WINDOW_TYPE_DIALOG")
+		);
+
+		m_fullscreen = fullscreen;
+
 		XEvent e;
 		memset(&e, 0, sizeof(e));
 		e.xclient.type = ClientMessage;
@@ -544,9 +560,7 @@ namespace BearLibTerminal
 		e.xclient.data.l[1] = XInternAtom(m_display, "_NET_WM_STATE_FULLSCREEN", False);
 		XSendEvent(m_display, DefaultRootWindow(m_display), False, SubstructureRedirectMask | SubstructureNotifyMask, &e);
 
-		m_event_handler(TK_INVALIDATE);
-
-		m_fullscreen = fullscreen;
+		SendExposeEvent(m_display, m_window);
 	}
 
 	void X11Window::SetCursorVisibility(bool visible)
@@ -720,8 +734,6 @@ namespace BearLibTerminal
 				Size new_size(e.xconfigure.width, e.xconfigure.height);
 				if (new_size.width != m_client_size.width || new_size.height != m_client_size.height)
 				{
-					m_event_handler(TK_INVALIDATE);
-
 					if (!m_fullscreen)
 					{
 						// X11 spams ConfigureNotify events with different sizes
@@ -731,10 +743,9 @@ namespace BearLibTerminal
 						event[TK_HEIGHT] = new_size.height;
 						m_event_handler(event);
 					}
-
-					//HandleRepaint();
-					m_event_handler(TK_INVALIDATE); // XXX: EXPOSE
 				}
+
+				SendExposeEvent(m_display, m_window);
 			}
 			else if (e.type == MotionNotify)
 			{
@@ -809,8 +820,9 @@ namespace BearLibTerminal
 			}
 		}
 
-		if (m_expose_timer > 0 && (gettime() - m_expose_timer) > (1000/30))
+		if (m_expose_timer > 0 && (gettime() - m_expose_timer) > (1000000/30))
 		{
+			m_event_handler(TK_INVALIDATE);
 			m_event_handler(TK_REDRAW);
 			m_expose_timer = 0;
 		}
