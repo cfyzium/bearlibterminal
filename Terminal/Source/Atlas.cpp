@@ -368,9 +368,17 @@ namespace BearLibTerminal
 
 		if (tile->bitmap.GetSize().Area() >= 100*100) // Arbitrary chosen size.
 		{
-			auto texture = std::make_shared<AtlasTexture>(tile->bitmap.GetSize() + Size{2, 2});
+			Size texture_size = tile->bitmap.GetSize();
+			if (!g_has_texture_npot)
+			{
+				texture_size.width = RoundUpToPow2(texture_size.width);
+				texture_size.height = RoundUpToPow2(texture_size.height);
+			}
+
+			auto texture = std::make_shared<AtlasTexture>(texture_size);
 			if (!texture->Add(tile))
 				throw std::runtime_error("Failed to add a sprite tile to a newly constructed texture");
+
 			m_textures.push_back(texture);
 		}
 		else
