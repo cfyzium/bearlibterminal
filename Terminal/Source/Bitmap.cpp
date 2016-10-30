@@ -312,6 +312,7 @@ namespace BearLibTerminal
 
 	Bitmap ResizeBilinear(Bitmap& original, Size size)
 	{
+		Size original_size = original.GetSize();
 		Bitmap result(size, Color());
 
 		auto filter = [&](int x, int y, float ox, float oy)
@@ -328,9 +329,9 @@ namespace BearLibTerminal
 			float w4 = dx1*dy1;
 
 			Color q11 = original(x1+0, y1+0);
-			Color q12 = original(x1+0, y1+1);
-			Color q21 = original(x1+1, y1+0);
-			Color q22 = original(x1+1, y1+1);
+			Color q12 = (y1+1 < original_size.height)? original(x1+0, y1+1): q11;
+			Color q21 = (x1+1 < original_size.width)? original(x1+1, y1+0): q11;
+			Color q22 = (x1+1 < original_size.width && y1+1 < original_size.height)? original(x1+1, y1+1): q11;
 
 			int r = q11.r*w1 + q21.r*w2 + q12.r*w3 + q22.r*w4;
 			int g = q11.g*w1 + q21.g*w2 + q12.g*w3 + q22.g*w4;
@@ -340,7 +341,6 @@ namespace BearLibTerminal
 			return Color(a, r, g, b);
 		};
 
-		Size original_size = original.GetSize();
 		float hfactor = size.width / (float)original_size.width;
 		float vfactor = size.height / (float)original_size.height;
 
