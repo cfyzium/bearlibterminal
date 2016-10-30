@@ -199,6 +199,29 @@ namespace BearLibTerminal
 		return Module();
 	}
 
+	std::unordered_map<std::wstring, std::weak_ptr<Module>> Module::m_cache;
+
+	std::shared_ptr<Module> Module::Load(std::wstring name)
+	{
+		try
+		{
+			auto it = m_cache.find(name);
+			if (it != m_cache.end())
+			{
+				if (auto ret = it->second.lock())
+					return ret;
+			}
+
+			auto ret = std::make_shared<Module>(name);
+			m_cache[name] = ret;
+			return ret;
+		}
+		catch (...)
+		{
+			return std::shared_ptr<Module>{};
+		}
+	}
+
 	std::wstring FixPathSeparators(std::wstring name)
 	{
 #if defined(_WIN32)

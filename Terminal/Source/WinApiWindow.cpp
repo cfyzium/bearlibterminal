@@ -87,10 +87,8 @@ namespace BearLibTerminal
 		m_suppress_wm_paint_once(false),
 		m_mouse_cursor_enabled(true),
 		m_mouse_cursor_visible(true),
-		m_wglSwapIntervalEXT(nullptr),
 		m_resizing(false),
-		m_has_been_shown(false),
-		m_DwmGetWindowAttribute(nullptr)
+		m_has_been_shown(false)
 	{
 		// Raising timing resolution for Delay function.
 		timeBeginPeriod(1);
@@ -555,15 +553,7 @@ namespace BearLibTerminal
 		SetWindowLongPtrW(m_handle, GWLP_USERDATA, (LONG_PTR)(void*)this);
 
 		// Look up some optional functions
-		try
-		{
-			Module dwmapi{L"Dwmapi.dll"};
-			m_DwmGetWindowAttribute = (PFNDWMGETWINDOWATTRIBUTE)dwmapi["DwmGetWindowAttribute"];
-		}
-		catch (...)
-		{
-			// Not an error, the library may not be present, e. g. on XP.
-		}
+		m_DwmGetWindowAttribute.Load(L"Dwmapi.dll", "DwmGetWindowAttribute");
 
 		return true;
 	}
@@ -617,7 +607,7 @@ namespace BearLibTerminal
 		}
 		ProbeOpenGL();
 
-		m_wglSwapIntervalEXT = (PFN_WGLSWAPINTERVALEXT)wglGetProcAddress("wglSwapIntervalEXT");
+		m_wglSwapIntervalEXT.Load((void*)wglGetProcAddress("wglSwapIntervalEXT"));
 		SetVSync(true);
 
 		return true;

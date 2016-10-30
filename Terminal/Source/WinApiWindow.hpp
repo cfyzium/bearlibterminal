@@ -29,6 +29,7 @@
 #include <string>
 #include <cstdint>
 #include "Window.hpp"
+#include "Platform.hpp"
 
 // Force SDK version to XP SP3
 #if !defined(WINVER)
@@ -43,7 +44,6 @@
 namespace BearLibTerminal
 {
 	// Windows Vista+ functionality, i. e. not available universally and cannot be linked against.
-	typedef HRESULT WINAPI (*PFNDWMGETWINDOWATTRIBUTE)(HWND, DWORD, PVOID, DWORD);
 	const DWORD DWMWA_EXTENDED_FRAME_BOUNDS = 9;
 
 	class WinApiWindow: public Window
@@ -93,10 +93,8 @@ namespace BearLibTerminal
 		std::list<Event> m_events;
 		bool m_resizing;
 		bool m_has_been_shown;
-
-		typedef BOOL (WINAPI *PFN_WGLSWAPINTERVALEXT)(int interval);
-		PFN_WGLSWAPINTERVALEXT m_wglSwapIntervalEXT;
-		PFNDWMGETWINDOWATTRIBUTE m_DwmGetWindowAttribute;
+		Module::Function<BOOL, stdcall_t, int> m_wglSwapIntervalEXT;
+		Module::Function<HRESULT, stdcall_t, HWND, DWORD, PVOID, DWORD> m_DwmGetWindowAttribute;
 	};
 }
 
