@@ -32,6 +32,10 @@
 #include <unordered_map>
 #include <stdint.h>
 
+#if !defined(_WIN32)
+#define __stdcall
+#endif
+
 namespace BearLibTerminal
 {
 	struct cdecl_t;
