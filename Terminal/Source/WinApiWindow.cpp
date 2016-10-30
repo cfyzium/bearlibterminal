@@ -249,12 +249,15 @@ namespace BearLibTerminal
 		RECT extra = {0, 0, 0, 0};
 		if (m_DwmGetWindowAttribute)
 		{
-			RECT extended;
+			RECT extended = {0, 0, 0, 0};
 			m_DwmGetWindowAttribute(m_handle, DWMWA_EXTENDED_FRAME_BOUNDS, &extended, sizeof(extended));
-			extra.left = rect.left - extended.left;
-			extra.top = rect.top - extended.top;
-			extra.right = extended.right - rect.right;
-			extra.bottom = extended.bottom - rect.bottom;
+			if (extended.right - extended.left > 0 && extended.bottom - extended.top > 0)
+			{
+				extra.left = rect.left - extended.left;
+				extra.top = rect.top - extended.top;
+				extra.right = extended.right - rect.right;
+				extra.bottom = extended.bottom - rect.bottom;
+			}
 		}
 
 		// Look up the nearest monitor.
@@ -297,6 +300,7 @@ namespace BearLibTerminal
 		if (width == rect.right - rect.left && height == rect.bottom - rect.top)
 			flags |= SWP_NOSIZE;
 
+		LOG(Trace, "SetWindowPos(" << left << ", " << top << ", " << width << ", " << height << ")");
 		SetWindowPos(
 			m_handle,
 			HWND_NOTOPMOST,
