@@ -1,6 +1,6 @@
 /*
 * BearLibTerminal
-* Copyright (C) 2013-2016 Cfyz
+* Copyright (C) 2016 Joe "ZhayTee" Toscano
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -22,14 +22,9 @@
 
 package bearlibterminal
 
-// #cgo darwin LDFLAGS: -mmacosx-version-min=10.9 -L${SRCDIR} -lc++ -lBearLibTerminal -lfreetype2 -lpicopng -framework OpenGL -framework Cocoa
-// #cgo darwin CFLAGS: -DBEARLIBTERMINAL_STATIC_BUILD
-// #cgo linux LDFLAGS: -L${SRCDIR} -lBearLibTerminal -lfreetype2 -lpicopng -lstdc++ -lGL -lm -lX11 -ldl
-// #cgo linux CFLAGS: -DBEARLIBTERMINAL_STATIC_BUILD
-// #cgo windows LDFLAGS: -Wl,--allow-multiple-definition -static -mwindows -L${SRCDIR} -lBearLibTerminal -lpicopng -lfreetype2 -lstdc++ -lopengl32 -lwinmm
-// #cgo windows CFLAGS: -DBEARLIBTERMINAL_STATIC_BUILD
+// #cgo LDFLAGS: -lBearLibTerminal
 // #include <stdlib.h>
-// #include "BearLibTerminal.h"
+// #include <BearLibTerminal.h>
 import "C"
 
 import (
