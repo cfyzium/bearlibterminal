@@ -138,10 +138,10 @@ namespace BearLibTerminal
         // {0x37, kVK_Command},
         {0x38, TK_SHIFT},
         // {0x39, kVK_CapsLock},
-        // {0x3A, kVK_Option}, // This would be TK_ALT
+        {0x3A, TK_ALT},
         {0x3B, TK_CONTROL},
         {0x3C, TK_SHIFT},
-        // {0x3D, kVK_RightOption},
+        {0x3D, TK_ALT},
         {0x3E, TK_CONTROL},
         // {0x3F, kVK_Function},
         {0x60, TK_F5},
@@ -240,6 +240,8 @@ namespace BearLibTerminal
                     pressed = (e.modifierFlags & NSControlKeyMask);
                 else if (key == TK_SHIFT)
                     pressed = (e.modifierFlags & NSShiftKeyMask);
+                else if (key == TK_ALT)
+                    pressed = (e.modifierFlags & NSAlternateKeyMask);
                 
                 int code = key | (pressed? 0: TK_KEY_RELEASED);
                 m_handler({code, {{key, pressed? 1: 0}}});
