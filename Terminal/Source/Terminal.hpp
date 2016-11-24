@@ -76,10 +76,12 @@ namespace BearLibTerminal
 		void PutInternal(int x, int y, int dx, int dy, char32_t code, Color* colors);
 		void ConsumeEvent(Event& event);
 		Event ReadEvent(int timeout);
-		void Render(bool update_scene);
+		void Render();
 		int Redraw();
 		int OnWindowEvent(Event event);
 		void PushEvent(Event event);
+		bool IsEventFiltered(int code);
+		bool HasFilteredInput();
 	private:
 		enum state_t {kHidden, kVisible, kClosed} m_state;
 		std::thread::id m_main_thread_id;

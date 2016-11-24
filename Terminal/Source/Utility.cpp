@@ -104,6 +104,28 @@ namespace BearLibTerminal
 		return true;
 	}
 
+	std::vector<std::wstring> split(const std::wstring& s, wchar_t delimiter)
+	{
+		std::vector<std::wstring> result;
+
+		for (size_t offset = 0; offset < s.length(); )
+		{
+			size_t pos = s.find(delimiter, offset);
+			if (pos == std::wstring::npos)
+			{
+				result.push_back(s.substr(offset));
+				break;
+			}
+			else
+			{
+				result.push_back(s.substr(offset, pos - offset));
+				offset = pos + 1;
+			}
+		}
+
+		return result;
+	}
+
 #if defined(_WIN32)
 	static float get_timer_factor()
 	{

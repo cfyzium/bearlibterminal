@@ -29,6 +29,7 @@
 #include <string>
 #include <cstdint>
 #include "Window.hpp"
+#include "Platform.hpp"
 
 // Force SDK version to XP SP3
 #if !defined(WINVER)
@@ -42,6 +43,9 @@
 
 namespace BearLibTerminal
 {
+	// Windows Vista+ functionality, i. e. not available universally and cannot be linked against.
+	const DWORD DWMWA_EXTENDED_FRAME_BOUNDS = 9;
+
 	class WinApiWindow: public Window
 	{
 	public:
@@ -71,6 +75,7 @@ namespace BearLibTerminal
 		void DestroyWindowObject();
 		void DestroyOpenGLContext();
 		void Redraw();
+		void ClipToScreen(int width, int height, bool center);
 		static LRESULT CALLBACK SharedWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 		LRESULT WindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam);
 		LRESULT HandleWmPaint(WPARAM wParam, LPARAM lParam);
@@ -87,9 +92,9 @@ namespace BearLibTerminal
 		bool m_mouse_cursor_visible;
 		std::list<Event> m_events;
 		bool m_resizing;
-
-		typedef BOOL (WINAPI *PFN_WGLSWAPINTERVALEXT)(int interval);
-		PFN_WGLSWAPINTERVALEXT m_wglSwapIntervalEXT;
+		bool m_has_been_shown;
+		Module::Function<BOOL, stdcall_t, int> m_wglSwapIntervalEXT;
+		Module::Function<HRESULT, stdcall_t, HWND, DWORD, PVOID, DWORD> m_DwmGetWindowAttribute;
 	};
 }
 

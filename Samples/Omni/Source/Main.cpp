@@ -26,7 +26,11 @@ int main()
 
 	auto reset = []()
 	{
-		terminal_set("window: size=80x25, cellsize=auto, title='Omni: menu'; font: default");
+		terminal_set(
+			"window: size=80x25, cellsize=auto, title='Omni: menu';"
+			"font: default;"
+			"input: filter={keyboard}"
+		);
 		terminal_color("white");
 	};
 
@@ -57,7 +61,7 @@ int main()
 
 	reset();
 
-	for (bool proceed=true; proceed;)
+	while (true)
 	{
 		terminal_clear();
 		for (size_t i=0; i<entries.size(); i++)
@@ -68,25 +72,21 @@ int main()
 		terminal_printf(2, 23, "[color=orange]ESC.[/color] Exit");
 		terminal_refresh();
 
-		do
-		{
-			int key = terminal_read();
+		int key = terminal_read();
 
-			if (key == TK_ESCAPE || key == TK_CLOSE)
+		if (key == TK_ESCAPE || key == TK_CLOSE)
+		{
+			break;
+		}
+		else if ((key >= TK_1 && key <= TK_9) || (key >= TK_A && key <= TK_Z))
+		{
+			int index = key >= TK_1? (key-TK_1): 9+(key-TK_A);
+			if (index >= 0 && index < entries.size() && entries[index].func)
 			{
-				proceed = false;
-			}
-			else if ((key >= TK_1 && key <= TK_9) || (key >= TK_A && key <= TK_Z))
-			{
-				int index = key >= TK_1? (key-TK_1): 9+(key-TK_A);
-				if (index >= 0 && index < entries.size() && entries[index].func)
-				{
-					entries[index].func();
-					reset();
-				}
+				entries[index].func();
+				reset();
 			}
 		}
-		while (proceed && terminal_has_input());
 	}
 	terminal_close();
 	return 0;

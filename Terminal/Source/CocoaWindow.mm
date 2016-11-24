@@ -180,6 +180,7 @@ namespace BearLibTerminal
         Size m_increment;
         Size m_minimum_size;
         bool m_cursor_visible;
+        bool m_has_been_shown;
         id m_window;
         id m_view;
     };
@@ -188,6 +189,7 @@ namespace BearLibTerminal
         m_handler(handler),
         m_resizeable(false),
         m_cursor_visible(true),
+        m_has_been_shown(false),
         m_window(nil),
         m_view(nil)
     { }
@@ -364,8 +366,6 @@ namespace BearLibTerminal
         [CocoaTerminalApplication sharedApplication];
         NSApp.delegate = [[CocoaTerminalApplicationDelegate alloc] initWithImpl:m_impl.get()];
         NSApp.activationPolicy = NSApplicationActivationPolicyRegular;
-        [NSApp activateIgnoringOtherApps:YES];
-        
         [NSApp run];
         
         NSUInteger styleMask =
@@ -406,6 +406,14 @@ namespace BearLibTerminal
         // Zoom and fullscreen buttons: hidden by default.
         [m_impl->m_window standardWindowButton:NSWindowZoomButton].hidden = YES;
         [m_impl->m_window standardWindowButton:NSWindowFullScreenButton].hidden = YES;
+		
+        // Menu
+        NSMenu* bar = [[NSMenu alloc] init];
+        [NSApp setMainMenu:bar];
+        NSMenuItem* appMenuItem = [bar addItemWithTitle:@"" action:NULL keyEquivalent:@""];
+        NSMenu* appMenu = [[NSMenu alloc] init];
+        [appMenu addItemWithTitle:@"Quit" action:@selector(terminate:) keyEquivalent:@"q"];
+        [appMenuItem setSubmenu:appMenu];
     }
 	
     void CocoaWindow::Destroy()
@@ -446,9 +454,11 @@ namespace BearLibTerminal
     
     void CocoaWindow::SetClientSize(const Size& size)
     {
-        NSRect prev = [m_impl->m_window frame];
-        NSRect next = NSMakeRect(prev.origin.x, prev.origin.y, size.width, size.height);
-        NSRect frame = [m_impl->m_window frameRectForContentRect:next];
+        NSRect frame = [m_impl->m_window frame];
+        NSRect next = NSMakeRect(0, 0, size.width, size.height);
+        next = [m_impl->m_window frameRectForContentRect:next];
+        frame.origin.y += (frame.size.height - next.size.height);
+        frame.size = next.size;
         [m_impl->m_window setFrame:frame display:YES];
         m_client_size = size;
     }
@@ -456,6 +466,11 @@ namespace BearLibTerminal
     void CocoaWindow::Show()
     {
         [NSApp unhide:nil];
+        if (!m_impl->m_has_been_shown)
+        {
+            [m_impl->m_window center];
+            m_impl->m_has_been_shown = true;
+        }
         [m_impl->m_window makeKeyAndOrderFront:nil];
         [m_impl->m_window makeMainWindow];
     }
@@ -586,11 +601,13 @@ namespace BearLibTerminal
 
 - (NSApplicationTerminateReply)applicationShouldTerminate: (NSApplication*)sender
 {
+    m_impl->m_handler(TK_CLOSE);
     return NSTerminateCancel;
 }
 
 - (void)applicationDidFinishLaunching: (NSNotification*)notification
 {
+    [NSApp activateIgnoringOtherApps:YES];
     [NSApp stop:nil];
 }
 

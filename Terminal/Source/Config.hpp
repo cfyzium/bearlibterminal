@@ -67,7 +67,7 @@ namespace BearLibTerminal
 			std::wstring temp;
 			if (!TryGet(std::move(name), temp))
 				return false;
-			return try_parse(name, out);
+			return try_parse(temp, out);
 		}
 
 	private:

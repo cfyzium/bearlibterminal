@@ -22,112 +22,185 @@
 
 #include "Palette.hpp"
 #include "Utility.hpp"
+#include <cctype>
 
 namespace BearLibTerminal
 {
 	Palette Palette::Instance;
 
-	Palette::Palette()
+	HSV Convert(Color in)
 	{
-		m_items[L"transparent"] = m_items[L"none"] = Color(0, 0, 0, 0);
-		m_items[L"black"] = Color(0, 0, 0);
-		m_items[L"white"] = Color(255,255,255);
+		int min = std::min(in.r, std::min(in.g, in.b));
+		int max = std::max(in.r, std::max(in.g, in.b));
+		int delta = max - min;
 
-		auto f = [&](const std::wstring& base, Color shades[]) -> void
-		{
-			static std::wstring shade_names[7] =
-			{
-				L"lightest ", L"lighter ", L"light ", L"", L"dark ", L"darker ", L"darkest "
-			};
+	    uint8_t h = 0, s = 0, v = max;
+	    if (delta == 0)
+	    	return HSV{in.a, h, s, v};
 
-			for ( size_t i = 0; i < 7; i++ )
-			{
-				m_items[shade_names[i]+base] = shades[i];
-			}
-		};
+	    if (max > 0)
+	    	s = 255 * delta / max;
+	    else
+	    	return HSV{in.a, h, s, v}; // 0, 0, 0?
 
-		Color grey[]		= { Color(223,223,223), Color(191,191,191), Color(159,159,159), Color(127,127,127), Color(95,95,95),  Color(63,63,63),  Color(31,31,31) };
-		Color red[]			= { Color(255,191,191), Color(255,127,127), Color(255,63,63),   Color(255,0,0),     Color(191,0,0),   Color(127,0,0),   Color(63,0,0) };
-		Color flame[]		= { Color(255,207,191), Color(255,159,127), Color(255,111,63),  Color(255,63,0),    Color(191,47,0),  Color(127,31,0),  Color(63,15,0) };
-		Color orange[]		= { Color(255,223,191), Color(255,191,127), Color(255,159,63),  Color(255,127,0),   Color(191,95,0),  Color(127,63,0),  Color(63,31,0) };
-		Color amber[]		= { Color(255,239,191), Color(255,223,127), Color(255,207,63),  Color(255,191,0),   Color(191,143,0), Color(127,95,0),  Color(63,47,0) };
-		Color yellow[]		= { Color(255,255,191), Color(255,255,127), Color(255,255,63),  Color(255,255,0),   Color(191,191,0), Color(127,127,0), Color(63,63,0) };
-		Color lime[]		= { Color(239,255,191), Color(223,255,127), Color(207,255,63),  Color(191,255,0),   Color(143,191,0), Color(95,127,0),  Color(47,63,0) };
-		Color chartreuse[]	= { Color(223,255,191), Color(191,255,127), Color(159,255,63),  Color(127,255,0),   Color(95,191,0),  Color(63,127,0),  Color(31,63,0) };
-		Color green[]		= { Color(191,255,191), Color(127,255,127), Color(63,255,63),   Color(0,255,0),     Color(0,191,0),   Color(0,127,0),   Color(0,63,0) };
-		Color sea[]			= { Color(191,255,223), Color(127,255,191), Color(63,255,159),  Color(0,255,127),   Color(0,191,95),  Color(0,127,63),  Color(0,63,31) };
-		Color turquoise[]	= { Color(191,255,239), Color(127,255,223), Color(63,255,207),  Color(0,255,191),   Color(0,191,143), Color(0,127,95),  Color(0,63,47) };
-		Color cyan[]		= { Color(191,255,255), Color(127,255,255), Color(63,255,255),  Color(0,255,255),   Color(0,191,191), Color(0,127,127), Color(0,63,63) };
-		Color sky[]			= { Color(191,239,255), Color(127,223,255), Color(63,207,255),  Color(0,191,255),   Color(0,143,191), Color(0,95,127),  Color(0,47,63) };
-		Color azure[]		= { Color(191,223,255), Color(127,191,255), Color(63,159,255),  Color(0,127,255),   Color(0,95,191),  Color(0,63,127),  Color(0,31,63) };
-		Color blue[]		= { Color(191,191,255), Color(127,127,255), Color(63,63,255),   Color(0,0,255),     Color(0,0,191),   Color(0,0,127),   Color(0,0,63) };
-		Color han[]			= { Color(207,191,255), Color(159,127,255), Color(111,63,255),  Color(63,0,255),    Color(47,0,191),  Color(31,0,127),  Color(15,0,63) };
-		Color violet[]		= { Color(223,191,255), Color(191,127,255), Color(159,63,255),  Color(127,0,255),   Color(95,0,191),  Color(63,0,127),  Color(31,0,63) };
-		Color purple[]		= { Color(239,191,255), Color(223,127,255), Color(207,63,255),  Color(191,0,255),   Color(143,0,191), Color(95,0,127),  Color(47,0,63) };
-		Color fuchsia[]		= { Color(255,191,255), Color(255,127,255), Color(255,63,255),  Color(255,0,255),   Color(191,0,191), Color(127,0,127), Color(63,0,63) };
-		Color magenta[]		= { Color(255,191,239), Color(255,127,223), Color(255,63,207),  Color(255,0,191),   Color(191,0,143), Color(127,0,95),  Color(63,0,47) };
-		Color pink[]		= { Color(255,191,223), Color(255,127,191), Color(255,63,159),  Color(255,0,127),   Color(191,0,95),  Color(127,0,63),  Color(63,0,31) };
-		Color crimson[]		= { Color(255,191,207), Color(255,127,159), Color(255,63,111),  Color(255,0,63),    Color(191,0,47),  Color(127,0,31),  Color(63,0,15) };
+	    if (max == in.r)
+	    	h =   0 + 43 * (in.g - in.b) / delta; // between yellow & magenta
+	    else if (max == in.g)
+	    	h =  85 + 43 * (in.b - in.r) / delta; // between cyan & yellow
+	    else
+	    	h = 171 + 43 * (in.r - in.g) / delta; // between magenta & cyan
 
-		f(L"grey", grey);
-		f(L"gray", grey);
-		f(L"red", red);
-		f(L"flame", flame);
-		f(L"orange", orange);
-		f(L"amber", amber);
-		f(L"yellow", yellow);
-		f(L"lime", lime);
-		f(L"chartreuse", chartreuse);
-		f(L"green", green);
-		f(L"sea", sea);
-		f(L"turquoise", turquoise);
-		f(L"cyan", cyan);
-		f(L"sky", sky);
-		f(L"azure", azure);
-		f(L"blue", blue);
-		f(L"han", han);
-		f(L"violet", violet);
-		f(L"purple", purple);
-		f(L"fuchsia", fuchsia);
-		f(L"magenta", magenta);
-		f(L"pink", pink);
-		f(L"crimson", crimson);
+	    return HSV{in.a, h, s, v};
 	}
 
-	Color Palette::operator[] (const std::wstring& name)
+	Color Convert(HSV hsv)
 	{
-		size_t length = name.length();
+		uint8_t region, remainder, p, q, t;
 
-		if ( length > 0 )
+	    if (hsv.s == 0)
+	    	return Color{hsv.a, hsv.v, hsv.v, hsv.v};
+
+	    region = hsv.h / 43;
+	    remainder = (hsv.h - (region * 43)) * 6;
+
+	    p = (hsv.v * (255 - hsv.s)) >> 8;
+	    q = (hsv.v * (255 - ((hsv.s * remainder) >> 8))) >> 8;
+	    t = (hsv.v * (255 - ((hsv.s * (255 - remainder)) >> 8))) >> 8;
+
+	    switch (region)
+	    {
+	    case 0:  return Color{hsv.a, hsv.v, t, p};
+		case 1:  return Color{hsv.a, q, hsv.v, p};
+		case 2:  return Color{hsv.a, p, hsv.v, t};
+		case 3:  return Color{hsv.a, p, q, hsv.v};
+		case 4:  return Color{hsv.a, t, p, hsv.v};
+		default: return Color{hsv.a, hsv.v, p, q};
+	    }
+	}
+
+	Palette::Palette()
+	{
+		Set(L"transparent", Color{0, 0, 0, 0});
+		Set(L"none",        Color{0, 0, 0, 0});
+
+		Set(L"black",       Color{  0,   0,   0});
+		Set(L"white",       Color{255, 255, 255});
+		Set(L"grey",        Color(127, 127, 127));
+		Set(L"gray",        Color(127, 127, 127));
+		Set(L"red",         Color(255,   0,   0));
+		Set(L"flame",       Color(255,  63,   0));
+		Set(L"orange",      Color(255, 127,   0));
+		Set(L"amber",       Color(255, 191,   0));
+		Set(L"yellow",      Color(255, 255,   0));
+		Set(L"lime",        Color(191, 255,   0));
+		Set(L"chartreuse",  Color(127, 255,   0));
+		Set(L"green",       Color(  0, 255,   0));
+		Set(L"sea",         Color(  0, 255, 127));
+		Set(L"turquoise",   Color(  0, 255, 191));
+		Set(L"cyan",        Color(  0, 255, 255));
+		Set(L"sky",         Color(  0, 191, 255));
+		Set(L"azure",       Color(  0, 127, 255));
+		Set(L"blue",        Color(  0,   0, 255));
+		Set(L"han",         Color( 63,   0, 255));
+		Set(L"violet",      Color(127,   0, 255));
+		Set(L"purple",      Color(191,   0, 255));
+		Set(L"fuchsia",     Color(255,   0, 255));
+		Set(L"magenta",     Color(255,   0, 191));
+		Set(L"pink",        Color(255,   0, 127));
+		Set(L"crimson",     Color(255,   0,  63));
+	}
+
+	static Color Shade(Color base, const std::wstring& shade)
+	{
+		if (shade.empty())
+			return base;
+
+		HSV hsv = Convert(base);
+
+		if (shade == L"darkest")
+			hsv.v *= 0.25f;
+		else if (shade == L"darker")
+			hsv.v *= 0.50f;
+		else if (shade == L"dark")
+			hsv.v *= 0.75f;
+		else if (shade == L"light")
+			hsv.s *= 0.75f;
+		else if (shade == L"lighter")
+			hsv.s *= 0.50f;
+		else if (shade == L"lightest")
+			hsv.s *= 0.25f;
+		else
+			return base;
+
+		return Convert(hsv);
+	}
+
+	Color Palette::Get(std::wstring name)
+	{
+		if (name.empty())
+			return Color{255, 255, 255};
+
+		auto i = m_colors.find(name);
+		if (i != m_colors.end())
+			return i->second;
+
+		try
 		{
-			const wchar_t c = name[0];
-			try
+			// Split '[shade ]name' color description
+			std::wstring shade;
+			size_t space_pos = name.find(L' ');
+			if (space_pos != std::wstring::npos)
 			{
-				if ( c == L'#' )
-				{
-					// Color is in hexadecimal numeric format
-					// Either #AARRGGBB or #RRGGBB
+				shade = name.substr(0, space_pos);
+				name = name.substr(space_pos + 1);
+			}
 
-					if ( length < 7 ) return m_items[L"white"];
-					uint32_t value = parse<uint32_t>(name.substr(1), std::hex);
-					if ( (value & 0xFF000000) == 0 ) value |= 0xFF000000;
-					return Color(value);
-				}
-				else if ( c == L'-' || (c >= L'0' && c <= L'9') )
+			if (name[0] == L'#')
+			{
+				// Hexadecimal numeric format: #AARRGGBB or #RRGGBB
+				uint32_t value = parse<uint32_t>(name.substr(1), std::hex);
+				if (!(value & 0xFF000000))
+					value |= 0xFF000000;
+				return Shade(Color{value}, shade);
+			}
+			else if (name.find(L',') != std::wstring::npos)
+			{
+				// Comma-separated format: A,R,G,B or R,G,B
+				auto parts = split(name, L',');
+				if (parts.size() == 3)
 				{
-					// Color is in decimal numeric format
-					uint32_t value = (uint32_t)parse<int32_t>(name, std::dec);
-					if ( (value & 0xFF000000) == 0 ) value |= 0xFF000000;
-					return Color(value);
+					// R,G,B
+					Color base(parse<int>(parts[0]), parse<int>(parts[1]), parse<int>(parts[2]));
+					return Shade(base, shade);
+				}
+				else if (parts.size() == 4)
+				{
+					// A,R,G,B
+					Color base(parse<int>(parts[0]), parse<int>(parts[1]), parse<int>(parts[2]), parse<int>(parts[3]));
+					return Shade(base, shade);
 				}
 			}
-			catch ( std::exception& e )
+			else if (name[0] == L'-' || (std::isdigit(name[0])))
 			{
-				return m_items[L"white"];
+				// Decimal numeric format
+				uint32_t value = (uint32_t)parse<int64_t>(name, std::dec);
+				if (!(value & 0xFF000000))
+					value |= 0xFF000000;
+				return Shade(Color{value}, shade);
 			}
 		}
+		catch (std::exception& e)
+		{
+			// Nothing...
+		}
 
-		auto i = m_items.find(name);
-		return (i != m_items.end()? i->second: m_items[L"white"]);
+		return Color{255, 255, 255};
+	}
+
+	void Palette::Set(std::wstring name, Color base)
+	{
+		m_colors[name] = base;
+		for (std::wstring shade: {L"darkest", L"darker", L"dark", L"light", L"lighter", L"lightest"})
+			m_colors[shade + L" " + name] = Shade(base, shade);
 	}
 }

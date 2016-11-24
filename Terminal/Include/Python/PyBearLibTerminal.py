@@ -21,9 +21,10 @@
 #
 # Release date: 2016-07-06
 
-import sys, ctypes, numbers
+import sys, ctypes
 
 _version3 = sys.version_info >= (3, 0)
+_integer = int if _version3 else (int, long)
 
 def _load_library():
 	from os import path
@@ -141,13 +142,13 @@ layer = _library.terminal_layer
 layer.restype = None
 
 def color(v):
-	if isinstance(v, numbers.Number):
+	if isinstance(v, _integer):
 		_library.terminal_color(v)
 	else:
 		_library.terminal_color(color_from_name(v))
 
 def bkcolor(v):
-	if isinstance(v, numbers.Number):
+	if isinstance(v, _integer):
 		_library.terminal_bkcolor(v)
 	else:
 		_library.terminal_bkcolor(color_from_name(v))
@@ -156,12 +157,12 @@ composition = _library.terminal_composition
 composition.restype = None
 
 def put(x, y, c):
-	if not isinstance(c, numbers.Number):
+	if not isinstance(c, _integer):
 		c = ord(c)
 	_library.terminal_put(x, y, c)
 
 def put_ext(x, y, dx, dy, c, corners=None):
-	if not isinstance(c, numbers.Number):
+	if not isinstance(c, _integer):
 		c = ord(c)
 	if corners is None:
 		_library.terminal_put_ext(x, y, dx, dy, c, None)
@@ -204,7 +205,7 @@ def has_input():
 state = _library.terminal_state
 
 def check(state):
-	return _library.terminal_state(state) == 1
+	return _library.terminal_state(state) > 0
 
 read = _library.terminal_read
 
@@ -227,7 +228,9 @@ _library.terminal_get8.restype = ctypes.c_char_p
 _wget.restype = ctypes.c_wchar_p
 
 def get(s, default_value=None):
-	if _version3 or isinstance(s, unicode):
+	if _version3:
+		return _wget(s, default_value)
+	elif isinstance(s, unicode):
 		return unicode(_wget(s, default_value));
 	else:
 		return str(_library.terminal_get8(s, default_value))

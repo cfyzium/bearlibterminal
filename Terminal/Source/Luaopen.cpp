@@ -28,6 +28,7 @@
 #include <type_traits>
 #include <stddef.h>
 #include <string.h>
+#include <stdexcept>
 
 typedef struct lua_State lua_State;
 typedef double lua_Number;
@@ -86,6 +87,8 @@ typedef void (*PFNLUAREPLACE)(lua_State *L, int index); // lua_replace
 typedef int (*PFNLUAERROR)(lua_State *L); // lua_error
 typedef size_t (*PFNLUAOBJLEN)(lua_State *L, int index); // lua_objlen
 typedef size_t (*PFNLUARAWLEN)(lua_State *L, int idx); // lua_rawlen
+typedef void (*PFNLUAROTATE)(lua_State *L, int idx, int n);
+typedef void (*PFNLUACOPY)(lua_State *L, int fromidx, int toidx);
 
 static PFNLUAGETTOP lua_gettop = 0;
 static PFNLUACREATETABLE lua_createtable = 0;
@@ -114,30 +117,43 @@ static PFNLUAREPLACE lua_replace = 0;
 static PFNLUAERROR lua_error = 0;
 static PFNLUAOBJLEN lua_objlen = 0;
 static PFNLUARAWLEN lua_rawlen = 0;
+static PFNLUAROTATE lua_rotate = 0;
+static PFNLUACOPY lua_copy = 0;
 
 #define lua_pop(L,n)			lua_settop(L, -(n)-1)
 #define luaL_newlibtable(L,l)	lua_createtable(L, 0, sizeof(l)/sizeof((l)[0]) - 1)
 #define luaL_newlib(L,l)		(luaL_newlibtable(L,l), luaL_setfuncs(L,l,0))
 #define lua_tostring(L,i)		lua_tolstring(L, (i), NULL)
 
-lua_Number lua_tonumber_52(lua_State* L, int index)
+lua_Number lua_tonumber_via_tonumberx(lua_State* L, int index)
 {
 	return lua_tonumberx(L, index, nullptr);
 }
 
-lua_Integer lua_tointeger_52(lua_State* L, int index)
+lua_Integer lua_tointeger_via_tointegerx(lua_State* L, int index)
 {
 	return lua_tointegerx(L, index, nullptr);
 }
 
-int lua_pcall_52(lua_State *L, int nargs, int nresults, int errfunc)
+int lua_pcall_via_pcallk(lua_State *L, int nargs, int nresults, int errfunc)
 {
 	return lua_pcallk(L, nargs, nresults, errfunc, 0, nullptr);
 }
 
-size_t lua_objlen_52(lua_State* L, int index)
+size_t lua_objlen_via_rawlen(lua_State* L, int index)
 {
 	return lua_rawlen(L, index);
+}
+
+void lua_insert_via_rotate(lua_State* L, int idx)
+{
+	lua_rotate(L, idx, 1);
+}
+
+void lua_replace_via_copy(lua_State* L, int idx)
+{
+	lua_copy(L, -1, idx);
+	lua_settop(L, -(1)-1);
 }
 
 void luaL_setfuncs (lua_State *L, const luaL_Reg *l, int nup)
@@ -691,6 +707,7 @@ luaterminal_constants[] =
 	CONST(TK_MOUSE_Y),
 	CONST(TK_MOUSE_PIXEL_X),
 	CONST(TK_MOUSE_PIXEL_Y),
+	CONST(TK_MOUSE_SCROLL),
 	CONST(TK_MOUSE_WHEEL),
 	CONST(TK_MOUSE_CLICKS),
 	CONST(TK_KEY_RELEASED),
@@ -723,7 +740,7 @@ int luaopen_BearLibTerminal(lua_State* L)
 		return 1; // This will cause lua runtime to fail on table dereferencing, thus notifying user that something went wrong
 	}
 
-	bool version_52 = liblua.Probe("lua_tonumberx") != nullptr;
+	//bool version_52 = liblua.Probe("lua_tonumberx") != nullptr;
 
 	lua_gettop = (PFNLUAGETTOP)liblua["lua_gettop"];
 	lua_createtable = (PFNLUACREATETABLE)liblua["lua_createtable"];
@@ -741,32 +758,60 @@ int luaopen_BearLibTerminal(lua_State* L)
 	lua_gettable = (PFNLUAGETTABLE)liblua["lua_gettable"];
 	lua_pushstring = (PFNLUAPUSHSTRING)liblua["lua_pushstring"];
 	lua_getfield = (PFNLUAGETFIELD)liblua["lua_getfield"];
-	lua_insert = (PFNLUAINSERT)liblua["lua_insert"];
-	lua_replace = (PFNLUAREPLACE)liblua["lua_replace"];
 	lua_error = (PFNLUAERROR)liblua["lua_error"];
 
-	if (version_52)
+	if ((lua_rotate = (PFNLUAROTATE)liblua.Probe("lua_rotate")) != nullptr) // Since Lua 5.3
 	{
-		// Lua 5.2 has lua_tonumber and lua_tointeger as preprocessor macro
-
-		lua_tonumberx = (PFNLUATONUMBERX)liblua["lua_tonumberx"];
-		lua_tonumber = &lua_tonumber_52;
-
-		lua_tointegerx = (PFNLUATOINTEGERX)liblua["lua_tointegerx"];
-		lua_tointeger = &lua_tointeger_52;
-
-		lua_pcallk = (PFNLUAPCALLK)liblua["lua_pcallk"];
-		lua_pcall = &lua_pcall_52;
-
-		lua_rawlen = (PFNLUARAWLEN)liblua["lua_rawlen"];
-		lua_objlen = &lua_objlen_52;
+		lua_insert = &lua_insert_via_rotate;
 	}
-	else
+	else if ((lua_insert = (PFNLUAINSERT)liblua.Probe("lua_insert")) == nullptr)
 	{
-		lua_tonumber = (PFNLUATONUMBER)liblua["lua_tonumber"];
-		lua_tointeger = (PFNLUATOINTEGER)liblua["lua_tointeger"];
-		lua_pcall = (PFNLUAPCALL)liblua["lua_pcall"];
-		lua_objlen = (PFNLUAOBJLEN)liblua["lua_objlen"];
+		throw std::runtime_error("Lua interpreter has incompatible binary interface (lua_insert)");
+	}
+
+	if ((lua_copy = (PFNLUACOPY)liblua.Probe("lua_copy")) != nullptr) // Since Lua 5.3
+	{
+		lua_replace = &lua_replace_via_copy;
+	}
+	else if ((lua_replace = (PFNLUAREPLACE)liblua.Probe("lua_replace")) == nullptr)
+	{
+		throw std::runtime_error("Lua interpreter has incompatible binary interface (lua_replace)");
+	}
+
+	if ((lua_tonumberx = (PFNLUATONUMBERX)liblua.Probe("lua_tonumberx")) != nullptr) // Since Lua 5.2
+	{
+		lua_tonumber = &lua_tonumber_via_tonumberx;
+	}
+	else if ((lua_tonumber = (PFNLUATONUMBER)liblua.Probe("lua_tonumber")) == nullptr)
+	{
+		throw std::runtime_error("Lua interpreter has incompatible binary interface (lua_tonumber)");
+	}
+
+	if ((lua_tointegerx = (PFNLUATOINTEGERX)liblua.Probe("lua_tointegerx")) != nullptr) // Since Lua 5.2
+	{
+		lua_tointeger = &lua_tointeger_via_tointegerx;
+	}
+	else if ((lua_tointeger = (PFNLUATOINTEGER)liblua.Probe("lua_tointeger")) == nullptr)
+	{
+		throw std::runtime_error("Lua interpreter has incompatible binary interface (lua_tointeger)");
+	}
+
+	if ((lua_pcallk = (PFNLUAPCALLK)liblua.Probe("lua_pcallk")) != nullptr) // Since Lua 5.2
+	{
+		lua_pcall = &lua_pcall_via_pcallk;
+	}
+	else if ((lua_pcall = (PFNLUAPCALL)liblua.Probe("lua_pcall")) == nullptr)
+	{
+		throw std::runtime_error("Lua interpreter has incompatible binary interface (lua_pcall)");
+	}
+
+	if ((lua_rawlen = (PFNLUARAWLEN)liblua.Probe("lua_rawlen")) != nullptr) // Since Lua 5.2
+	{
+		lua_objlen = &lua_objlen_via_rawlen;
+	}
+	else if ((lua_objlen = (PFNLUAOBJLEN)liblua.Probe("lua_objlen")) == nullptr)
+	{
+		throw std::runtime_error("Lua interpreter has incompatible binary interface (lua_objlen)");
 	}
 
 	// Make module table

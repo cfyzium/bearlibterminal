@@ -26,6 +26,7 @@ void TestExtendedSmoothScroll()
 	std::srand(std::time(nullptr));
 
 	terminal_set("window.title='Omni: extended output / smooth scroll'");
+	terminal_set("input.filter={keyboard+}"); // Enable key-release events.
 	terminal_composition(TK_ON);
 
 	// Load resources

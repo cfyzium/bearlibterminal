@@ -1,6 +1,6 @@
 {*
 * BearLibTerminal
-* Copyright (C) 2013-2014 Cfyz
+* Copyright (C) 2013-2016 Cfyz, Apromix
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -19,7 +19,7 @@
 * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 *
-* Release date: 2015-03-24
+* Release date: 2016-09-06
 *}
 
 {$H+}
@@ -176,6 +176,13 @@ const
 // Module interface
 // ----------------------------------------------------------------------------
 
+{$IFNDEF FPC}
+type
+  Int32 = Integer;
+  UInt32 = Cardinal;
+  PUInt32 = ^Cardinal;
+{$ENDIF}
+
 // Open
 function terminal_open(): LongBool;
   cdecl; external 'BearLibTerminal' name 'terminal_open';
@@ -185,9 +192,9 @@ procedure terminal_close();
   cdecl; external 'BearLibTerminal' name 'terminal_close';
 
 // Set
-function terminal_set(const Options: AnsiString): LongBool;
+function terminal_set(const Options: AnsiString): LongBool; overload;
 
-function terminal_set(const Options: WideString): LongBool;
+function terminal_set(const Options: WideString): LongBool; overload;
 
 // Refresh
 procedure terminal_refresh();
@@ -206,20 +213,20 @@ procedure terminal_crop(Left, Top, Width, Height: Int32);
   cdecl; external 'BearLibTerminal' name 'terminal_crop';
 
 // Color
-procedure terminal_color(Color: UInt32);
+procedure terminal_color(Color: UInt32); overload;
   cdecl; external 'BearLibTerminal' name 'terminal_color';
   
-procedure terminal_color(Color: AnsiString);
+procedure terminal_color(Color: AnsiString); overload;
 
-procedure terminal_color(Color: WideString);
+procedure terminal_color(Color: WideString); overload;
 
 // BkColor
-procedure terminal_bkcolor(Color: UInt32);
+procedure terminal_bkcolor(Color: UInt32); overload;
   cdecl; external 'BearLibTerminal' name 'terminal_bkcolor';
 
-procedure terminal_bkcolor(Color: AnsiString);
+procedure terminal_bkcolor(Color: AnsiString); overload;
 
-procedure terminal_bkcolor(Color: WideString);
+procedure terminal_bkcolor(Color: WideString); overload;
 
 // Composition
 procedure terminal_composition(Mode: Int32);
@@ -230,47 +237,47 @@ procedure terminal_layer(Mode: Int32);
   cdecl; external 'BearLibTerminal' name 'terminal_layer';
 
 // Put
-procedure terminal_put(X, Y, Code: Int32);
+procedure terminal_put(X, Y, Code: Int32); overload;
 
-procedure terminal_put(X, Y: Int32; Code: AnsiChar);
+procedure terminal_put(X, Y: Int32; Code: AnsiChar); overload;
 
-procedure terminal_put(X, Y: Int32; Code: WideChar);
+procedure terminal_put(X, Y: Int32; Code: WideChar); overload;
 
 // PutExt
-procedure terminal_put_ext(X, Y, dX, dY: Int32; Code: Int32; Corners: PUInt32);
+procedure terminal_put_ext(X, Y, dX, dY: Int32; Code: Int32; Corners: PUInt32); overload;
   cdecl; external 'BearLibTerminal' name 'terminal_put_ext';
 
-procedure terminal_put_ext(X, Y, dX, dY: Int32; Code: WideChar; Corners: PUInt32);
+procedure terminal_put_ext(X, Y, dX, dY: Int32; Code: WideChar; Corners: PUInt32); overload;
 
-procedure terminal_put_ext(X, Y, dX, dY: Int32; Code: Int32);
+procedure terminal_put_ext(X, Y, dX, dY: Int32; Code: Int32); overload;
 
-procedure terminal_put_ext(X, Y, dX, dY: Int32; Code: WideChar);
+procedure terminal_put_ext(X, Y, dX, dY: Int32; Code: WideChar); overload;
 
 // Pick
-function terminal_pick(X, Y, Index: Int32): Int32;
+function terminal_pick(X, Y, Index: Int32): Int32; overload;
   cdecl; external 'BearLibTerminal' name 'terminal_pick';
 
-function terminal_pick(X, Y: Int32): Int32;
+function terminal_pick(X, Y: Int32): Int32; overload;
 
 // PickColor
-function terminal_pick_color(X, Y, Index: Int32): UInt32;
+function terminal_pick_color(X, Y, Index: Int32): UInt32; overload;
   cdecl; external 'BearLibTerminal' name 'terminal_pick_color';
 
-function terminal_pick_color(X, Y: Int32): UInt32;
+function terminal_pick_color(X, Y: Int32): UInt32; overload;
 
 // PickBkColor
 function terminal_pick_bkcolor(X, Y: Int32): UInt32;
   cdecl; external 'BearLibTerminal' name 'terminal_pick_bkcolor';
 
 // Print
-function terminal_print(X, Y: Int32; const S: AnsiString): Int32;
+function terminal_print(X, Y: Int32; const S: AnsiString): Int32; overload;
 
-function terminal_print(X, Y: Int32; const S: WideString): Int32;
+function terminal_print(X, Y: Int32; const S: WideString): Int32; overload;
 
 // Measure
-function terminal_measure(const S: AnsiString): Int32;
+function terminal_measure(const S: AnsiString): Int32; overload;
 
-function terminal_measure(const S: WideString): Int32;
+function terminal_measure(const S: WideString): Int32; overload;
 
 // HasInput
 function terminal_has_input(): LongBool;
@@ -288,9 +295,9 @@ function terminal_read(): Int32;
   cdecl; external 'BearLibTerminal' name 'terminal_read';
 
 // ReadStr
-function terminal_read_str(X, Y: Int32; var S: AnsiString; MaxLength: Int32): Int32;
+function terminal_read_str(X, Y: Int32; var S: AnsiString; MaxLength: Int32): Int32; overload;
 
-function terminal_read_str(X, Y: Int32; var S: WideString; MaxLength: Int32): Int32;
+function terminal_read_str(X, Y: Int32; var S: WideString; MaxLength: Int32): Int32; overload;
   
 // Peek
 function terminal_peek(): Int32;
@@ -301,18 +308,18 @@ procedure terminal_delay(Period: Int32);
   cdecl; external 'BearLibTerminal' name 'terminal_delay';
 
 // Get
-function terminal_get(const S: AnsiString): AnsiString;
+function terminal_get(const S: AnsiString): AnsiString; overload;
 
-function terminal_get(const S, Default: AnsiString): AnsiString;
+function terminal_get(const S, Default: AnsiString): AnsiString; overload;
 
-function terminal_get(const S: WideString): WideString;
+function terminal_get(const S: WideString): WideString; overload;
 
-function terminal_get(const S, Default: WideString): WideString;
+function terminal_get(const S, Default: WideString): WideString; overload;
 
 // ColorFromName
-function color_from_name(const Name: AnsiString): UInt32;
+function color_from_name(const Name: AnsiString): UInt32; overload;
 
-function color_from_name(const Name: WideString): UInt32;
+function color_from_name(const Name: WideString): UInt32; overload;
 
 // ColorFromARGB
 function color_from_argb(a, r, g, b: Int32): UInt32;
@@ -339,24 +346,24 @@ begin
     terminal_set := terminal_set_unicode(PWideChar(Options));
 end;
 
-procedure terminal_color(Color: AnsiString);
+procedure terminal_color(Color: AnsiString); overload;
 begin
-	terminal_color(color_from_name(Color));
+    terminal_color(color_from_name(Color));
 end;
 
-procedure terminal_color(Color: WideString);
+procedure terminal_color(Color: WideString); overload;
 begin
-	terminal_color(color_from_name(Color));
+    terminal_color(color_from_name(Color));
 end;
 
-procedure terminal_bkcolor(Color: AnsiString);
+procedure terminal_bkcolor(Color: AnsiString); overload;
 begin
-	terminal_bkcolor(color_from_name(Color));
+    terminal_bkcolor(color_from_name(Color));
 end;
 
-procedure terminal_bkcolor(Color: WideString);
+procedure terminal_bkcolor(Color: WideString); overload;
 begin
-	terminal_bkcolor(color_from_name(Color));
+    terminal_bkcolor(color_from_name(Color));
 end;
 
 procedure terminal_put_integer(X, Y: Int32; Code: Int32);
@@ -377,29 +384,29 @@ begin
     terminal_put_integer(X, Y, ord(Code));
 end;
 
-procedure terminal_put_ext(X, Y, dX, dY: Int32; Code: WideChar; Corners: PUInt32);
+procedure terminal_put_ext(X, Y, dX, dY: Int32; Code: WideChar; Corners: PUInt32); overload;
 begin
-	terminal_put_ext(X, Y, dX, dY, ord(Code), Corners);
+    terminal_put_ext(X, Y, dX, dY, ord(Code), Corners);
 end;
 
-procedure terminal_put_ext(X, Y, dX, dY, Code: Int32);
+procedure terminal_put_ext(X, Y, dX, dY, Code: Int32); overload;
 begin
-	terminal_put_ext(X, Y, dX, dY, Code, PUInt32(0));
+    terminal_put_ext(X, Y, dX, dY, Code, PUInt32(0));
 end;
 
-procedure terminal_put_ext(X, Y, dX, dY: Int32; Code: WideChar);
+procedure terminal_put_ext(X, Y, dX, dY: Int32; Code: WideChar); overload;
 begin
-	terminal_put_ext(X, Y, dX, dY, ord(Code), PUInt32(0));
+    terminal_put_ext(X, Y, dX, dY, ord(Code), PUInt32(0));
 end;
 
-function terminal_pick(X, Y: Int32): Int32;
+function terminal_pick(X, Y: Int32): Int32; overload;
 begin
-	terminal_pick := terminal_pick(X, Y, 0);
+    terminal_pick := terminal_pick(X, Y, 0);
 end;
 
-function terminal_pick_color(X, Y: Int32): UInt32;
+function terminal_pick_color(X, Y: Int32): UInt32; overload;
 begin;
-	terminal_pick_color := terminal_pick_color(X, Y, 0);
+    terminal_pick_color := terminal_pick_color(X, Y, 0);
 end;
 
 function terminal_print_ansi(X, Y: Int32; const S: PAnsiChar): Int32;
@@ -415,7 +422,7 @@ function terminal_print_unicode(X, Y: Int32; const S: PWideChar): Int32;
 
 function terminal_print(X, Y: Int32; const S: WideString): Int32;
 begin
-	terminal_print := terminal_print_unicode(X, Y, PWideChar(S));
+    terminal_print := terminal_print_unicode(X, Y, PWideChar(S));
 end;
 
 function terminal_measure_ansi(const S: PAnsiChar): Int32;
@@ -431,12 +438,12 @@ function terminal_measure_unicode(const S: PWideChar): Int32;
 
 function terminal_measure(const S: WideString): Int32;
 begin
-	terminal_measure := terminal_measure_unicode(PWideChar(S));
+    terminal_measure := terminal_measure_unicode(PWideChar(S));
 end;
 
 function terminal_check(Code: Int32): Boolean;
 begin
-	terminal_check := terminal_state(Code) > 0;
+    terminal_check := terminal_state(Code) > 0;
 end;
 
 function terminal_read_str_ansi(X, Y: Int32; S: PAnsiChar; MaxLength: Int32): Int32;
@@ -449,8 +456,8 @@ begin
     SetLength(S, MaxLength*3+1); // Bigger size to accomodate possible UTF-8 string.
     terminal_read_str := terminal_read_str_ansi(X, Y, PAnsiChar(S), MaxLength);
     for i := 1 to MaxLength*3+1 do
-    	if S[i] = AnsiChar(0) then
-    		break;
+        if S[i] = AnsiChar(0) then
+            break;
     SetLength(S, i);
 end;
 
@@ -459,13 +466,13 @@ function terminal_read_str_unicode(X, Y: Int32; S: PWideChar; MaxLength: Int32):
 
 function terminal_read_str(X, Y: Int32; var S: WideString; MaxLength: Int32): Int32;
 var
-	i: Integer;
+    i: Integer;
 begin
     SetLength(S, MaxLength);
     terminal_read_str := terminal_read_str_unicode(X, Y, PWideChar(S), MaxLength);
     for i := 1 to MaxLength do
-    	if S[i] = WideChar(0) then
-    		break;
+        if S[i] = WideChar(0) then
+            break;
     SetLength(S, i);
 end;
 
@@ -477,22 +484,22 @@ function terminal_get_unicode(const S, Default: PWideChar): PWideChar;
 
 function terminal_get(const S: AnsiString): AnsiString;
 begin
-	terminal_get := terminal_get_ansi(PAnsiChar(S), nil);
+    terminal_get := terminal_get_ansi(PAnsiChar(S), nil);
 end;
 
 function terminal_get(const S, Default: AnsiString): AnsiString;
 begin
-	terminal_get := terminal_get_ansi(PAnsiChar(S), PAnsiChar(Default));
+    terminal_get := terminal_get_ansi(PAnsiChar(S), PAnsiChar(Default));
 end;
 
 function terminal_get(const S: WideString): WideString;
 begin
-	terminal_get := terminal_get_unicode(PWideChar(S), nil);
+    terminal_get := terminal_get_unicode(PWideChar(S), nil);
 end;
 
 function terminal_get(const S, Default: WideString): WideString;
 begin
-	terminal_get := terminal_get_unicode(PWideChar(S), PWideChar(Default));
+    terminal_get := terminal_get_unicode(PWideChar(S), PWideChar(Default));
 end;
 
 function color_from_name_ansi(const Name: PAnsiChar): UInt32;

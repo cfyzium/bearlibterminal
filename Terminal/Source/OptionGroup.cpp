@@ -28,6 +28,21 @@
 
 namespace BearLibTerminal
 {
+	static bool isquote(wchar_t c)
+	{
+		return c == L'\'' || c == L'"' || c == L'[' || c == '{';
+	}
+
+	static wchar_t get_closing_quote(wchar_t c)
+	{
+		switch (c)
+		{
+		case L'[':  return L']';
+		case L'{':  return L'}';
+		default:    return c;
+		}
+	}
+
 	std::wstring read_until3(const wchar_t*& p, const std::wstring& until)
 	{
 		std::wstring value, space;
@@ -57,10 +72,10 @@ namespace BearLibTerminal
 					closing_quote = 0;
 				}
 			}
-			else if ((*p == L'\'' || *p == L'"' || *p == L'[') && !closing_quote)
+			else if (isquote(*p) && !closing_quote && value.empty())
 			{
 				// Start of quoted string.
-				closing_quote = (*p == L'['? L']': *p);
+				closing_quote = get_closing_quote(*p);
 				space.clear();
 			}
 			else

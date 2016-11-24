@@ -49,26 +49,19 @@ void TestDefaultFont()
 
 		terminal_refresh();
 
-		bool exit = false;
-		do
-		{
-			int key = terminal_read();
-			if (key == TK_ESCAPE || key == TK_CLOSE)
-			{
-				exit = true;
-				break;
-			}
-			else if (key == TK_UP)
-			{
-				if (current_range > 0) current_range -= 1;
-			}
-			else if (key == TK_DOWN)
-			{
-				if (current_range < g_wgl4_ranges.size()-1) current_range += 1;
-			}
-		}
-		while (terminal_has_input());
+		int key = terminal_read();
 
-		if (exit) break;
+		if (key == TK_ESCAPE || key == TK_CLOSE)
+		{
+			break;
+		}
+		else if (key == TK_UP && current_range > 0)
+		{
+			current_range -= 1;
+		}
+		else if (key == TK_DOWN && current_range < g_wgl4_ranges.size()-1)
+		{
+			current_range += 1;
+		}
 	}
 }

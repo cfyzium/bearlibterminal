@@ -80,7 +80,7 @@ void TestTextInput()
 	int result = 0;
 	int char_result = 0;
 
-	for (bool proceed=true; proceed;)
+	while (true)
 	{
 		terminal_clear();
 		terminal_color("white");
@@ -100,9 +100,10 @@ void TestTextInput()
 		terminal_refresh();
 
 		int key = terminal_read();
+
 		if (key == TK_CLOSE || key == TK_ESCAPE)
 		{
-			proceed = false;
+			break;
 		}
 		else if (key == TK_1)
 		{

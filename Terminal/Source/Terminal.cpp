@@ -172,17 +172,25 @@ namespace BearLibTerminal
 		return i == mapping.end()? 0: i->second;
 	}
 
+	static std::wstring Escape(const std::wstring& s)
+	{
+		std::wstring result = L"'";
+		for (auto c: s)
+		{
+			result += c;
+			if (c == L'\'')
+				result += c;
+		}
+		result += L"'";
+		return result;
+	}
+
 	Terminal::Terminal():
 		m_state{kHidden},
 		m_show_grid{false},
 		m_viewport_modified{false},
 		m_scale_step(kScaleDefault),
 		m_alt_pressed(false)
-#if defined(USING_SDL)
-		,
-		m_window2(nullptr),
-		m_gl_context(nullptr)
-#endif
 	{
 #if defined(__APPLE__)
 		// OS X implementation of C-string manipulation routines (e. g. swprintf)
@@ -208,7 +216,7 @@ namespace BearLibTerminal
 		m_window = Window::Create(std::bind(&Terminal::OnWindowEvent, this, std::placeholders::_1));
 
 		// Default parameters
-		SetOptionsInternal(L"window: size=80x25, icon=default; font: default; terminal.encoding=utf8;");
+		SetOptionsInternal(L"window: size=80x25, icon=default; font: default; terminal.encoding=utf8; input.filter={keyboard}");
 
 		// Apply parameters from configuration file:
 		// Each group (line) is applied separately to allow some error resilience.
@@ -220,10 +228,17 @@ namespace BearLibTerminal
 			std::wstring group = pair.first.substr(0, pair.first.find(L'.'));
 			std::wstring property = group.length() >= pair.first.length()-1?
 				L"_": pair.first.substr(group.length()+1);
-			groups[group] += group + L"." + property + L"=" + pair.second + L";";
+			groups[group] += group + L"." + property + L"=" + Escape(pair.second) + L";";
 		}
 		for (auto& pair: groups)
 			SetOptions(pair.second);
+		LOG(Info, "Applying palette from configuration file");
+		for (auto& pair: Config::Instance().List(L"ini.palette"))
+		{
+			Color value = Palette::Instance.Get(pair.second);
+			LOG(Info, "* '" << pair.first << "' = '" << pair.second << "' (a=" << (int)value.a << ", r=" << (int)value.r << ", g=" << (int)value.g << ", b=" << (int)value.b << ")");
+			Palette::Instance.Set(pair.first, value);
+		}
 		LOG(Info, "Terminal initialization complete");
 	}
 
@@ -373,6 +388,7 @@ namespace BearLibTerminal
 		auto groups = ParseOptions2(value);
 		Options updated = m_options;
 		std::unordered_map<char32_t, std::shared_ptr<Tileset>> new_tilesets;
+		std::unordered_map<std::wstring, Color> palette_update;
 
 		// Validate options
 		for (auto& group: groups)
@@ -411,6 +427,13 @@ namespace BearLibTerminal
 					Config::Instance().Set(group.name + L"." + i.first, i.second);
 				}
 			}
+			else if (group.name == L"palette")
+			{
+				for (auto kv: group.attributes)
+				{
+					palette_update[kv.first] = Palette::Instance.Get(kv.second);
+				}
+			}
 			else
 			{
 				char32_t offset = ParseTilesetOffset(group.name);
@@ -446,6 +469,10 @@ namespace BearLibTerminal
 		// Primary sanity check: if there is no base font, lots of things are gonna fail
 		if (!g_tilesets.count(0))
 			throw std::runtime_error("No main font has been configured");
+
+		// Apply palette
+		for (auto kv: palette_update)
+			Palette::Instance.Set(kv.first, kv.second);
 
 		Log::Instance().filename = updated.log_filename;
 		Log::Instance().level = updated.log_level;
@@ -722,17 +749,11 @@ namespace BearLibTerminal
 
 	void Terminal::ValidateInputOptions(OptionGroup& group, Options& options)
 	{
-		// Possible options: nonblocking, events, precise_mouse, sticky_close, cursor_symbol, cursor_blink_rate
+		// Possible options: nonblocking, events, precise_mouse, cursor_symbol, cursor_blink_rate
 
 		if (group.attributes.count(L"precise-mouse") && !try_parse(group.attributes[L"precise-mouse"], options.input_precise_mouse))
 		{
 			throw std::runtime_error("input.precise-mouse cannot be parsed");
-		}
-
-		// TODO: deprecated
-		if (group.attributes.count(L"sticky-close") && !try_parse(group.attributes[L"sticky-close"], options.input_sticky_close))
-		{
-			throw std::runtime_error("input.sticky-close cannot be parsed");
 		}
 
 		if (group.attributes.count(L"filter") && !ParseInputFilter(group.attributes[L"filter"], options.input_filter))
@@ -797,14 +818,9 @@ namespace BearLibTerminal
 
 				if (!name.empty())
 				{
-					if (name == L"false")
+					if (name == L"false" || name == L"none")
 					{
 						result.clear();
-					}
-					else if (name == L"system")
-					{
-						add(TK_CLOSE, release_too);
-						add(TK_RESIZED, release_too);
 					}
 					else if (name == L"keyboard")
 					{
@@ -859,6 +875,12 @@ namespace BearLibTerminal
 			}
 
 			start = end+1;
+		}
+
+		if (!result.empty())
+		{
+			result.insert(TK_CLOSE);
+			result.insert(TK_RESIZED);
 		}
 
 		out = result;
@@ -973,7 +995,9 @@ namespace BearLibTerminal
 			m_state = kVisible;
 		}
 
-		Render(true);
+		m_world.stage.frontbuffer = m_world.stage.backbuffer;
+		m_window->PumpEvents();
+		Render();
 	}
 #endif
 
@@ -1347,7 +1371,7 @@ namespace BearLibTerminal
 
 				if ((name == L"color" || name == L"c") && !params.empty())
 				{
-					color_t color = Palette::Instance[params];
+					color_t color = Palette::Instance.Get(params);
 					tag = [&, color]{m_world.state.color = color;};
 				}
 				else if (name == L"/color" || name == L"/c")
@@ -1356,7 +1380,7 @@ namespace BearLibTerminal
 				}
 				else if ((name == L"bkcolor" || name == L"b") && !params.empty())
 				{
-					color_t color = Palette::Instance[params];
+					color_t color = Palette::Instance.Get(params);
 					tag = [&, color]{m_world.state.bkcolor = color;};
 				}
 				else if (name == L"/bkcolor" || name == L"/b")
@@ -1592,16 +1616,32 @@ namespace BearLibTerminal
 		return wrap.width > 0? total_height: total_width;
 	}
 
+	bool Terminal::IsEventFiltered(int code)
+	{
+		return m_options.input_filter.empty() || m_options.input_filter.count(code);
+	}
+
+	bool Terminal::HasFilteredInput()
+	{
+		for (auto& e: m_input_queue)
+		{
+			if (IsEventFiltered(e.code))
+				return true;
+		}
+
+		return false;
+	}
+
 	int Terminal::HasInput()
 	{
 		CHECK_THREAD("has_input", 0);
 
 		m_window->PumpEvents();
 
-		if (m_state == kClosed)
+		if (m_state != kVisible)
 			return 1;
 
-		return !m_input_queue.empty();
+		return HasFilteredInput();
 	}
 
 	int Terminal::GetState(int code)
@@ -1611,7 +1651,7 @@ namespace BearLibTerminal
 
 	Event Terminal::ReadEvent(int timeout) // FIXME: more precise wait
 	{
-		if (m_state == kClosed)
+		if (m_state != kVisible)
 			return {TK_CLOSE};
 
 		auto started = std::chrono::system_clock::now();
@@ -1620,12 +1660,18 @@ namespace BearLibTerminal
 		{
 			m_window->PumpEvents();
 
-			if (!m_input_queue.empty())
+			if (HasFilteredInput())
 			{
-				Event event = m_input_queue.front();
-				ConsumeEvent(event);
-				m_input_queue.pop_front();
-				return event;
+				while (!m_input_queue.empty())
+				{
+					Event e = m_input_queue.front();
+					m_input_queue.pop_front();
+					ConsumeEvent(e);
+					if (IsEventFiltered(e.code))
+						return e;
+				}
+
+				return 0;
 			}
 			else
 			{
@@ -1651,19 +1697,22 @@ namespace BearLibTerminal
 
 		m_window->PumpEvents();
 
-		if (m_state == kClosed)
+		if (m_state != kVisible)
 		{
 			return TK_CLOSE;
 		}
-		else if (m_input_queue.empty())
+		else if (HasFilteredInput())
 		{
-			return TK_INPUT_NONE;
+			for (auto& e: m_input_queue)
+			{
+				ConsumeEvent(e);
+				if (IsEventFiltered(e.code))
+					return e.code;
+			}
 		}
 		else
 		{
-			Event event = m_input_queue.front();
-			ConsumeEvent(event);
-			return event.code;
+			return TK_INPUT_NONE;
 		}
 	}
 
@@ -2159,26 +2208,14 @@ namespace BearLibTerminal
 
 	void Terminal::PushEvent(Event event)
 	{
-		bool must_be_consumed = false;
-		{
-			must_be_consumed = !m_options.input_filter.empty() && !m_options.input_filter.count(event.code);
-		}
-
-		if (must_be_consumed)
-		{
-			ConsumeEvent(event);
-		}
-		else
-		{
-			m_input_queue.push_back(event);
-		}
+		m_input_queue.push_back(event);
 	}
 
 	int Terminal::OnWindowEvent(Event event)
 	{
 		if (event.code == TK_REDRAW)
 		{
-			Render(false);
+			Render();
 			return 0;
 		}
 		else if (event.code == TK_INVALIDATE)
@@ -2245,17 +2282,36 @@ namespace BearLibTerminal
 			Size& cellsize = m_world.state.cellsize;
 			Point location(pixel_x / cellsize.width, pixel_y / cellsize.height);
 			location = Rectangle(m_world.stage.size).Clamp(location);
+			event[TK_MOUSE_X] = location.x;
+			event[TK_MOUSE_Y] = location.y;
 
-			if (!m_options.input_precise_mouse && m_vars[TK_MOUSE_X] == location.x && m_vars[TK_MOUSE_Y] == location.y)
+			// If application do not read events fast enough, do not flood it with mouse moves.
+			if (!m_input_queue.empty() && m_input_queue.back().code == TK_MOUSE_MOVE)
 			{
-				// This event do not change mouse cell position, ignore.
+				// Replace the last, yet unread event with the most recent one.
+				m_input_queue.back() = event;
 				return 0;
 			}
-			else
+
+			// Ignore mouse movement events that do not change coarse cursor location.
+			if (!m_options.input_precise_mouse)
 			{
-				// Make event update both pixel and cell positions.
-				event[TK_MOUSE_X] = location.x;
-				event[TK_MOUSE_Y] = location.y;
+				Point last_location{m_vars[TK_MOUSE_X], m_vars[TK_MOUSE_Y]};
+
+				// Search for last mouse movement event in the queue.
+				for (auto i = m_input_queue.rbegin(); i != m_input_queue.rend(); i++)
+				{
+					if (i->code == TK_MOUSE_MOVE)
+					{
+						last_location = Point{(*i)[TK_MOUSE_X], (*i)[TK_MOUSE_Y]};
+						break;
+					}
+				}
+
+				if (location == last_location)
+				{
+					return 0;
+				}
 			}
 		}
 		else if ((event.code & 0xFF) == TK_ALT && m_options.input_alt_functions)
@@ -2275,7 +2331,7 @@ namespace BearLibTerminal
 			{
 				// Alt+G: toggle grid
 				m_show_grid = !m_show_grid;
-				Render(false);
+				Render();
 				return 0;
 			}
 			else if (event.code == TK_RETURN)
@@ -2354,13 +2410,6 @@ namespace BearLibTerminal
 				return;
 			}
 		}
-		else if (event.code == TK_CLOSE)
-		{
-			if (m_options.input_sticky_close)
-			{
-				m_vars[TK_CLOSE] = 1;
-			}
-		}
 
 		if (!event.properties.count(TK_WCHAR))
 		{
@@ -2391,10 +2440,8 @@ namespace BearLibTerminal
 		m_vars[TK_EVENT] = event.code;
 	}
 
-	void Terminal::Render(bool update_scene)
+	void Terminal::Render()
 	{
-		if (update_scene)
-			m_world.stage.frontbuffer = m_world.stage.backbuffer;
 		Redraw();
 		m_window->SwapBuffers();
 	}

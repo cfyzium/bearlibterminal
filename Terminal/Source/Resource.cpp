@@ -59,12 +59,38 @@ namespace BearLibTerminal
 		{L"codepage-tcod", BuiltinResource(kCodepageTCOD, false)}
 	};
 
+	struct MemoryResource
+	{
+		MemoryResource():
+			address(0),
+			size(0)
+		{ }
+	
+		uint64_t address;
+		size_t size;
+	};
+
+	bool try_parse(const std::wstring& s, MemoryResource& out)
+	{
+		size_t colon_pos = s.find(L":");
+		if (colon_pos == std::wstring::npos)
+			return false;
+
+		if (!try_parse(s.substr(0, colon_pos), out.address))
+			return false;
+
+		if (!try_parse(s.substr(colon_pos+1), out.size))
+			return false;
+
+		return true;
+	}
+
 	std::vector<uint8_t> Resource::Open(std::wstring name, std::wstring prefix)
 	{
 		LOG(Debug, "Requested resource \"" << name << "\" with possible prefix \"" << prefix << "\"");
 
 		auto i = kBuiltinResources.find(prefix + name);
-		size_t colon_pos = std::wstring::npos;
+		MemoryResource mem;
 
 		if (i != kBuiltinResources.end())
 		{
@@ -80,23 +106,12 @@ namespace BearLibTerminal
 				return std::vector<uint8_t>(data, data + i->second.data.length());
 			}
 		}
-		else if ((colon_pos = name.find(L":")) != std::wstring::npos)
+		else if (try_parse(name, mem))
 		{
 			// Memory source.
 			LOG(Debug, "Loading resource from memory '" << name << "'");
-
-			uint64_t address = 0;
-			if (!try_parse(name.substr(0, colon_pos), address))
-				throw std::runtime_error("Resource::Open: failed to parse memory address (" + UTF8Encoding().Convert(name) + ")");
-
-			size_t size = 0;
-			if (!try_parse(colon_pos < name.length()? name.substr(colon_pos+1): std::wstring{}, size))
-				throw std::runtime_error("Resource::Open: failed to parse memory size (" + UTF8Encoding().Convert(name) + ")");
-
-			// TODO: sanity checks.
-
-			std::vector<uint8_t> result(size);
-			memcpy(&result[0], (uint8_t*)address, size);
+			std::vector<uint8_t> result(mem.size);
+			memcpy(&result[0], (uint8_t*)mem.address, mem.size);
 			return std::move(result);
 		}
 		else

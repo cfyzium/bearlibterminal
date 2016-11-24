@@ -181,22 +181,14 @@ namespace BearLibTerminal
 				}
 
 				Section& section = m_sections[current_section];
-
-				std::wstring name = trim(line.substr(0, pos));
-				line[pos] = L':';
-
 				for (const auto& group: ParseOptions2(line, true))
 				{
 					for (auto& i: group.attributes)
 					{
-						std::wstring key = i.first;
+						std::wstring key = (i.first == L"_")? group.name: (group.name + L"." + i.first);
 						std::wstring value = i.second;
-
-						key = key.empty()? name: (name + L"." + key);
-
 						Property& property = section.m_properties[key];
 						property.m_value = value;
-
 						LOG(Trace, L"'" << key << L"' = '" << value << L"'");
 					}
 				}
@@ -319,7 +311,7 @@ namespace BearLibTerminal
 
 		// Prepare property value for merging
 		std::map<std::string, std::string> pieces;
-		std::string piece_name;
+		std::string piece_name = "_";
 		{
 			size_t period_pos = property_name.find(".");
 			if (period_pos != std::string::npos)
@@ -443,10 +435,6 @@ namespace BearLibTerminal
 					lines.pop_back();
 				}
 
-				// Overwriting name separator will make the line suitable for
-				// universal parsing by ParseOptions function.
-				line[pos] = ':';
-
 				for (const auto& group: ParseOptions2(UTF8Encoding().Convert(line), true))
 				{
 					for (auto& i: group.attributes)
@@ -493,7 +481,7 @@ namespace BearLibTerminal
 		{
 			std::ostringstream ss;
 			ss << property_name;
-			if (pieces.size() == 1 && pieces.begin()->first.empty())
+			if (pieces.size() == 1 && pieces.begin()->first == "_")
 			{
 				// One entry and its subname is empty --> "foo=bar"
 				ss << "=";
@@ -505,7 +493,7 @@ namespace BearLibTerminal
 				for (auto i = pieces.begin(); i != pieces.end(); i++)
 				{
 					ss << (i == pieces.begin()? ": ": ", ");
-					if (i->first.empty())
+					if (i->first == "_")
 					{
 						append_escaped(ss, i->second);
 					}

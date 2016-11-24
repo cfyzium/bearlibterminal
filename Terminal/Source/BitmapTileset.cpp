@@ -124,15 +124,8 @@ namespace BearLibTerminal
 		if (options.attributes.count(L"transparent"))
 		{
 			std::wstring& name = options.attributes[L"transparent"];
-			Color mask = (name == L"auto"? image(0, 0): Palette::Instance[name]);
+			Color mask = (name == L"auto"? image(0, 0): Palette::Instance.Get(name));
 			image.MakeTransparent(mask);
-		}
-
-		if (resize_to.Area())
-		{
-			LOG(Trace, "BitmapTileset: resizing tileset image to " << resize_to << " with " << resize_filter << " filter, " << resize_mode << " mode");
-			Size prev = image.GetSize();
-			image = image.Resize(resize_to, resize_filter, resize_mode);
 		}
 
 		if (!m_bounding_box_size.Area())
@@ -143,18 +136,16 @@ namespace BearLibTerminal
 		if (m_bounding_box_size.width < 1 || m_bounding_box_size.height < 1)
 			m_bounding_box_size = Size{1, 1};
 
-		// Adjust tile size accordingly
+		Size source_tile_size = m_bounding_box_size;
 		if (resize_to.Area())
 		{
-			float hf = resize_to.width/(float)m_bounding_box_size.width;
-			float vf = resize_to.height/(float)m_bounding_box_size.height;
-			m_bounding_box_size.width *= hf;
-			m_bounding_box_size.height *= vf;
+			LOG(Debug, "BitmapTileset: changing tile size " << m_bounding_box_size << " -> " << resize_to);
+			m_bounding_box_size = resize_to;
 		}
 
 		Size image_size = image.GetSize();
-		int columns = image_size.width / m_bounding_box_size.width;
-		int rows = image_size.height / m_bounding_box_size.height;
+		int columns = image_size.width / source_tile_size.width;
+		int rows = image_size.height / source_tile_size.height;
 		Size grid_size = Size{columns, rows};
 		LOG(Debug, "Tileset has " << columns << "x" << rows << " tiles");
 
@@ -175,7 +166,9 @@ namespace BearLibTerminal
 
 			auto tile = std::make_shared<TileInfo>();
 			tile->tileset = this;//shared_from_this();
-			tile->bitmap = image.Extract(Rectangle{Point{x * m_bounding_box_size.width, y * m_bounding_box_size.height}, m_bounding_box_size});
+			tile->bitmap = image.Extract(Rectangle{Point{x * source_tile_size.width, y * source_tile_size.height}, source_tile_size});
+			if (resize_to.Area())
+				tile->bitmap = tile->bitmap.Resize(resize_to, resize_filter, resize_mode);
 			tile->offset = offset;
 			tile->spacing = spacing;
 			tile->alignment = alignment;
