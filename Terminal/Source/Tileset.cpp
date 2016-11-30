@@ -84,7 +84,7 @@ namespace BearLibTerminal
 		return i->second;
 	}
 
-	std::shared_ptr<Tileset> Tileset::Create(OptionGroup& options)
+	std::shared_ptr<Tileset> Tileset::Create(OptionGroup& options, bool is_font)
 	{
 		char32_t offset = parse<char32_t>(options.name);
 
@@ -103,6 +103,11 @@ namespace BearLibTerminal
 		{
 			options.attributes[L"size"] = L"8x16";
 			options.attributes[L"codepage"] = L"tileset-default";
+		}
+
+		if (is_font && !options.attributes.count(L"size"))
+		{
+			throw std::runtime_error("Tileset::Create: font does not have 'size' attribute");\
 		}
 
 		bool is_raw_bitmap = options.attributes.count(L"raw-size");

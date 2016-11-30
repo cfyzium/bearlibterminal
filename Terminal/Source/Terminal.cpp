@@ -287,7 +287,7 @@ namespace BearLibTerminal
 		options.name = L"0xFFFF";
 		options.attributes[L"_"] = L"dynamic";
 		options.attributes[L"size"] = to_string<wchar_t>(size);
-		AddTileset(Tileset::Create(options));
+		AddTileset(Tileset::Create(options, false));
 	}
 
 	std::map<std::wstring, int> g_fonts;
@@ -446,7 +446,7 @@ namespace BearLibTerminal
 				{
 					// Add new tileset.
 					group.name = to_string<wchar_t>(offset);
-					new_tilesets[offset] = Tileset::Create(group);
+					new_tilesets[offset] = Tileset::Create(group, (offset & 0x00FFFFFF) == 0);
 				}
 			}
 		}
