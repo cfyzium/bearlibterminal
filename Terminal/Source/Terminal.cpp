@@ -360,6 +360,9 @@ namespace BearLibTerminal
 
 		for (auto j = g_tilesets.rbegin(); j != g_tilesets.rend(); ++j)
 		{
+			if (j->first == 0xFFFF)
+				continue;
+
 			if (j->second->Provides(code))
 			{
 				auto tile = j->second->Get(code);
