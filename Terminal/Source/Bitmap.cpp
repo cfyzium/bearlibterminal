@@ -286,7 +286,41 @@ namespace BearLibTerminal
 
 	void Bitmap::MakeTransparent(Color color)
 	{
-		for (Color& pixel: m_data) if (pixel == color) pixel.a = 0;
+		// If black regardless of alpha
+		if (color.r == 0 && color.g == 0 && color.b == 0)
+		{
+			std::vector<int> luma(m_data.size());
+			bool grayscale = true;
+
+			for (size_t i = 0; i < m_data.size(); i++)
+			{
+				int min = std::min(m_data[i].r, std::min(m_data[i].g, m_data[i].b));
+				int max = std::max(m_data[i].r, std::max(m_data[i].g, m_data[i].b));
+				if (max - min > 1)
+				{
+					grayscale = false;
+					break;
+				}
+				luma[i] = max;
+			}
+
+			if (grayscale)
+			{
+				for (size_t i = 0; i < m_data.size(); i++)
+				{
+					m_data[i].a = luma[i];
+					m_data[i].r = m_data[i].g = m_data[i].b = 255;
+				}
+
+				return;
+			}
+		}
+
+		for (Color& pixel: m_data)
+		{
+			if (pixel == color)
+				pixel.a = 0;
+		}
 	}
 
 	Bitmap ResizeNearest(Bitmap& original, Size size)
