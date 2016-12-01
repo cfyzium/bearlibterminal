@@ -279,7 +279,11 @@ namespace BearLibTerminal
 
 	bool Bitmap::HasAlpha() const
 	{
-		for (const Color& pixel: m_data) if (pixel.a < 0xFF) return true;
+		for (const Color& pixel: m_data)
+		{
+			if (pixel.a < 0xFF)
+				return true;
+		}
 
 		return false;
 	}

@@ -123,9 +123,18 @@ namespace BearLibTerminal
 
 		if (options.attributes.count(L"transparent"))
 		{
-			std::wstring& name = options.attributes[L"transparent"];
-			Color mask = (name == L"auto"? image(0, 0): Palette::Instance.Get(name));
-			image.MakeTransparent(mask);
+			std::wstring name = options.attributes[L"transparent"];
+			if (name == L"auto")
+			{
+				if (!image.HasAlpha())
+				{
+					image.MakeTransparent(image(0, 0));
+				}
+			}
+			else if (name != L"false")
+			{
+				image.MakeTransparent(Palette::Instance.Get(name));
+			}
 		}
 
 		if (!m_bounding_box_size.Area())

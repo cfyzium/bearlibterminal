@@ -128,6 +128,11 @@ namespace BearLibTerminal
 
 		if (is_raw_bitmap || format == "png" || format == "bmp" || format == "jpg")
 		{
+			if (IsFontOffset(offset) && options.attributes.count(L"transparent") == 0)
+			{
+				options.attributes[L"transparent"] = L"auto";
+			}
+
 			return std::make_shared<BitmapTileset>(offset, std::move(data), options);
 		}
 		else if (format == "ttf")
