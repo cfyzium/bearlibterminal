@@ -56,7 +56,8 @@ namespace BearLibTerminal
 		0.75f, 1.0f, 1.25f, 1.5f, 2.0f, 3.0f
 	};
 
-	static int kScaleDefault = 1;
+	static const int kScaleDefault = 1;
+	static const char32_t kDynamicTilesetOffset = 0xFFFF;
 
 	static int GetInputEventNameByName(const std::wstring& name)
 	{
@@ -282,12 +283,12 @@ namespace BearLibTerminal
 
 	void Terminal::UpdateDynamicTileset(Size size)
 	{
-		RemoveTileset(0xFFFF);
+		RemoveTileset(kDynamicTilesetOffset);
 		OptionGroup options;
-		options.name = L"0xFFFF";
+		options.name = to_string<wchar_t>(kDynamicTilesetOffset);
 		options.attributes[L"_"] = L"dynamic";
 		options.attributes[L"size"] = to_string<wchar_t>(size);
-		AddTileset(Tileset::Create(options, false));
+		AddTileset(Tileset::Create(options, kDynamicTilesetOffset));
 	}
 
 	std::map<std::wstring, int> g_fonts;
@@ -299,7 +300,7 @@ namespace BearLibTerminal
 		{
 			char32_t font_offset = i->second * 0x1000000;
 			auto j = g_tilesets.lower_bound(font_offset);
-			if ((j->first & 0xFF000000) != font_offset)
+			if ((j->first & Tileset::kFontOffsetMask) != font_offset)
 			{
 				// The first tileset with offset >= font_offset does not belong to this font.
 				// Meaning there is no tilesets belonging to this font.
@@ -360,7 +361,7 @@ namespace BearLibTerminal
 
 		for (auto j = g_tilesets.rbegin(); j != g_tilesets.rend(); ++j)
 		{
-			if (j->first == 0xFFFF)
+			if (j->first == kDynamicTilesetOffset)
 				continue;
 
 			if (j->second->Provides(code))
@@ -372,11 +373,11 @@ namespace BearLibTerminal
 			}
 		}
 
-		char32_t relative_code = code & 0x00FFFFFF;
+		char32_t relative_code = (code & Tileset::kCharOffsetMask);
 		if (relative_code < 0x2500 || relative_code > 0x259F)
 			relative_code = kUnicodeReplacementCharacter;
 
-		auto fallback = g_tilesets.find(0xFFFF); // Dynamic tileset.
+		auto fallback = g_tilesets.find(kDynamicTilesetOffset);
 		if (fallback == g_tilesets.end())
 			return nullptr;
 
@@ -449,7 +450,7 @@ namespace BearLibTerminal
 				{
 					// Add new tileset.
 					group.name = to_string<wchar_t>(offset);
-					new_tilesets[offset] = Tileset::Create(group, (offset & 0x00FFFFFF) == 0);
+					new_tilesets[offset] = Tileset::Create(group, offset);
 				}
 			}
 		}
@@ -1169,7 +1170,9 @@ namespace BearLibTerminal
 
 		int cell_index = y * m_world.stage.size.width + x;
 		auto& cell = m_world.stage.backbuffer.layers[m_world.state.layer].cells[cell_index];
-		wchar_t code = (index >= 0 && index < (int)cell.leafs.size())? (int)(cell.leafs[index].code & 0x00FFFFFF): 0;
+		wchar_t code = 0;
+		if (index >= 0 && index < (int)cell.leafs.size())
+			code = (int)(cell.leafs[index].code & Tileset::kCharOffsetMask);
 
 		// Must take into account possible terminal.encoding codepage.
 		int translated = m_encoding->Convert(code);
@@ -1512,8 +1515,7 @@ namespace BearLibTerminal
 						int offset = last_line_break + 1;
 						int leave = offset;
 
-						//if (line.symbols[last_line_break].code > 0 && GetTileRelativeIndex(line.symbols[last_line_break].code) == (int)L' ')
-						if ((line.symbols[last_line_break].code & 0x00FFFFFF) == L' ')
+						if ((line.symbols[last_line_break].code & Tileset::kCharOffsetMask) == L' ')
 						{
 							leave -= 1;
 						}
@@ -1528,8 +1530,7 @@ namespace BearLibTerminal
 					}
 					else
 					{
-						//int relative_index = GetTileRelativeIndex(s.code);
-						int relative_index = (s.code & 0x00FFFFFF); // TODO: const mask
+						int relative_index = (s.code & Tileset::kCharOffsetMask);
 						if (relative_index == (int)L' ' || relative_index == (int)L'-')
 						{
 							last_line_break = j;

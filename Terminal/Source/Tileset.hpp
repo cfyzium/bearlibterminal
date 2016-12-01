@@ -39,7 +39,11 @@ namespace BearLibTerminal
 		virtual bool Provides(char32_t code);
 		virtual std::shared_ptr<TileInfo> Get(char32_t code);
 		virtual Size GetBoundingBoxSize() = 0;
-		static std::shared_ptr<Tileset> Create(OptionGroup& options, bool is_font);
+
+		static const char32_t kFontOffsetMask = 0xFF000000;
+		static const char32_t kCharOffsetMask = 0x00FFFFFF;
+		static std::shared_ptr<Tileset> Create(OptionGroup& options, char32_t offset);
+		static bool IsFontOffset(char32_t offset);
 
 	protected:
 		char32_t m_offset;

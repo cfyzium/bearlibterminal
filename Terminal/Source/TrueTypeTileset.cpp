@@ -213,10 +213,10 @@ namespace BearLibTerminal
 		if (code < m_offset)
 			return 0;
 
-		if ((m_offset & 0x00FFFFFF) == 0)
+		if (Tileset::IsFontOffset(m_offset))
 		{
 			// Font
-			char32_t char_code = (code & 0x00FFFFFF);
+			char32_t char_code = (code & Tileset::kCharOffsetMask);
 			return FT_Get_Char_Index(*m_font_face, char_code);
 		}
 		else
@@ -232,7 +232,7 @@ namespace BearLibTerminal
 
 	bool TrueTypeTileset::Provides(char32_t code)
 	{
-		char32_t relative_code = code & 0x00FFFFFF;
+		char32_t relative_code = (code & Tileset::kCharOffsetMask);
 		if (relative_code >= 0x2500 && relative_code <= 0x259F)
 			return false; // TrueType tilesets do not provide Box Drawing and Block Elements characters.
 

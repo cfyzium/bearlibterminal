@@ -175,7 +175,7 @@ namespace BearLibTerminal
 			m_cache[code] = tile;
 		};
 
-		if ((offset & 0x00FFFFFF) == 0)
+		if (Tileset::IsFontOffset(offset))
 		{
 			// Font.
 			for (int y = 0; y < rows; y++)
