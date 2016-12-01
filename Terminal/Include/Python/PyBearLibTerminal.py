@@ -19,9 +19,9 @@
 # IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #
-# Release date: 2016-07-06
+# Release date: 2016-12-01
 
-import sys, ctypes
+import sys, ctypes, atexit
 
 _version3 = sys.version_info >= (3, 0)
 _integer = int if _version3 else (int, long)
@@ -241,6 +241,10 @@ def color_from_argb(a, r, g, b):
 	result = result * 256 + g
 	result = result * 256 + b
 	return result
+
+@atexit.register
+def _cleanup():
+	close()
 
 # Keyboard scancodes for events/states.
 TK_A                = 0x04
