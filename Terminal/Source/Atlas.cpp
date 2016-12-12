@@ -80,6 +80,9 @@ namespace BearLibTerminal
 		case TileAlignment::Center:
 			s << L"center";
 			break;
+		case TileAlignment::DeadCenter:
+			s << L"dead-center";
+			break;
 		case TileAlignment::TopLeft:
 			s << L"top-left";
 			break;
@@ -104,6 +107,8 @@ namespace BearLibTerminal
 
 		if (temp == L"center")
 			value = TileAlignment::Center;
+		else if (temp == L"dead-center")
+			value = TileAlignment::DeadCenter;
 		else if (temp == L"top-left")
 			value = TileAlignment::TopLeft;
 		else if (temp == L"top-right")

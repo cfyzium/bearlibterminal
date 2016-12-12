@@ -1937,6 +1937,7 @@ namespace BearLibTerminal
 		switch (tile.alignment)
 		{
 		case TileAlignment::Center:
+		case TileAlignment::DeadCenter:
 			left = x + tile.offset.x + w2 + leaf.dx;
 			top = y + tile.offset.y + h2 + leaf.dy;
 			break;

@@ -49,6 +49,7 @@ namespace BearLibTerminal
 	{
 		Unknown,
 		Center,
+		DeadCenter,
 		TopLeft,
 		TopRight,
 		BottomLeft,

@@ -160,27 +160,31 @@ namespace BearLibTerminal
 
 		if (alignment == TileAlignment::Unknown)
 		{
-			if (grid_size.Area() > 1)
-				alignment = (grid_size.Area() > 1? TileAlignment::Center: TileAlignment::TopLeft);
+			// By default, single tiles (usually sprites) are aligned top-left.
+			// Tilesets (usually fonts, map tiles, etc.) on the other hand are aligned centered.
+			alignment = grid_size.Area() > 1? TileAlignment::Center: TileAlignment::TopLeft;
 		}
 
 		auto keep_tile = [&](int x, int y, char32_t code)
 		{
-			Point offset;
-			if (alignment == TileAlignment::Center)
-			{
-				// TODO: round in a way to compensate state.half_cellsize rounding error
-				offset = Point(-m_bounding_box_size.width/2, -m_bounding_box_size.height/2);
-			}
-
 			auto tile = std::make_shared<TileInfo>();
-			tile->tileset = this;//shared_from_this();
+			tile->tileset = this;
 			tile->bitmap = image.Extract(Rectangle{Point{x * source_tile_size.width, y * source_tile_size.height}, source_tile_size});
 			if (resize_to.Area())
 				tile->bitmap = tile->bitmap.Resize(resize_to, resize_filter, resize_mode);
-			tile->offset = offset;
 			tile->spacing = spacing;
 			tile->alignment = alignment;
+			if (alignment == TileAlignment::Center)
+			{
+				// TODO: round in a way to compensate state.half_cellsize rounding error
+				tile->offset = Point(-m_bounding_box_size.width/2, -m_bounding_box_size.height/2);
+			}
+			else if (alignment == TileAlignment::DeadCenter)
+			{
+				Point center = tile->bitmap.CenterOfMass();
+				tile->offset = Point(-center.x, -center.y);
+			}
+
 			m_cache[code] = tile;
 		};
 

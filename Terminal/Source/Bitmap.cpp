@@ -554,4 +554,45 @@ namespace BearLibTerminal
 			throw std::runtime_error("Bitmap::Resize: internal logic error");
 		}
 	}
+
+	Point Bitmap::CenterOfMass() const
+	{
+		std::vector<int> cfs(m_size.width, 0.0f);
+		std::vector<int> rfs(m_size.height, 0.0f);
+		for (int y = 0; y < m_size.height; y++)
+		{
+			for (int x = 0; x < m_size.width; x++)
+			{
+				float a = m_data[y * m_size.width + x].a;
+				if (a > cfs[x])
+					cfs[x] = a;
+				if (a > rfs[y])
+					rfs[y] = a;
+			}
+		}
+
+		int lwf = 0, rwf = 0;
+		for (size_t i = 0; i < cfs.size() && cfs[i] < 224; i++)
+		{
+			lwf += 255 - cfs[i];
+		}
+		for (int i = cfs.size()-1; i >= 0 && cfs[i] < 224; i--)
+		{
+			rwf += 255 - cfs[i];
+		}
+		float wf = m_size.width + (lwf - rwf) / 255.0f;
+
+		int thf = 0, bhf = 0;
+		for (size_t i = 0; i < rfs.size() && rfs[i] < 224; i++)
+		{
+			thf += 255 - rfs[i];
+		}
+		for (int i = rfs.size()-1; i >= 0 && rfs[i] < 224; i--)
+		{
+			bhf += 255 - rfs[i];
+		}
+		float hf = m_size.height + (thf - bhf) / 255.0f;
+
+		return Point(std::round(wf/2.0f), std::round(hf/2.0f));
+	}
 }

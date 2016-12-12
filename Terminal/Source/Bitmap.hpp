@@ -78,6 +78,7 @@ namespace BearLibTerminal
 		bool HasAlpha() const;
 		void MakeTransparent(Color color);
 		Bitmap Resize(Size size, ResizeFilter filter, ResizeMode mode);
+		Point CenterOfMass() const;
 
 	protected:
 		Size m_size;

@@ -317,14 +317,19 @@ namespace BearLibTerminal
 		}
 
 		int descender2 = (*m_font_face)->size->metrics.descender >> 6;
-		int dy = -((by-descender2) - m_tile_size.height/2);
+		float wff = slot->metrics.horiAdvance / 4096.0f;
+		float hff = (*m_font_face)->size->metrics.height / 64.0f;
+		int dy = -((by-descender2) - hff/2);
 		Point offset;
 		if (m_alignment == TileAlignment::Center)
 		{
-			if (m_monospace)
-				offset = Point(-m_tile_size.width/2+bx, dy);
-			else
-				offset = Point(-(columns+bx)/2, dy);
+			int dx = -std::round((wff + 0.5f) / 2.0f) + bx;
+			offset = Point(dx, dy);
+		}
+		else if (m_alignment == TileAlignment::DeadCenter)
+		{
+			Point center = glyph.CenterOfMass();
+			offset = Point(-center.x, -center.y);
 		}
 		else
 		{
