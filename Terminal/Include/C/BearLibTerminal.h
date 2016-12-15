@@ -27,10 +27,17 @@
 #define _CRT_SECURE_NO_WARNINGS
 #endif
 
+#ifdef __GNUC__
+#if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ > 1)
+#pragma GCC diagnostic ignored "-Wformat-nonliteral" /* False-positive when wrapping vsnprintf. */
+#endif /* __GNUC__ >= 4.1 */
+#endif
+
 #include <stdio.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdarg.h>
+#include <stdlib.h>
 #include <wchar.h>
 #if defined(__cplusplus)
 #include <sstream>
@@ -291,11 +298,6 @@ TERMINAL_API color_t color_from_name32(const int32_t* name);
 #define TERMINAL_WCHAR_TYPE int32_t
 #endif
 
-/*
- * This set of inline functions define basic name substitution + type cast:
- * terminal_[w]xxxx -> terminal_xxxx{8|16|32}
- */
-
 #if defined(__cplusplus)
 #define TERMINAL_INLINE inline
 #define TERMINAL_DEFAULT(value) = value
@@ -304,14 +306,107 @@ TERMINAL_API color_t color_from_name32(const int32_t* name);
 #define TERMINAL_DEFAULT(value)
 #endif
 
-TERMINAL_INLINE int terminal_set(const char* value)
+/*
+ * These functions provide inline string formatting support
+ * for terminal_setf, terminal_printf, etc.
+ *
+ * Using static termporary buffer is okay because terminal API is not
+ * required to be multiple-thread safe by design.
+ */
+
+#define TERMINAL_VSPRINTF_MAXIMUM_BUFFER_SIZE 65536
+
+TERMINAL_INLINE const char* terminal_vsprintf(const char* s, va_list args)
 {
-	return terminal_set8((const int8_t*)value);
+	static int buffer_size = 512;
+	static char* buffer = (char*)malloc(buffer_size);
+	int rc = 0;
+
+	if (!s)
+		return NULL;
+
+	do
+	{
+		buffer[buffer_size-1] = '\0';
+		rc = vsnprintf(buffer, buffer_size, s, args);
+		if (rc >= buffer_size || buffer[buffer_size-1] != '\0')
+		{
+			if (buffer_size >= TERMINAL_VSPRINTF_MAXIMUM_BUFFER_SIZE)
+				return NULL;
+
+			buffer_size *= 2;
+			buffer = (char*)realloc(buffer, buffer_size);
+			rc = 0;
+		}
+	}
+	while (!rc);
+
+	return rc >= 0? buffer: NULL;
 }
 
-TERMINAL_INLINE int terminal_wset(const wchar_t* value)
+TERMINAL_INLINE const wchar_t* terminal_vswprintf(const wchar_t* s, va_list args)
 {
-	return TERMINAL_CAT(terminal_set, TERMINAL_WCHAR_SUFFIX)((const TERMINAL_WCHAR_TYPE*)value);
+	static int buffer_size = 512;
+	static wchar_t* buffer = (wchar_t*)malloc(buffer_size * sizeof(wchar_t));
+	int rc = 0;
+
+	if (!s)
+		return NULL;
+
+	do
+	{
+		buffer[buffer_size-1] = L'\0';
+#if defined(_WIN32)
+		rc = _vsnwprintf(buffer, buffer_size, s, args);
+#else
+		rc = vswprintf(buffer, buffer_size, s, args);
+#endif
+		if (rc >= buffer_size || buffer[buffer_size-1] != L'\0')
+		{
+			if (buffer_size >= TERMINAL_VSPRINTF_MAXIMUM_BUFFER_SIZE)
+				return NULL;
+
+			buffer_size *= 2;
+			buffer = (wchar_t*)realloc(buffer, buffer_size * sizeof(wchar_t));
+			rc = 0;
+		}
+	}
+	while (!rc);
+
+	return rc >= 0? buffer: NULL;
+}
+
+#define TERMINAL_FORMATTED_WRAP(type, call) \
+	type ret; \
+	va_list args; \
+	va_start(args, s); \
+	ret = call; \
+	va_end(args); \
+	return ret;
+
+/*
+ * This set of inline functions define basic name substitution + type cast:
+ * terminal_[w]xxxx -> terminal_xxxx{8|16|32}
+ */
+
+TERMINAL_INLINE int terminal_set(const char* s)
+{
+	return terminal_set8((const int8_t*)s);
+}
+
+TERMINAL_INLINE int terminal_setf(const char* s, ...)
+{
+	TERMINAL_FORMATTED_WRAP(int, terminal_set(terminal_vsprintf(s, args)))
+}
+
+TERMINAL_INLINE int terminal_wset(const wchar_t* s)
+{
+	return TERMINAL_CAT(terminal_set, TERMINAL_WCHAR_SUFFIX)((const TERMINAL_WCHAR_TYPE*)s);
+}
+
+TERMINAL_INLINE int terminal_wsetf(const wchar_t* s, ...)
+{
+	TERMINAL_FORMATTED_WRAP(int, terminal_wset(terminal_vswprintf(s, args)))
 }
 
 TERMINAL_INLINE int terminal_print(int x, int y, const char* s)
@@ -319,9 +414,19 @@ TERMINAL_INLINE int terminal_print(int x, int y, const char* s)
 	return terminal_print8(x, y, (const int8_t*)s);
 }
 
+TERMINAL_INLINE int terminal_printf(int x, int y, const char* s, ...)
+{
+	TERMINAL_FORMATTED_WRAP(int, terminal_print(x, y, terminal_vsprintf(s, args)))
+}
+
 TERMINAL_INLINE int terminal_wprint(int x, int y, const wchar_t* s)
 {
 	return TERMINAL_CAT(terminal_print, TERMINAL_WCHAR_SUFFIX)(x, y, (const TERMINAL_WCHAR_TYPE*)s);
+}
+
+TERMINAL_INLINE int terminal_wprintf(int x, int y, const wchar_t* s, ...)
+{
+	TERMINAL_FORMATTED_WRAP(int, terminal_wprint(x, y, terminal_vswprintf(s, args)))
 }
 
 TERMINAL_INLINE int terminal_measure(const char* s)
@@ -329,9 +434,19 @@ TERMINAL_INLINE int terminal_measure(const char* s)
 	return terminal_measure8((const int8_t*)s);
 }
 
+TERMINAL_INLINE int terminal_measuref(const char* s, ...)
+{
+	TERMINAL_FORMATTED_WRAP(int, terminal_measure(terminal_vsprintf(s, args)))
+}
+
 TERMINAL_INLINE int terminal_wmeasure(const wchar_t* s)
 {
 	return TERMINAL_CAT(terminal_measure, TERMINAL_WCHAR_SUFFIX)((const TERMINAL_WCHAR_TYPE*)s);
+}
+
+TERMINAL_INLINE int terminal_wmeasuref(const wchar_t* s, ...)
+{
+	TERMINAL_FORMATTED_WRAP(int, terminal_wmeasure(terminal_vswprintf(s, args)))
 }
 
 TERMINAL_INLINE int terminal_read_str(int x, int y, char* buffer, int max)
@@ -364,60 +479,6 @@ TERMINAL_INLINE color_t color_from_wname(const wchar_t* name)
 	return TERMINAL_CAT(color_from_name, TERMINAL_WCHAR_SUFFIX)((const TERMINAL_WCHAR_TYPE*)name);
 }
 
-/*
- * These inline functions provide formatted versions for textual API:
- * terminal_[w]setf and terminal_[w]printf
- *
- * Using static termporary buffer is okay because terminal API is not
- * required to be multiple-thread safe by design.
- */
-
-#if !defined(TERMINAL_FORMAT_BUFFER_SIZE)
-#define TERMINAL_FORMAT_BUFFER_SIZE 1024
-#endif
-
-#define TERMINAL_FORMATTED_VA(type, name, sign, func, call_sign)\
-	TERMINAL_INLINE int terminal_v##name##f sign\
-	{\
-		static type buffer[TERMINAL_FORMAT_BUFFER_SIZE] = {0};\
-		int rc = 0;\
-		if (s == NULL) return 0;\
-		rc = func(buffer, TERMINAL_FORMAT_BUFFER_SIZE-1, s, args);\
-		if (rc > 0) rc = terminal_##name call_sign;\
-		return rc;\
-	}
-
-#if defined(_WIN32)
-#define TERMINAL_VSNWPRINTF _vsnwprintf
-#else
-#define TERMINAL_VSNWPRINTF vswprintf
-#endif
-
-TERMINAL_FORMATTED_VA(char, set, (const char* s, va_list args), vsnprintf, (buffer))
-TERMINAL_FORMATTED_VA(wchar_t, wset, (const wchar_t* s, va_list args), TERMINAL_VSNWPRINTF, (buffer))
-TERMINAL_FORMATTED_VA(char, print, (int x, int y, const char* s, va_list args), vsnprintf, (x, y, buffer))
-TERMINAL_FORMATTED_VA(wchar_t, wprint, (int x, int y, const wchar_t* s, va_list args), TERMINAL_VSNWPRINTF, (x, y, buffer))
-TERMINAL_FORMATTED_VA(char, measure, (const char* s, va_list args), vsnprintf, (buffer))
-TERMINAL_FORMATTED_VA(wchar_t, wmeasure, (const wchar_t* s, va_list args), TERMINAL_VSNWPRINTF, (buffer))
-
-#define TERMINAL_FORMATTED(outer, inner)\
-	TERMINAL_INLINE int terminal_##outer\
-	{\
-		va_list args;\
-		int rc = 0;\
-		va_start(args, s);\
-		rc = terminal_v##inner;\
-		va_end(args);\
-		return rc;\
-	}
-
-TERMINAL_FORMATTED(setf(const char* s, ...), setf(s, args))
-TERMINAL_FORMATTED(wsetf(const wchar_t* s, ...), wsetf(s, args))
-TERMINAL_FORMATTED(printf(int x, int y, const char* s, ...), printf(x, y, s, args))
-TERMINAL_FORMATTED(wprintf(int x, int y, const wchar_t* s, ...), wprintf(x, y, s, args))
-TERMINAL_FORMATTED(measuref(const char* s, ...), measuref(s, args))
-TERMINAL_FORMATTED(wmeasuref(const wchar_t* s, ...), wmeasuref(s, args))
-
 #ifdef __cplusplus
 /*
  * C++ supports function overloading, should take advantage of it.
@@ -428,7 +489,10 @@ TERMINAL_INLINE int terminal_set(const wchar_t* s)
 	return terminal_wset(s);
 }
 
-TERMINAL_FORMATTED(setf(const wchar_t* s, ...), wsetf(s, args))
+TERMINAL_INLINE int terminal_setf(const wchar_t* s, ...)
+{
+	TERMINAL_FORMATTED_WRAP(int, terminal_wset(terminal_vswprintf(s, args)));
+}
 
 TERMINAL_INLINE void terminal_color(const char* name)
 {
@@ -460,14 +524,20 @@ TERMINAL_INLINE int terminal_print(int x, int y, const wchar_t* s)
 	return terminal_wprint(x, y, s);
 }
 
-TERMINAL_FORMATTED(printf(int x, int y, const wchar_t* s, ...), wprintf(x, y, s, args))
+TERMINAL_INLINE int terminal_printf(int x, int y, const wchar_t* s, ...)
+{
+	TERMINAL_FORMATTED_WRAP(int, terminal_wprint(x, y, terminal_vswprintf(s, args)))
+}
 
 TERMINAL_INLINE int terminal_measure(const wchar_t* s)
 {
 	return terminal_wmeasure(s);
 }
 
-TERMINAL_FORMATTED(measuref(const wchar_t* s, ...), wmeasuref(s, args))
+TERMINAL_INLINE int terminal_measuref(const wchar_t* s, ...)
+{
+	TERMINAL_FORMATTED_WRAP(int, terminal_wmeasure(terminal_vswprintf(s, args)))
+}
 
 TERMINAL_INLINE int terminal_read_str(int x, int y, wchar_t* buffer, int max)
 {
