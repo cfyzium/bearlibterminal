@@ -319,11 +319,13 @@ TERMINAL_API color_t color_from_name32(const int32_t* name);
 TERMINAL_INLINE const char* terminal_vsprintf(const char* s, va_list args)
 {
 	static int buffer_size = 512;
-	static char* buffer = (char*)malloc(buffer_size);
+	static char* buffer = NULL;
 	int rc = 0;
 
 	if (!s)
 		return NULL;
+	else if (!buffer)
+		buffer = (char*)malloc(buffer_size);
 
 	do
 	{
@@ -347,11 +349,13 @@ TERMINAL_INLINE const char* terminal_vsprintf(const char* s, va_list args)
 TERMINAL_INLINE const wchar_t* terminal_vswprintf(const wchar_t* s, va_list args)
 {
 	static int buffer_size = 512;
-	static wchar_t* buffer = (wchar_t*)malloc(buffer_size * sizeof(wchar_t));
+	static wchar_t* buffer = NULL;
 	int rc = 0;
 
 	if (!s)
 		return NULL;
+	else if (!buffer)
+		buffer = (wchar_t*)malloc(buffer_size * sizeof(wchar_t));
 
 	do
 	{
