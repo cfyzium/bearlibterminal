@@ -86,11 +86,17 @@ namespace BearLibTerminal
 			throw std::runtime_error("TrueTypeTileset: size " + UTF8Encoding().Convert(options.attributes[L"size"]) + " is out of acceptable range");
 
 		// Trying to initialize FreeType
-		m_font_library = std::shared_ptr<FT_Library>(new FT_Library(), [](FT_Library* p){FT_Done_FreeType(*p);});
+		m_font_library = std::shared_ptr<FT_Library>(
+			new FT_Library(),
+			[](FT_Library* p){FT_Done_FreeType(*p); delete p;}
+		);
 		if (FT_Init_FreeType(m_font_library.get()))
 			throw std::runtime_error("TrueTypeTileset: can't initialize Freetype");
 
-		m_font_face = std::shared_ptr<FT_Face>(new FT_Face, [](FT_Face* p){FT_Done_Face(*p);});
+		m_font_face = std::shared_ptr<FT_Face>(
+			new FT_Face(),
+			[](FT_Face* p){FT_Done_Face(*p); delete p;}
+		);
 		if (FT_New_Memory_Face(*m_font_library, &m_font_data[0], m_font_data.size(), 0, m_font_face.get()))
 			throw std::runtime_error("TrueTypeTileset: can't load font from buffer");
 

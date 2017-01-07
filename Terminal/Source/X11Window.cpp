@@ -246,7 +246,7 @@ namespace BearLibTerminal
 		//m_wm_close_message(),
 		m_glXSwapIntervalEXT(nullptr),
 		m_glXSwapIntervalMESA(nullptr),
-		m_size_hints(XAllocSizeHints()),
+		m_size_hints(nullptr),
 		m_expose_timer(0)
 	{
 		try
@@ -288,6 +288,8 @@ namespace BearLibTerminal
 		int major, minor;
 		glXQueryVersion(m_display, &major, &minor);
 		LOG(Info, "Available OpenGL version: " << major << "." << minor);
+
+		m_size_hints = XAllocSizeHints();
 
 		m_colormap = XCreateColormap
 			(
@@ -403,9 +405,11 @@ namespace BearLibTerminal
 
 	void X11Window::Dispose()
 	{
-		// FIXME: release XIC
+		if (m_ic != nullptr)
+			XDestroyIC(m_ic);
 
-		// FIXME: release XIM
+		if (m_im != nullptr)
+			XCloseIM(m_im);
 
 		ReleaseRC();
 
@@ -417,6 +421,9 @@ namespace BearLibTerminal
 
 		if (m_colormap != 0)
 			XFreeColormap(m_display, m_colormap);
+
+		if (m_size_hints != nullptr)
+			XFree(m_size_hints);
 
 		if (m_visual != nullptr)
 			XFree(m_visual);
