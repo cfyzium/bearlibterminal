@@ -45,6 +45,22 @@ std::map<int, std::string> key_names =
 	{TK_F10, "F10"},
 	{TK_F11, "F11"},
 	{TK_F12, "F12"},
+	{TK_KP_DIVIDE, "Keypad /"},
+	{TK_KP_MULTIPLY, "Keypad *"},
+	{TK_KP_MINUS, "Keypad -"},
+	{TK_KP_PLUS, "Keypad +"},
+	{TK_KP_ENTER, "Keypad Enter"},
+	{TK_KP_0, "Keypad 0"},
+	{TK_KP_1, "Keypad 1"},
+	{TK_KP_2, "Keypad 2"},
+	{TK_KP_3, "Keypad 3"},
+	{TK_KP_4, "Keypad 4"},
+	{TK_KP_5, "Keypad 5"},
+	{TK_KP_6, "Keypad 6"},
+	{TK_KP_7, "Keypad 7"},
+	{TK_KP_8, "Keypad 8"},
+	{TK_KP_9, "Keypad 9"},
+	{TK_KP_PERIOD, "Keypad ."},
 };
 
 void DrawFrame(int x, int y, int w, int h)
@@ -115,7 +131,6 @@ void TestTextInput()
 		{
 			terminal_color("orange");
 			DrawFrame(5, 9, 5, 3);
-			character = L'?';
 
 			do
 			{
@@ -124,19 +139,7 @@ void TestTextInput()
 				terminal_printf(5+3+2+1, 10, "[color=gray]%s", (key_names.count(char_result)? key_names[char_result]: to_string(char_result)).c_str());
 				terminal_refresh();
 
-				/*
-				int symbol = terminal_read_ext(TK_READ_NOREMOVE);
-				char_result = terminal_read();
-				if (char_result == TK_ESCAPE || char_result == TK_CLOSE || char_result == TK_RETURN)
-				{
-					break;
-				}
-				else if (symbol > 0)
-				{
-					character = symbol;
-					char_result = 0;
-				}
-				/*/
+				character = L' ';
 				int key = terminal_read();
 				if (key == TK_ESCAPE || key == TK_CLOSE || key == TK_RETURN)
 				{
@@ -145,13 +148,12 @@ void TestTextInput()
 				else if (terminal_check(TK_WCHAR))
 				{
 					character = terminal_state(TK_WCHAR);
-					//char_result = 0;
+					char_result = key;
 				}
 				else if (key < TK_KEY_RELEASED)
 				{
 					char_result = key;
 				}
-				//*/
 			}
 			while (true);
 		}

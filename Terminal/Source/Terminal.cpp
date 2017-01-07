@@ -2415,6 +2415,23 @@ namespace BearLibTerminal
 				return;
 			}
 		}
+		else if (event.code >= TK_KP_DIVIDE && event.code <= TK_KP_PERIOD)
+		{
+			// Keypad is translated to characters here because platform-specific translation is
+			// * much more complex (e. g. WM_CHAR vs WM_KEYDOWN)
+			// * not always possible (subject to NumLock and terminal ignores NumLock by design)
+			static std::map<int, wchar_t> keypad_char_mapping =
+			{
+				{TK_KP_DIVIDE, L'/'}, {TK_KP_MULTIPLY, L'*'}, {TK_KP_MINUS, L'-'}, {TK_KP_PLUS, L'+'},
+				{TK_KP_ENTER, 0},
+				{TK_KP_1, L'1'}, {TK_KP_2, L'2'}, {TK_KP_3, L'3'},
+				{TK_KP_4, L'4'}, {TK_KP_5, L'5'}, {TK_KP_6, L'6'},
+				{TK_KP_7, L'7'}, {TK_KP_8, L'8'}, {TK_KP_9, L'9'},
+				{TK_KP_0, L'0'}, {TK_KP_PERIOD, L'.'}
+			};
+
+			event.properties[TK_WCHAR] = keypad_char_mapping[event.code];
+		}
 
 		if (!event.properties.count(TK_WCHAR))
 		{
