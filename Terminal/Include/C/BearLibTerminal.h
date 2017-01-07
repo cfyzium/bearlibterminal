@@ -327,7 +327,7 @@ TERMINAL_INLINE const char* terminal_vsprintf(const char* s, va_list args)
 	else if (!buffer)
 		buffer = (char*)malloc(buffer_size);
 
-	do
+	while (true)
 	{
 		buffer[buffer_size-1] = '\0';
 		rc = vsnprintf(buffer, buffer_size, s, args);
@@ -338,10 +338,12 @@ TERMINAL_INLINE const char* terminal_vsprintf(const char* s, va_list args)
 
 			buffer_size *= 2;
 			buffer = (char*)realloc(buffer, buffer_size);
-			rc = 0;
+		}
+		else
+		{
+			break;
 		}
 	}
-	while (!rc);
 
 	return rc >= 0? buffer: NULL;
 }
@@ -357,7 +359,7 @@ TERMINAL_INLINE const wchar_t* terminal_vswprintf(const wchar_t* s, va_list args
 	else if (!buffer)
 		buffer = (wchar_t*)malloc(buffer_size * sizeof(wchar_t));
 
-	do
+	while (true)
 	{
 		buffer[buffer_size-1] = L'\0';
 #if defined(_WIN32)
@@ -372,10 +374,12 @@ TERMINAL_INLINE const wchar_t* terminal_vswprintf(const wchar_t* s, va_list args
 
 			buffer_size *= 2;
 			buffer = (wchar_t*)realloc(buffer, buffer_size * sizeof(wchar_t));
-			rc = 0;
+		}
+		else
+		{
+			break;
 		}
 	}
-	while (!rc);
 
 	return rc >= 0? buffer: NULL;
 }
