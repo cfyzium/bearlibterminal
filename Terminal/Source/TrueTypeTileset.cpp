@@ -1,6 +1,6 @@
 /*
 * BearLibTerminal
-* Copyright (C) 2013-2016 Cfyz
+* Copyright (C) 2013-2017 Cfyz
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -36,7 +36,9 @@ namespace BearLibTerminal
 		m_font_data(std::move(data)),
 		m_font_library(nullptr),
 		m_font_face(nullptr),
-		m_render_mode(FT_RENDER_MODE_NORMAL)
+		m_render_mode(FT_RENDER_MODE_NORMAL),
+		m_use_box_drawing(false),
+		m_use_block_elements(false)
 	{
 		if (options.attributes.count(L"spacing") && !try_parse(options.attributes[L"spacing"], m_spacing))
 			throw std::runtime_error("TrueTypeTileset: failed to parse 'spacing' attribute");
@@ -84,6 +86,12 @@ namespace BearLibTerminal
 
 		if (m_tile_size.width < 0 || m_tile_size.height < 1)
 			throw std::runtime_error("TrueTypeTileset: size " + UTF8Encoding().Convert(options.attributes[L"size"]) + " is out of acceptable range");
+
+		if (options.attributes.count(L"use-box-drawing") && !try_parse(options.attributes[L"use-box-drawing"], m_use_box_drawing))
+			throw std::runtime_error("TrueTypeTileset: failed to parse 'use-box-drawing' attribute");
+
+		if (options.attributes.count(L"use-block-elements") && !try_parse(options.attributes[L"use-block-elements"], m_use_block_elements))
+			throw std::runtime_error("TrueTypeTileset: failed to parse 'use-block-elements' attribute");
 
 		// Trying to initialize FreeType
 		m_font_library = std::shared_ptr<FT_Library>(
@@ -239,8 +247,15 @@ namespace BearLibTerminal
 	bool TrueTypeTileset::Provides(char32_t code)
 	{
 		char32_t relative_code = (code & Tileset::kCharOffsetMask);
-		if (relative_code >= 0x2500 && relative_code <= 0x259F)
-			return false; // TrueType tilesets do not provide Box Drawing and Block Elements characters.
+		if (Tileset::IsFontOffset(m_offset))
+		{
+			// TrueType fonts do not provide Box Drawing and Block Elements characters by default.
+			if ((relative_code >= 0x2500 && relative_code <= 0x257F && !m_use_box_drawing) ||
+			    (relative_code >= 0x2580 && relative_code <= 0x259F && !m_use_block_elements))
+			{
+				return false;
+			}
+		}
 
 		return GetGlyphIndex(code) > 0;
 	}

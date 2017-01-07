@@ -1,6 +1,6 @@
 /*
 * BearLibTerminal
-* Copyright (C) 2013-2016 Cfyz
+* Copyright (C) 2013-2017 Cfyz
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -52,6 +52,8 @@ namespace BearLibTerminal
 		std::shared_ptr<FT_Face> m_font_face;
 		FT_Render_Mode m_render_mode;
 		bool m_monospace;
+		bool m_use_box_drawing;
+		bool m_use_block_elements;
 	};
 }
 
