@@ -1,4 +1,4 @@
-### 0.15.0 (Unreleased)
+### 0.15.0 (2017-01-09)
 
 - Add bbox and alignment parameters to `print()` function (instead of using in-string formatting tags).
 - Add bbox parameters to `measure()` function.
