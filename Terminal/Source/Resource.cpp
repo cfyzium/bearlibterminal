@@ -1,6 +1,6 @@
 /*
 * BearLibTerminal
-* Copyright (C) 2013-2015 Cfyz
+* Copyright (C) 2013-2017 Cfyz
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -105,6 +105,13 @@ namespace BearLibTerminal
 				auto data = (const uint8_t*)i->second.data.data();
 				return std::vector<uint8_t>(data, data + i->second.data.length());
 			}
+		}
+		else if (name.find(L"text:") == 0)
+		{
+			std::string text = UTF8Encoding().Convert(name.substr(5));
+			std::vector<uint8_t> result(text.length());
+			memcpy(&result[0], (uint8_t*)text.data(), text.length());
+			return result;
 		}
 		else if (try_parse(name, mem))
 		{
