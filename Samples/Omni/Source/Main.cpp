@@ -11,6 +11,10 @@
 #include <vector>
 #include <set>
 #include <iostream>
+#if defined(__APPLE__)
+#include <mach-o/dyld.h>
+#include <sys/param.h>
+#endif
 
 struct TestEntry
 {
@@ -22,6 +26,21 @@ TERMINAL_TAKE_CARE_OF_WINMAIN
 
 int main()
 {
+#if defined(__APPLE__)
+	char path[MAXPATHLEN] = {0};
+	uint32_t bufsize = MAXPATHLEN;
+	_NSGetExecutablePath(path, &bufsize);
+	for (int i = bufsize-1; i >= 0; i--)
+	{
+		if (path[i] == '/')
+		{
+				path[i] = '\0';
+				break;
+		}
+	}
+	chdir(path);
+#endif
+
 	terminal_open();
 
 	auto reset = []()
