@@ -11,6 +11,13 @@ add_subdirectory(Dependencies/PicoPNG)
 
 project(BearLibTerminal)
 
+if(EXISTS "../CHANGELOG.md")
+	file(STRINGS "../CHANGELOG.md" TERMINAL_VERSION_TOP_LINE LIMIT_COUNT 1)
+	string(REGEX MATCH "[0-9\\.]+" TERMINAL_VERSION ${TERMINAL_VERSION_TOP_LINE})
+else()
+	set(TERMINAL_VERSION "Unknown")
+endif()
+
 # Detect system bitness
 math(EXPR BITNESS "8*${CMAKE_SIZEOF_VOID_P}")
 
@@ -23,7 +30,7 @@ else()
 endif()
 
 # Release flags
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -g0")
+set(CMAKE_CXX_FLAGS_RELEASE "-O2 -g0")
 if (NOT APPLE)
 	set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "-s")
 endif()
@@ -55,6 +62,8 @@ include_directories(./Dependencies/PicoPNG/Include)
 include_directories(./Dependencies/NanoJPEG/Include)
 
 add_library(BearLibTerminal ${TERMINAL_SOURCES} ${TERMINAL_HEADERS})
+
+target_compile_definitions(BearLibTerminal PRIVATE TERMINAL_VERSION=\"${TERMINAL_VERSION}\")
 
 target_link_libraries(BearLibTerminal freetype2)
 target_link_libraries(BearLibTerminal picopng)

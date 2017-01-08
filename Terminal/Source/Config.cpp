@@ -199,10 +199,18 @@ namespace BearLibTerminal
 	bool Config::TryGet(std::wstring name, std::wstring& out)
 	{
 		if (name.empty())
+		{
 			return false;
-
-		if (!starts_with<wchar_t>(name, L"sys.") && !starts_with<wchar_t>(name, L"ini."))
+		}
+		else if (name == L"version" || name == L"terminal.version")
+		{
+			out = UTF8Encoding().Convert(TERMINAL_VERSION);
+			return true;
+		}
+		else if (!starts_with<wchar_t>(name, L"sys.") && !starts_with<wchar_t>(name, L"ini."))
+		{
 			name = L"sys." + name;
+		}
 
 		std::wstring section_name, property_name;
 
