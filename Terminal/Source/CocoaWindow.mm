@@ -366,8 +366,8 @@ namespace BearLibTerminal
     void CocoaWindow::Construct()
     {
         [CocoaTerminalApplication sharedApplication];
-        NSApp.delegate = [[CocoaTerminalApplicationDelegate alloc] initWithImpl:m_impl.get()];
-        NSApp.activationPolicy = NSApplicationActivationPolicyRegular;
+        [NSApp setDelegate:[[CocoaTerminalApplicationDelegate alloc] initWithImpl:m_impl.get()]];
+        [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
         [NSApp run];
         
         NSUInteger styleMask =
