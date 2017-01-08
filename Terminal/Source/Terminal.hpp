@@ -1,6 +1,6 @@
 /*
 * BearLibTerminal
-* Copyright (C) 2013-2016 Cfyz
+* Copyright (C) 2013-2017 Cfyz
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -55,7 +55,7 @@ namespace BearLibTerminal
 		int Pick(int x, int y, int index);
 		Color PickForeColor(int x, int y, int index);
 		Color PickBackColor(int x, int y);
-		int Print(int x, int y, std::wstring str, bool raw, bool measure_only);
+		Size Print(int x, int y, int w, int h, int align, std::wstring str, bool raw, bool measure_only);
 		int HasInput();
 		int GetState(int code);
 		int Read();

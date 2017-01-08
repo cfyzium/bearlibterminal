@@ -1,6 +1,6 @@
 ﻿/*
 * BearLibTerminal C# wrapper
-* Copyright (C) 2013-2016 Cfyz
+* Copyright (C) 2013-2017 Cfyz
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -18,8 +18,6 @@
 * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-*
-* Release date: 2016-12-01
 */
 
 using System;
@@ -169,14 +167,44 @@ namespace BearLib
         TK_CLOSE            = 0xE0,
         TK_RESIZED          = 0xE1,
 
-        // Generic mode enum.
-        // Right now it is used for composition option only.
-        TK_OFF              =    0,
-        TK_ON               =    1,
-
         // Input result codes for terminal_read function.
         TK_INPUT_NONE       =    0,
         TK_INPUT_CANCELLED  =   -1;
+        
+        private static string Format(string text, object[] args)
+        {
+        	if (args != null && args.Length > 0)
+        		return string.Format(text, args);
+        	else
+        		return text;
+        }
+        
+        private static int LibraryAlignmentFromContentAlignment(ContentAlignment alignment)
+        {
+            switch (alignment)
+            {
+                case ContentAlignment.TopLeft:
+                    return 5;
+                case ContentAlignment.TopCenter:
+                    return 7;
+                case ContentAlignment.TopRight:
+                    return 6;
+                case ContentAlignment.MiddleLeft:
+                    return 13;
+                case ContentAlignment.MiddleCenter:
+                    return 15;
+                case ContentAlignment.MiddleRight:
+                    return 14;
+                case ContentAlignment.BottomLeft:
+                    return 9;
+                case ContentAlignment.BottomCenter:
+                    return 11;
+                case ContentAlignment.BottomRight:
+                    return 10;
+                default:
+                    return 5;
+            }
+        }
 
         [DllImport("BearLibTerminal.dll", EntryPoint = "terminal_open", CallingConvention=CallingConvention.Cdecl)]
         public static extern bool Open();
@@ -276,7 +304,7 @@ namespace BearLib
 
         public static void Composition(bool enabled)
         {
-        	CompositionImpl(enabled? TK_ON: TK_OFF);
+        	CompositionImpl(enabled? 1: 0);
         }
 
         [DllImport("BearLibTerminal.dll", EntryPoint = "terminal_layer", CallingConvention = CallingConvention.Cdecl)]
@@ -399,30 +427,58 @@ namespace BearLib
             return PickBkColor(location.X, location.Y);
         }
 
-        [DllImport("BearLibTerminal.dll", CharSet = CharSet.Unicode, EntryPoint = "terminal_print16", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int Print(int x, int y, string text);
-
-        public static int Print(Point location, string text)
+        [DllImport("BearLibTerminal.dll", CharSet = CharSet.Unicode, EntryPoint = "terminal_print_ext16", CallingConvention = CallingConvention.Cdecl)]
+        private static extern void PrintImpl(int x, int y, int w, int h, int align, string text, out int out_w, out int out_h);
+        
+        public static Size Print(Rectangle layout, ContentAlignment alignment, string text, params object[] args)
         {
-            return Print(location.X, location.Y, text);
+        	int width, height;
+        	PrintImpl(layout.X, layout.Y, layout.Width, layout.Height, LibraryAlignmentFromContentAlignment(alignment), Format(text, args), out width, out height);
+        	return new Size(width, height);
         }
-
-        public static int Print(int x, int y, string text, params object[] args)
+        
+        public static Size Print(Rectangle layout, string text, params object[] args)
         {
-            return Print(x, y, string.Format(text, args));
+        	return Print(layout, ContentAlignment.TopLeft, text, args);
         }
-
-        public static int Print(Point location, string text, params object[] args)
+        
+        public static Size Print(Point location, ContentAlignment alignment, string text, params object[] args)
         {
-            return Print(location.X, location.Y, string.Format(text, args));
+        	return Print(location.X, location.Y, alignment, text, args);
         }
-
-        [DllImport("BearLibTerminal.dll", CharSet = CharSet.Unicode, EntryPoint = "terminal_measure16", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int Measure(string text);
-
-        public static int Measure(string text, params object[] args)
+        
+        public static Size Print(Point location, string text, params object[] args)
         {
-            return Measure(string.Format(text, args));
+        	return Print(location.X, location.Y, text, args);
+        }
+        
+        public static Size Print(int x, int y, ContentAlignment alignment, string text, params object[] args)
+        {
+        	int width, height;
+        	PrintImpl(x, y, 0, 0, LibraryAlignmentFromContentAlignment(alignment), Format(text, args), out width, out height);
+        	return new Size(width, height);
+        }
+        
+        public static Size Print(int x, int y, string text, params object[] args)
+        {
+        	int width, height;
+        	PrintImpl(x, y, 0, 0, 0, Format(text, args), out width, out height);
+        	return new Size(width, height);
+        }  
+
+        [DllImport("BearLibTerminal.dll", CharSet = CharSet.Unicode, EntryPoint = "terminal_measure_ext16", CallingConvention = CallingConvention.Cdecl)]
+        private static extern void MeasureImpl(int width, int height, string text, out int out_w, out int out_h);
+        
+        public static Size Measure(Size bbox, string text, params object[] args)
+        {
+        	int width, height;
+        	MeasureImpl(bbox.Width, bbox.Height, Format(text, args), out width, out height);
+        	return new Size(width, height);
+        }
+        
+        public static Size Measure(string text, params object[] args)
+        {
+        	return Measure(new Size(), text, args);
         }
 
         [DllImport("BearLibTerminal.dll", EntryPoint = "terminal_has_input", CallingConvention = CallingConvention.Cdecl)]

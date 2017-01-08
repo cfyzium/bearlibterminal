@@ -1,6 +1,6 @@
 /*
 * BearLibTerminal
-* Copyright (C) 2014-2015 Cfyz
+* Copyright (C) 2014-2017 Cfyz
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -172,6 +172,21 @@ void luaL_setfuncs (lua_State *L, const luaL_Reg *l, int nup)
 	}
 	// remove upvalues
 	lua_pop(L, nup);
+}
+
+static bool check_stack(lua_State* L, std::initializer_list<int> types)
+{
+	if (lua_gettop(L) < types.size())
+		return false;
+
+	int i = 0;
+	for (auto type: types)
+	{
+		if (lua_type(L, ++i) != type)
+			return false;
+	}
+
+	return true;
 }
 
 int luaterminal_open(lua_State* L)
@@ -406,70 +421,125 @@ int luaterminal_pick_bkcolor(lua_State* L)
 
 int luaterminal_print(lua_State* L)
 {
-	int rc = terminal_print8(lua_tonumber(L, 1), lua_tonumber(L, 2), (const int8_t*)lua_tostring(L, 3));
-	lua_pushnumber(L, rc);
+	int nargs = lua_gettop(L);
+	int w = 0, h = 0, align = TK_ALIGN_DEFAULT, pattern_index;
+
+	if (check_stack(L, {LUA_TNUMBER, LUA_TNUMBER, LUA_TNUMBER, LUA_TNUMBER, LUA_TNUMBER, LUA_TSTRING}))
+	{
+		w = lua_tonumber(L, 3);
+		h = lua_tonumber(L, 4);
+		align = lua_tonumber(L, 5);
+		pattern_index = 6;
+	}
+	else if (check_stack(L, {LUA_TNUMBER, LUA_TNUMBER, LUA_TSTRING}))
+	{
+		pattern_index = 3;
+	}
+	else
+	{
+		lua_pushstring(L, "luaterminal_print: invalid number or types of arguments");
+		lua_error(L);
+		return 0;
+	}
+
+	dimensions_t size = terminal_print_ext(lua_tonumber(L, 1), lua_tonumber(L, 2), w, h, align, lua_tostring(L, pattern_index));
+	lua_pushnumber(L, size.width);
+	lua_pushnumber(L, size.height);
 	return 1;
 }
 
 int luaterminal_printf(lua_State* L)
 {
-	// Stack: [x, y, s, arg1, arg2, arg3, ...]
+	// Stack: [x, y, w, h, align, s, arg1, arg2, arg3, ...]
 	int nargs = lua_gettop(L);
-	if (nargs < 3) // Because Lua won't be as lenient with argument type errors here
+	int w = 0, h = 0, align = TK_ALIGN_DEFAULT, pattern_index;
+
+	if (check_stack(L, {LUA_TNUMBER, LUA_TNUMBER, LUA_TNUMBER, LUA_TNUMBER, LUA_TNUMBER, LUA_TSTRING}))
 	{
-		lua_pushstring(L, "luaterminal_printf: not enough arguments");
+		w = lua_tonumber(L, 3);
+		h = lua_tonumber(L, 4);
+		align = lua_tonumber(L, 5);
+		pattern_index = 6;
+	}
+	else if (check_stack(L, {LUA_TNUMBER, LUA_TNUMBER, LUA_TSTRING}))
+	{
+		pattern_index = 3;
+	}
+	else
+	{
+		lua_pushstring(L, "luaterminal_printf: invalid number or types of arguments");
 		lua_error(L);
 		return 0;
 	}
-	else if (lua_type(L, 3) != LUA_TSTRING)
-	{
-		lua_pushstring(L, "luaterminal_printf: third argument is not a string");
-		lua_error(L);
-		return 0;
-	}
 
-	lua_getfield(L, 3, "format"); // Gets the "format" field from the first (bottom) stack element which is string
-	lua_insert(L, 3); // Shift retrieved function to the bottom of the stack
+	lua_getfield(L, pattern_index, "format"); // Gets the "format" field from the first (bottom) stack element which is string
+	lua_insert(L, pattern_index); // Shift retrieved function to the bottom of the stack
+	lua_pcall(L, nargs - (pattern_index-1), 1, 0);
 
-	lua_pcall(L, nargs-2, 1, 0);
-
-	int rc = terminal_print8(lua_tonumber(L, 1), lua_tonumber(L, 2), (const int8_t*)lua_tostring(L, 3));
-	lua_pushnumber(L, rc);
+	dimensions_t size = terminal_print_ext(lua_tonumber(L, 1), lua_tonumber(L, 2), w, h, align, lua_tostring(L, pattern_index));
+	lua_pushnumber(L, size.width);
+	lua_pushnumber(L, size.height);
 	return 1;
 }
 
 int luaterminal_measure(lua_State* L)
 {
-	int rc = terminal_measure8((const int8_t*)lua_tostring(L, 1));
-	lua_pushnumber(L, rc);
-	return 1;
+	int w = 0, h = 0, pattern_index;
+
+	if (check_stack(L, {LUA_TNUMBER, LUA_TNUMBER, LUA_TSTRING}))
+	{
+		w = lua_tonumber(L, 1);
+		h = lua_tonumber(L, 2);
+		pattern_index = 3;
+	}
+	else if (check_stack(L, {LUA_TSTRING}))
+	{
+		pattern_index = 1;
+	}
+	else
+	{
+		lua_pushstring(L, "luaterminal_measure: invalid number or types of arguments");
+		lua_error(L);
+		return 0;
+	}
+
+	dimensions_t size = terminal_measure_ext(w, h, lua_tostring(L, pattern_index));
+	lua_pushnumber(L, size.width);
+	lua_pushnumber(L, size.height);
+	return 2;
 }
 
 int luaterminal_measuref(lua_State* L)
 {
-	// Stack: [s, arg1, arg2, arg3, ...]
+	// Stack: [w, h, s, arg1, arg2, arg3, ...]
 	int nargs = lua_gettop(L);
-	if (nargs < 1) // Because Lua won't be as lenient with argument type errors here
+	int w = 0, h = 0, pattern_index;
+
+	if (check_stack(L, {LUA_TNUMBER, LUA_TNUMBER, LUA_TSTRING}))
 	{
-		lua_pushstring(L, "luaterminal_measuref: not enough arguments");
+		w = lua_tonumber(L, 1);
+		h = lua_tonumber(L, 2);
+		pattern_index = 3;
+	}
+	else if (check_stack(L, {LUA_TSTRING}))
+	{
+		pattern_index = 1;
+	}
+	else
+	{
+		lua_pushstring(L, "luaterminal_measuref: invalid number or types of arguments");
 		lua_error(L);
 		return 0;
 	}
-	else if (lua_type(L, 1) != LUA_TSTRING)
-	{
-		lua_pushstring(L, "luaterminal_measuref: first argument is not a string");
-		lua_error(L);
-		return 0;
-	}
 
-	lua_getfield(L, 1, "format"); // Gets the "format" field from the first (bottom) stack element which is string
-	lua_insert(L, 1); // Shift retrieved function to the bottom of the stack
+	lua_getfield(L, pattern_index, "format"); // Gets the "format" field from the first (bottom) stack element which is string
+	lua_insert(L, pattern_index); // Shift retrieved function to the bottom of the stack
+	lua_pcall(L, nargs - (pattern_index-1), 1, 0);
 
-	lua_pcall(L, nargs, 1, 0);
-
-	int rc = terminal_measure8((const int8_t*)lua_tostring(L, 3));
-	lua_pushnumber(L, rc);
-	return 1;
+	dimensions_t size = terminal_measure_ext(w, h, lua_tostring(L, pattern_index));
+	lua_pushnumber(L, size.width);
+	lua_pushnumber(L, size.height);
+	return 2;
 }
 
 int luaterminal_has_input(lua_State* L)
@@ -728,7 +798,14 @@ luaterminal_constants[] =
 	CONST(TK_OFF),
 	CONST(TK_ON),
 	CONST(TK_INPUT_NONE),
-	CONST(TK_INPUT_CANCELLED)
+	CONST(TK_INPUT_CANCELLED),
+	CONST(TK_ALIGN_DEFAULT),
+	CONST(TK_ALIGN_LEFT),
+	CONST(TK_ALIGN_CENTER),
+	CONST(TK_ALIGN_RIGHT),
+	CONST(TK_ALIGN_TOP),
+	CONST(TK_ALIGN_MIDDLE),
+	CONST(TK_ALIGN_BOTTOM)
 };
 
 int luaopen_BearLibTerminal(lua_State* L)

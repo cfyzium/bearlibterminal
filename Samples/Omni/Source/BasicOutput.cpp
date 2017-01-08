@@ -14,7 +14,7 @@ void TestBasicOutput()
 	terminal_color("white");
 
 	// Wide color range
-	int n = terminal_printf(2, 1, "[color=orange]1.[/color] Wide color range: ");
+	int n = terminal_printf(2, 1, "[color=orange]1.[/color] Wide color range: ").width;
 	const char long_word[] = "antidisestablishmentarianism.";
 	const size_t long_word_length = sizeof(long_word)-1;
 	for (size_t i = 0; i < long_word_length; i++)

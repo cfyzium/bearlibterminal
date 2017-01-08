@@ -59,7 +59,7 @@ void TestMouse()
 			terminal_state(TK_MOUSE_X2)? "orange": "dark gray"
 		);
 
-		int n = terminal_printf
+		terminal_printf
 		(
 			1, 4,
 			"Cursor: [color=orange]%d:%d[/color] [color=dark gray]cells[/color]"

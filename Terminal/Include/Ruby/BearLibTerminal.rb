@@ -1,6 +1,6 @@
 #
 # BearLibTerminal
-# Copyright (C) 2014-2016 Cfyz
+# Copyright (C) 2014-2017 Cfyz
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -19,7 +19,6 @@
 # IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #
-# Release date: 2016-03-28
 
 require 'fiddle'
 require 'rbconfig'
@@ -78,8 +77,8 @@ module Terminal
 	Pick = Fiddle::Function.new(Lib['terminal_pick'], [Fiddle::TYPE_INT, Fiddle::TYPE_INT, Fiddle::TYPE_INT], Fiddle::TYPE_INT)
 	PickColor = Fiddle::Function.new(Lib['terminal_pick_color'], [Fiddle::TYPE_INT, Fiddle::TYPE_INT, Fiddle::TYPE_INT], -Fiddle::TYPE_INT)
 	PickBkColor = Fiddle::Function.new(Lib['terminal_pick_bkcolor'], [Fiddle::TYPE_INT, Fiddle::TYPE_INT], -Fiddle::TYPE_INT)
-	Print = Fiddle::Function.new(Lib['terminal_print8'], [Fiddle::TYPE_INT, Fiddle::TYPE_INT, Fiddle::TYPE_VOIDP], Fiddle::TYPE_INT)
-	Measure = Fiddle::Function.new(Lib['terminal_measure8'], [Fiddle::TYPE_VOIDP], Fiddle::TYPE_INT)
+	PrintExt = Fiddle::Function.new(Lib['terminal_print_ext8'], [Fiddle::TYPE_INT, Fiddle::TYPE_INT, Fiddle::TYPE_INT, Fiddle::TYPE_INT, Fiddle::TYPE_INT, Fiddle::TYPE_VOIDP, Fiddle::TYPE_VOIDP, Fiddle::TYPE_VOIDP], Fiddle::TYPE_VOID)
+	MeasureExt = Fiddle::Function.new(Lib['terminal_measure_ext8'], [Fiddle::TYPE_INT, Fiddle::TYPE_INT, Fiddle::TYPE_VOIDP, Fiddle::TYPE_VOIDP, Fiddle::TYPE_VOIDP], Fiddle::TYPE_VOID)
 	HasInput = Fiddle::Function.new(Lib['terminal_has_input'], [], Fiddle::TYPE_INT)
 	State = Fiddle::Function.new(Lib['terminal_state'], [Fiddle::TYPE_INT], Fiddle::TYPE_INT)
 	Read = Fiddle::Function.new(Lib['terminal_read'], [], Fiddle::TYPE_INT)
@@ -88,6 +87,9 @@ module Terminal
 	Delay = Fiddle::Function.new(Lib['terminal_delay'], [Fiddle::TYPE_INT], Fiddle::TYPE_VOID)
 	Get = Fiddle::Function.new(Lib['terminal_get8'], [Fiddle::TYPE_VOIDP, Fiddle::TYPE_VOIDP], Fiddle::TYPE_VOIDP)
 	ColorFromName = Fiddle::Function.new(Lib['color_from_name8'], [Fiddle::TYPE_VOIDP], -Fiddle::TYPE_INT)
+	
+	# Temporary buffer for by-pointer integer arguments.
+	Out = Fiddle::Pointer.malloc(Fiddle::SIZEOF_INT * 2)
 	
 	# Wrappers
 	def self.open; return Open.call == 1; end
@@ -122,8 +124,18 @@ module Terminal
 	def self.pick x, y, z=0; Pick.call x, y, z; end
 	def self.pick_color x, y, z=0; PickColor.call x, y, z; end
 	def self.pick_bkcolor x, y; PickBkColor.call x, y; end
-	def self.print x, y, s; return Print.call x, y, Ptr[s]; end
-	def self.measure s; return Measure.call Ptr[s]; end
+	def self.print_ext x, y, w, h, a, s;
+		PrintExt.call x, y, w, h, a, Ptr[s], Out+0, Out+Fiddle::SIZEOF_INT
+		return Out[0], Out[Fiddle::SIZEOF_INT]
+	end
+	def self.print x, y, s; return print_ext(x, y, 0, 0, 0, s); end
+	def self.measure_ext w, h, s;
+		MeasureExt.call w, h, Ptr[s], Out+0, Out+Fiddle::SIZEOF_INT
+		return Out[0], Out[Fiddle::SIZEOF_INT]
+	end
+    def self.measure s;
+    	return measure_ext(0, 0, s)
+    end
 	def self.has_input?; return HasInput.call == 1; end
 	def self.state code; return State.call code; end
 	def self.check? code; return state(code) > 0; end
@@ -290,6 +302,15 @@ module Terminal
         # Input result codes for terminal_read_str function.
         TK_INPUT_NONE       =    0
         TK_INPUT_CANCELLED  =   -1
+        
+        # Text printing alignment.
+        TK_ALIGN_DEFAULT    =    0
+        TK_ALIGN_LEFT       =    1
+        TK_ALIGN_RIGHT      =    2
+        TK_ALIGN_CENTER     =    3
+        TK_ALIGN_TOP        =    4
+        TK_ALIGN_BOTTOM     =    8
+        TK_ALIGN_MIDDLE     =   12
 	end
 	
 	include Constants

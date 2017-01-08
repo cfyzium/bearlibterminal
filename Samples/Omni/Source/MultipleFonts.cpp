@@ -19,19 +19,19 @@ void TestMultipleFonts()
 
 	terminal_clear();
 	terminal_color("white");
-	int h = terminal_printf
+	int h = terminal_print_ext
 	(
-		2, 1,
-		"[wrap=60]If you [color=orange][font=italic]really[/font][/color] want, "
+		2, 1, 60, 0, TK_ALIGN_DEFAULT,
+		"If you [color=orange][font=italic]really[/font][/color] want, "
 		"you can even put [color=orange][font=bold]emphasis[/font][/color] on a text. "
 		"This works by loading several truetype tilesets with custom codepages to an "
 		"unused code points and using [color=orange]font[/color] postformatting tag."
-	);
+	).height;
 
-	terminal_print
+	terminal_print_ext
 	(
-		2, 1+h+1,
-		"[font=huge][wrap=60]It's pretty easy to print in bigger fonts as well."
+		2, 1+h+1, 60, 0, TK_ALIGN_DEFAULT,
+		"[font=huge]It's pretty easy to print in bigger fonts as well."
 	);
 	terminal_refresh();
 

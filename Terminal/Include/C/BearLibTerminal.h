@@ -1,6 +1,6 @@
 /*
 * BearLibTerminal
-* Copyright (C) 2013-2014 Cfyz
+* Copyright (C) 2013-2017 Cfyz
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -203,11 +203,29 @@
 #define TK_INPUT_CANCELLED    -1
 
 /*
+ * Text printing alignment.
+ */
+#define TK_ALIGN_DEFAULT       0
+#define TK_ALIGN_LEFT          1
+#define TK_ALIGN_RIGHT         2
+#define TK_ALIGN_CENTER        3
+#define TK_ALIGN_TOP           4
+#define TK_ALIGN_BOTTOM        8
+#define TK_ALIGN_MIDDLE       12
+
+/*
  * Terminal uses unsigned 32-bit value for color representation in ARGB order (0xAARRGGBB), e. g.
  * a) solid red is 0xFFFF0000
  * b) half-transparent green is 0x8000FF00
  */
 typedef uint32_t color_t;
+
+typedef struct dimensions_t_
+{
+	int width;
+	int height;
+}
+dimensions_t;
 
 #if defined(BEARLIBTERMINAL_STATIC_BUILD)
 #  define TERMINAL_API
@@ -247,12 +265,12 @@ TERMINAL_API void terminal_put_ext(int x, int y, int dx, int dy, int code, color
 TERMINAL_API int terminal_pick(int x, int y, int index);
 TERMINAL_API color_t terminal_pick_color(int x, int y, int index);
 TERMINAL_API color_t terminal_pick_bkcolor(int x, int y);
-TERMINAL_API int terminal_print8(int x, int y, const int8_t* s);
-TERMINAL_API int terminal_print16(int x, int y, const int16_t* s);
-TERMINAL_API int terminal_print32(int x, int y, const int32_t* s);
-TERMINAL_API int terminal_measure8(const int8_t* s);
-TERMINAL_API int terminal_measure16(const int16_t* s);
-TERMINAL_API int terminal_measure32(const int32_t* s);
+TERMINAL_API void terminal_print_ext8(int x, int y, int w, int h, int align, const int8_t* s, int* out_w, int* out_h);
+TERMINAL_API void terminal_print_ext16(int x, int y, int w, int h, int align, const int16_t* s, int* out_w, int* out_h);
+TERMINAL_API void terminal_print_ext32(int x, int y, int w, int h, int align, const int32_t* s, int* out_w, int* out_h);
+TERMINAL_API void terminal_measure_ext8(int w, int h, const int8_t* s, int* out_w, int* out_h);
+TERMINAL_API void terminal_measure_ext16(int w, int h, const int16_t* s, int* out_w, int* out_h);
+TERMINAL_API void terminal_measure_ext32(int w, int h, const int32_t* s, int* out_w, int* out_h);
 TERMINAL_API int terminal_has_input();
 TERMINAL_API int terminal_state(int code);
 TERMINAL_API int terminal_read();
@@ -392,6 +410,12 @@ TERMINAL_INLINE const wchar_t* terminal_vswprintf(const wchar_t* s, va_list args
 	va_end(args); \
 	return ret;
 
+#define TERMINAL_FORMATTED_WRAP_V(call) \
+	va_list args; \
+	va_start(args, s); \
+	call; \
+	va_end(args);
+
 /*
  * This set of inline functions define basic name substitution + type cast:
  * terminal_[w]xxxx -> terminal_xxxx{8|16|32}
@@ -417,44 +441,100 @@ TERMINAL_INLINE int terminal_wsetf(const wchar_t* s, ...)
 	TERMINAL_FORMATTED_WRAP(int, terminal_wset(terminal_vswprintf(s, args)))
 }
 
-TERMINAL_INLINE int terminal_print(int x, int y, const char* s)
+TERMINAL_INLINE dimensions_t terminal_print(int x, int y, const char* s)
 {
-	return terminal_print8(x, y, (const int8_t*)s);
+	dimensions_t ret;
+	terminal_print_ext8(x, y, 0, 0, TK_ALIGN_DEFAULT, (const int8_t*)s, &ret.width, &ret.height);
+	return ret;
 }
 
-TERMINAL_INLINE int terminal_printf(int x, int y, const char* s, ...)
+TERMINAL_INLINE dimensions_t terminal_printf(int x, int y, const char* s, ...)
 {
-	TERMINAL_FORMATTED_WRAP(int, terminal_print(x, y, terminal_vsprintf(s, args)))
+	TERMINAL_FORMATTED_WRAP(dimensions_t, terminal_print(x, y, terminal_vsprintf(s, args)))
 }
 
-TERMINAL_INLINE int terminal_wprint(int x, int y, const wchar_t* s)
+TERMINAL_INLINE dimensions_t terminal_wprint(int x, int y, const wchar_t* s)
 {
-	return TERMINAL_CAT(terminal_print, TERMINAL_WCHAR_SUFFIX)(x, y, (const TERMINAL_WCHAR_TYPE*)s);
+	dimensions_t ret;
+	TERMINAL_CAT(terminal_print_ext, TERMINAL_WCHAR_SUFFIX)(x, y, 0, 0, TK_ALIGN_DEFAULT, (const TERMINAL_WCHAR_TYPE*)s, &ret.width, &ret.height);
+	return ret;
 }
 
-TERMINAL_INLINE int terminal_wprintf(int x, int y, const wchar_t* s, ...)
+TERMINAL_INLINE dimensions_t terminal_wprintf(int x, int y, const wchar_t* s, ...)
 {
-	TERMINAL_FORMATTED_WRAP(int, terminal_wprint(x, y, terminal_vswprintf(s, args)))
+	TERMINAL_FORMATTED_WRAP(dimensions_t, terminal_wprint(x, y, terminal_vswprintf(s, args)))
 }
 
-TERMINAL_INLINE int terminal_measure(const char* s)
+TERMINAL_INLINE dimensions_t terminal_print_ext(int x, int y, int w, int h, int align, const char* s)
 {
-	return terminal_measure8((const int8_t*)s);
+	dimensions_t ret;
+	terminal_print_ext8(x, y, w, h, align, (const int8_t*)s, &ret.width, &ret.height);
+	return ret;
 }
 
-TERMINAL_INLINE int terminal_measuref(const char* s, ...)
+TERMINAL_INLINE dimensions_t terminal_printf_ext(int x, int y, int w, int h, int align, const char* s, ...)
 {
-	TERMINAL_FORMATTED_WRAP(int, terminal_measure(terminal_vsprintf(s, args)))
+	TERMINAL_FORMATTED_WRAP(dimensions_t, terminal_print_ext(x, y, w, h, align, terminal_vsprintf(s, args)));
 }
 
-TERMINAL_INLINE int terminal_wmeasure(const wchar_t* s)
+TERMINAL_INLINE dimensions_t terminal_wprint_ext(int x, int y, int w, int h, int align, const wchar_t* s)
 {
-	return TERMINAL_CAT(terminal_measure, TERMINAL_WCHAR_SUFFIX)((const TERMINAL_WCHAR_TYPE*)s);
+	dimensions_t ret;
+	TERMINAL_CAT(terminal_print_ext, TERMINAL_WCHAR_SUFFIX)(x, y, w, h, align, (const TERMINAL_WCHAR_TYPE*)s, &ret.width, &ret.height);
+	return ret;
 }
 
-TERMINAL_INLINE int terminal_wmeasuref(const wchar_t* s, ...)
+TERMINAL_INLINE dimensions_t terminal_wprintf_ext(int x, int y, int w, int h, int align, const wchar_t* s, ...)
 {
-	TERMINAL_FORMATTED_WRAP(int, terminal_wmeasure(terminal_vswprintf(s, args)))
+	TERMINAL_FORMATTED_WRAP(dimensions_t, terminal_wprint_ext(x, y, w, h, align, terminal_vswprintf(s, args)))
+}
+
+TERMINAL_INLINE dimensions_t terminal_measure(const char* s)
+{
+	dimensions_t ret;
+	terminal_measure_ext8(0, 0, (const int8_t*)s, &ret.width, &ret.height);
+	return ret;
+}
+
+TERMINAL_INLINE dimensions_t terminal_measuref(const char* s, ...)
+{
+	TERMINAL_FORMATTED_WRAP(dimensions_t, terminal_measure(terminal_vsprintf(s, args)))
+}
+
+TERMINAL_INLINE dimensions_t terminal_wmeasure(const wchar_t* s)
+{
+	dimensions_t ret;
+	TERMINAL_CAT(terminal_measure_ext, TERMINAL_WCHAR_SUFFIX)(0, 0, (const TERMINAL_WCHAR_TYPE*)s, &ret.width, &ret.height);
+	return ret;
+}
+
+TERMINAL_INLINE dimensions_t terminal_wmeasuref(const wchar_t* s, ...)
+{
+	TERMINAL_FORMATTED_WRAP(dimensions_t, terminal_wmeasure(terminal_vswprintf(s, args)))
+}
+
+TERMINAL_INLINE dimensions_t terminal_measure_ext(int w, int h, const char* s)
+{
+	dimensions_t ret;
+	terminal_measure_ext8(w, h, (const int8_t*)s, &ret.width, &ret.height);
+	return ret;
+}
+
+TERMINAL_INLINE dimensions_t terminal_measuref_ext(int w, int h, const char* s, ...)
+{
+	TERMINAL_FORMATTED_WRAP(dimensions_t, terminal_measure_ext(w, h, terminal_vsprintf(s, args)))
+}
+
+TERMINAL_INLINE dimensions_t terminal_wmeasure_ext(int w, int h, const wchar_t* s)
+{
+	dimensions_t ret;
+	TERMINAL_CAT(terminal_measure_ext, TERMINAL_WCHAR_SUFFIX)(w, h, (const TERMINAL_WCHAR_TYPE*)s, &ret.width, &ret.height);
+	return ret;
+}
+
+TERMINAL_INLINE dimensions_t terminal_wmeasuref_ext(int w, int h, const wchar_t* s, ...)
+{
+	TERMINAL_FORMATTED_WRAP(dimensions_t, terminal_wmeasure_ext(w, h, terminal_vswprintf(s, args)))
 }
 
 TERMINAL_INLINE int terminal_read_str(int x, int y, char* buffer, int max)
@@ -527,24 +607,44 @@ TERMINAL_INLINE void terminal_put_ext(int x, int y, int dx, int dy, int code)
 	terminal_put_ext(x, y, dx, dy, code, 0);
 }
 
-TERMINAL_INLINE int terminal_print(int x, int y, const wchar_t* s)
+TERMINAL_INLINE dimensions_t terminal_print(int x, int y, const wchar_t* s)
 {
 	return terminal_wprint(x, y, s);
 }
 
-TERMINAL_INLINE int terminal_printf(int x, int y, const wchar_t* s, ...)
+TERMINAL_INLINE dimensions_t terminal_printf(int x, int y, const wchar_t* s, ...)
 {
-	TERMINAL_FORMATTED_WRAP(int, terminal_wprint(x, y, terminal_vswprintf(s, args)))
+	TERMINAL_FORMATTED_WRAP(dimensions_t, terminal_wprint(x, y, terminal_vswprintf(s, args)))
 }
 
-TERMINAL_INLINE int terminal_measure(const wchar_t* s)
+TERMINAL_INLINE dimensions_t terminal_print_ext(int x, int y, int w, int h, int align, const wchar_t* s)
+{
+	return terminal_wprint_ext(x, y, w, h, align, s);
+}
+
+TERMINAL_INLINE dimensions_t terminal_printf_ext(int x, int y, int w, int h, int align, const wchar_t* s, ...)
+{
+	TERMINAL_FORMATTED_WRAP(dimensions_t, terminal_wprint_ext(x, y, w, h, align, terminal_vswprintf(s, args)))
+}
+
+TERMINAL_INLINE dimensions_t terminal_measure(const wchar_t* s)
 {
 	return terminal_wmeasure(s);
 }
 
-TERMINAL_INLINE int terminal_measuref(const wchar_t* s, ...)
+TERMINAL_INLINE dimensions_t terminal_measuref(const wchar_t* s, ...)
 {
-	TERMINAL_FORMATTED_WRAP(int, terminal_wmeasure(terminal_vswprintf(s, args)))
+	TERMINAL_FORMATTED_WRAP(dimensions_t, terminal_wmeasure(terminal_vswprintf(s, args)))
+}
+
+TERMINAL_INLINE dimensions_t terminal_measure_ext(int w, int h, const wchar_t* s)
+{
+	return terminal_wmeasure_ext(w, h, s);
+}
+
+TERMINAL_INLINE dimensions_t terminal_measuref_ext(int w, int h, const wchar_t* s, ...)
+{
+	TERMINAL_FORMATTED_WRAP(dimensions_t, terminal_wmeasure_ext(w, h, terminal_vswprintf(s, args)))
 }
 
 TERMINAL_INLINE int terminal_read_str(int x, int y, wchar_t* buffer, int max)

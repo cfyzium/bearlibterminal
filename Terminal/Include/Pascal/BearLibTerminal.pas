@@ -1,6 +1,6 @@
 {*
 * BearLibTerminal
-* Copyright (C) 2013-2016 Cfyz, Apromix
+* Copyright (C) 2013-2017 Cfyz, Apromix
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -18,8 +18,6 @@
 * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-*
-* Release date: 2016-09-06
 *}
 
 {$H+}
@@ -27,6 +25,9 @@
 unit BearLibTerminal;
 
 interface
+
+uses
+  Types;
 
 const
   // Keyboard scancodes
@@ -171,6 +172,15 @@ const
   // Input result codes for terminal_read function.
   TK_INPUT_NONE       =   0;
   TK_INPUT_CANCELLED  =  -1;
+  
+  // Text alignment.
+  TK_ALIGN_DEFAULT    =   0;
+  TK_ALIGN_LEFT       =   1;
+  TK_ALIGN_RIGHT      =   2;
+  TK_ALIGN_CENTER     =   3;
+  TK_ALIGN_TOP        =   4;
+  TK_ALIGN_BOTTOM     =   8;
+  TK_ALIGN_MIDDLE     =  12;
 
 // ----------------------------------------------------------------------------
 // Module interface
@@ -179,9 +189,13 @@ const
 {$IFNDEF FPC}
 type
   Int32 = Integer;
+  PInt32 = ^Integer;
   UInt32 = Cardinal;
   PUInt32 = ^Cardinal;
 {$ENDIF}
+
+type
+  TSize = Types.TSize;
 
 // Open
 function terminal_open(): LongBool;
@@ -270,14 +284,26 @@ function terminal_pick_bkcolor(X, Y: Int32): UInt32;
   cdecl; external 'BearLibTerminal' name 'terminal_pick_bkcolor';
 
 // Print
-function terminal_print(X, Y: Int32; const S: AnsiString): Int32; overload;
+function terminal_print(X, Y: Int32; const S: AnsiString): TSize; overload;
 
-function terminal_print(X, Y: Int32; const S: WideString): Int32; overload;
+function terminal_print(X, Y: Int32; const S: WideString): TSize; overload;
+
+function terminal_print(X, Y, Alignment: Int32; const S: AnsiString): TSize; overload;
+
+function terminal_print(X, Y, Alignment: Int32; const S: WideString): TSize; overload;
+
+function terminal_print(X, Y, W, H, Alignment: Int32; const S: AnsiString): TSize; overload;
+
+function terminal_print(X, Y, W, H, Alignment: Int32; const S: WideString): TSize; overload;
 
 // Measure
-function terminal_measure(const S: AnsiString): Int32; overload;
+function terminal_measure(const S: AnsiString): TSize; overload;
 
-function terminal_measure(const S: WideString): Int32; overload;
+function terminal_measure(const S: WideString): TSize; overload;
+
+function terminal_measure(W, H: Int32; const S: AnsiString): TSize; overload;
+
+function terminal_measure(W, H: Int32; const S: WideString): TSize; overload;
 
 // HasInput
 function terminal_has_input(): LongBool;
@@ -409,36 +435,82 @@ begin;
     terminal_pick_color := terminal_pick_color(X, Y, 0);
 end;
 
-function terminal_print_ansi(X, Y: Int32; const S: PAnsiChar): Int32;
-  cdecl; external 'BearLibTerminal' name 'terminal_print8';
+procedure terminal_print_ansi(X, Y, W, H, Alignment: Int32; const S: PAnsiChar; OutW, OutH: PInt32);
+  cdecl; external 'BearLibTerminal' name 'terminal_print_ext8';
+  
+procedure terminal_print_unicode(X, Y, W, H, Alignment: Int32; const S: PWideChar; OutW, OutH: PInt32);
+  cdecl; external 'BearLibTerminal' name 'terminal_print_ext16';
 
-function terminal_print(X, Y: Int32; const S: AnsiString): Int32;
+function terminal_print(X, Y: Int32; const S: AnsiString): TSize;
 begin
-    terminal_print := terminal_print_ansi(X, Y, PAnsiChar(S));
+    terminal_print := terminal_print(X, Y, 0, 0, TK_ALIGN_DEFAULT, S);
 end;
 
-function terminal_print_unicode(X, Y: Int32; const S: PWideChar): Int32;
-  cdecl; external 'BearLibTerminal' name 'terminal_print16';
-
-function terminal_print(X, Y: Int32; const S: WideString): Int32;
+function terminal_print(X, Y: Int32; const S: WideString): TSize;
 begin
-    terminal_print := terminal_print_unicode(X, Y, PWideChar(S));
+    terminal_print := terminal_print(X, Y, 0, 0, TK_ALIGN_DEFAULT, S);
 end;
 
-function terminal_measure_ansi(const S: PAnsiChar): Int32;
-  cdecl; external 'BearLibTerminal' name 'terminal_measure8';
-
-function terminal_measure(const S: AnsiString): Int32;
+function terminal_print(X, Y, Alignment: Int32; const S: AnsiString): TSize;
 begin
-    terminal_measure := terminal_measure_ansi(PAnsiChar(S));
+    terminal_print := terminal_print(X, Y, 0, 0, Alignment, S);
 end;
 
-function terminal_measure_unicode(const S: PWideChar): Int32;
-  cdecl; external 'BearLibTerminal' name 'terminal_measure16';
-
-function terminal_measure(const S: WideString): Int32;
+function terminal_print(X, Y, Alignment: Int32; const S: WideString): TSize;
 begin
-    terminal_measure := terminal_measure_unicode(PWideChar(S));
+    terminal_print := terminal_print(X, Y, 0, 0, Alignment, S);
+end;
+
+function terminal_print(X, Y, W, H, Alignment: Int32; const S: AnsiString): TSize;
+var
+    OutW, OutH: Int32;
+begin
+    terminal_print_ansi(X, Y, W, H, Alignment, PAnsiChar(S), @OutW, @OutH);
+    terminal_print.cx := OutW;
+    terminal_print.cy := OutH;
+end;
+
+function terminal_print(X, Y, W, H, Alignment: Int32; const S: WideString): TSize;
+var
+    OutW, OutH: Int32;
+begin
+    terminal_print_unicode(X, Y, W, H, Alignment, PWideChar(S), @OutW, @OutH);
+    terminal_print.cx := OutW;
+    terminal_print.cy := OutH;
+end;
+
+procedure terminal_measure_ansi(W, H: Int32; const S: PAnsiChar; OutW, OutH: PInt32);
+  cdecl; external 'BearLibTerminal' name 'terminal_measure_ext8';
+
+procedure terminal_measure_unicode(W, H: Int32; const S: PWideChar; OutW, OutH: PInt32);
+  cdecl; external 'BearLibTerminal' name 'terminal_measure_ext16';
+
+function terminal_measure(const S: AnsiString): TSize;
+begin
+    terminal_measure := terminal_measure(0, 0, S);
+end;
+
+function terminal_measure(const S: WideString): TSize;
+begin
+    terminal_measure := terminal_measure(0, 0, S);
+end;
+
+function terminal_measure(W, H: Int32; const S: AnsiString): TSize;
+var
+    OutW, OutH: Int32;
+begin
+    terminal_measure_ansi(W, H, PAnsiChar(S), @OutW, @OutH);
+    terminal_measure.cx := OutW;
+    terminal_measure.cy := OutH;
+end;
+
+function terminal_measure(W, H: Int32; const S: WideString): TSize;
+var
+    OutW, OutH: Int32;
+begin
+    terminal_measure_unicode(W, H, PWideChar(S), @OutW, @OutH);
+    terminal_measure.cx := OutW;
+    terminal_measure.cy := OutH;
 end;
 
 function terminal_check(Code: Int32): Boolean;

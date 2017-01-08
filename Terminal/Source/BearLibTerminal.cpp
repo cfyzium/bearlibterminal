@@ -1,6 +1,6 @@
 /*
 * BearLibTerminal
-* Copyright (C) 2013-2016 Cfyz
+* Copyright (C) 2013-2017 Cfyz
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -219,42 +219,44 @@ color_t terminal_pick_bkcolor(int x, int y)
 	return g_instance->PickBackColor(x, y);
 }
 
-int terminal_print8(int x, int y, const int8_t* s)
+#define TERMINAL_PRINT_OR_MEASURE(x, y, a, cast, measure) \
+	if (!g_instance || !s) { \
+		if (out_w) *out_w = 0; \
+		if (out_h) *out_h = 0; \
+		return; \
+	} \
+	auto size = g_instance->Print(x, y, w, h, a, cast, false, measure); \
+	if (out_w) *out_w = size.width; \
+	if (out_h) *out_h = size.height;
+
+void terminal_print_ext8(int x, int y, int w, int h, int align, const int8_t* s, int* out_w, int* out_h)
 {
-	if (!g_instance || !s) return -1;
-	auto& encoding = g_instance->GetEncoding();
-	return g_instance->Print(x, y, encoding.Convert((const char*)s), false, false);
+	TERMINAL_PRINT_OR_MEASURE(x, y, align, g_instance->GetEncoding().Convert((const char*)s), false)
 }
 
-int terminal_print16(int x, int y, const int16_t* s)
+void terminal_print_ext16(int x, int y, int w, int h, int align, const int16_t* s, int* out_w, int* out_h)
 {
-	if (!g_instance || !s) return -1;
-	return g_instance->Print(x, y, BearLibTerminal::UCS2Encoding().Convert((const char16_t*)s), false, false);
+	TERMINAL_PRINT_OR_MEASURE(x, y, align, BearLibTerminal::UCS2Encoding().Convert((const char16_t*)s), false)
 }
 
-int terminal_print32(int x, int y, const int32_t* s)
+void terminal_print_ext32(int x, int y, int w, int h, int align, const int32_t* s, int* out_w, int* out_h)
 {
-	if (!g_instance || !s) return -1;
-	return g_instance->Print(x, y, BearLibTerminal::UCS4Encoding().Convert((const char32_t*)s), false, false);
+	TERMINAL_PRINT_OR_MEASURE(x, y, align, BearLibTerminal::UCS4Encoding().Convert((const char32_t*)s), false)
 }
 
-int terminal_measure8(const int8_t* s)
+void terminal_measure_ext8(int w, int h, const int8_t* s, int* out_w, int* out_h)
 {
-	if (!g_instance || !s) return -1;
-	auto& encoding = g_instance->GetEncoding();
-	return g_instance->Print(0, 0, encoding.Convert((const char*)s), false, true);
+	TERMINAL_PRINT_OR_MEASURE(0, 0, TK_ALIGN_DEFAULT, g_instance->GetEncoding().Convert((const char*)s), true)
 }
 
-int terminal_measure16(const int16_t* s)
+void terminal_measure_ext16(int w, int h, const int16_t* s, int* out_w, int* out_h)
 {
-	if (!g_instance || !s) return -1;
-	return g_instance->Print(0, 0, BearLibTerminal::UCS2Encoding().Convert((const char16_t*)s), false, true);
+	TERMINAL_PRINT_OR_MEASURE(0, 0, TK_ALIGN_DEFAULT, BearLibTerminal::UCS2Encoding().Convert((const char16_t*)s), true)
 }
 
-int terminal_measure32(const int32_t* s)
+void terminal_measure_ext32(int w, int h, const int32_t* s, int* out_w, int* out_h)
 {
-	if (!g_instance || !s) return -1;
-	return g_instance->Print(0, 0, BearLibTerminal::UCS4Encoding().Convert((const char32_t*)s), false, true);
+	TERMINAL_PRINT_OR_MEASURE(0, 0, TK_ALIGN_DEFAULT, BearLibTerminal::UCS4Encoding().Convert((const char32_t*)s), true)
 }
 
 int terminal_has_input()

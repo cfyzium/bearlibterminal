@@ -1,6 +1,6 @@
 /*
 * BearLibTerminal
-* Copyright (C) 2016 Joe "ZhayTee" Toscano
+* Copyright (C) 2016-2017 Joe "ZhayTee" Toscano, Cfyz
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -202,6 +202,16 @@ const (
 	TK_INPUT_CANCELLED = -1
 )
 
+const (
+	TK_ALIGN_DEFAULT = 0
+	TK_ALIGN_LEFT    = 1
+	TK_ALIGN_RIGHT   = 2
+	TK_ALIGN_CENTER  = 3
+	TK_ALIGN_TOP     = 4
+	TK_ALIGN_BOTTOM  = 8
+	TK_ALIGN_MIDDLE  = 12
+)
+
 //
 // Initialization and configuration
 //
@@ -287,16 +297,26 @@ func PutExt(x, y, dx, dy, code int, corners [4]uint32) {
 	C.terminal_put_ext(C.int(x), C.int(y), C.int(dx), C.int(dy), C.int(code), &cornerColors[0])
 }
 
-func Print(x, y int, s string) int {
+func PrintExt(x, y, w, h, alignment int, s string) (width, height int) {
 	cstring := C.CString(s)
 	defer C.free(unsafe.Pointer(cstring))
-	return int(C.terminal_print(C.int(x), C.int(y), cstring))
+	sz := C.terminal_print_ext(C.int(x), C.int(y), C.int(w), C.int(h), C.int(alignment), cstring)
+	return int(sz.width), int(sz.height)
 }
 
-func Measure(s string) int {
+func Print(x, y int, s string) (width, height int) {
+	return PrintExt(x, y, 0, 0, TK_ALIGN_DEFAULT, s)
+}
+
+func MeasureExt(w, h int, s string) (width, height int) {
 	cstring := C.CString(s)
 	defer C.free(unsafe.Pointer(cstring))
-	return int(C.terminal_measure(cstring))
+	sz := C.terminal_measure_ext(C.int(w), C.int(h), cstring)
+	return int(sz.width), int(sz.height)
+}
+
+func Measure(s string) (width, height int) {
+	return MeasureExt(0, 0, s)
 }
 
 //

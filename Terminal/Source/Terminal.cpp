@@ -1,6 +1,6 @@
 /*
 * BearLibTerminal
-* Copyright (C) 2013-2016 Cfyz
+* Copyright (C) 2013-2017 Cfyz
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -1196,58 +1196,6 @@ namespace BearLibTerminal
 		return m_world.stage.backbuffer.background[cell_index];
 	}
 
-	struct Alignment
-	{
-		Alignment();
-
-		enum // FIXME: enum class
-		{
-			Left,
-			Center,
-			Right,
-			Top,
-			Bottom
-		}
-		horisontal, vertical;
-	};
-
-	Alignment::Alignment():
-		horisontal(Left),
-		vertical(Top)
-	{ }
-
-	bool try_parse(const std::wstring& s, Alignment& out)
-	{
-		size_t hyphen_pos = s.find(L'-');
-
-		// FIXME: rewrite this mess
-		std::wstring vert = hyphen_pos != std::wstring::npos? s.substr(0, hyphen_pos): std::wstring();
-		std::wstring hor = hyphen_pos != std::wstring::npos? (hyphen_pos < s.length()-1? (s.substr(hyphen_pos+1)): std::wstring()): s;
-
-		Alignment result;
-
-		if (vert == L"center")
-		{
-			result.vertical = Alignment::Center;
-		}
-		else if (vert == L"bottom")
-		{
-			result.vertical = Alignment::Bottom;
-		}
-
-		if (hor == L"center")
-		{
-			result.horisontal = Alignment::Center;
-		}
-		else if (hor == L"right")
-		{
-			result.horisontal = Alignment::Right;
-		}
-
-		out = result;
-		return true;
-	}
-
 	struct Line
 	{
 		struct Symbol
@@ -1292,13 +1240,12 @@ namespace BearLibTerminal
 		}
 	}
 
-	int Terminal::Print(int x0, int y0, std::wstring str, bool raw, bool measure_only)
+	Size Terminal::Print(int x0, int y0, int w0, int h0, int align, std::wstring str, bool raw, bool measure_only)
 	{
 		char32_t font_offset = 0;
 		bool combine = false;
 		Point offset = Point(0, 0);
-		Size wrap = Size(0, 0);
-		Alignment alignment;
+		Size wrap = Size{w0, h0};
 		Color original_fore = m_world.state.color;
 		Color original_back = m_world.state.bkcolor;
 
@@ -1415,28 +1362,6 @@ namespace BearLibTerminal
 				{
 					font_offset = 0;
 				}
-				else if (name == L"wrap" || name == L"bbox")
-				{
-					if (params.find(L'x') != std::wstring::npos)
-					{
-						if (!try_parse<Size>(params, wrap) || wrap.width < 0 || wrap.height < 0)
-						{
-							wrap = Size();
-						}
-					}
-					else
-					{
-						wrap.height = 0;
-						if (!try_parse<int>(params, wrap.width) || wrap.width < 0)
-						{
-							wrap.width = 0;
-						}
-					}
-				}
-				else if (name == L"align" || name == L"a")
-				{
-					alignment = parse<Alignment>(params);
-				}
 				else if (name == L"raw")
 				{
 					raw = true;
@@ -1480,6 +1405,10 @@ namespace BearLibTerminal
 			else if (c == L'\n') // forced line-break
 			{
 				lines.emplace_back();
+			}
+			else if (c == L'\r')
+			{
+				// Ignore.
 			}
 			else
 			{
@@ -1551,28 +1480,26 @@ namespace BearLibTerminal
 			total_width = std::max(total_width, line.size.width);
 		}
 
+		int horizontal_align = (align & 3);
+		int vertical_align = (align & 12);
+
 		if (!measure_only)
 		{
-			int cutoff_top, cutoff_bottom;
-
-			switch (alignment.vertical)
+			if ((vertical_align & TK_ALIGN_MIDDLE) == TK_ALIGN_MIDDLE)
 			{
-			case Alignment::Bottom:
-				y = y0 - (total_height-1);
-				cutoff_top = y0 - (wrap.height-1);
-				cutoff_bottom = y0;
-				break;
-			case Alignment::Center:
-				y = y0 - (int)std::ceil((total_height-1)/2.0f); // NOTE: floor for lower-or-equal origin
-				cutoff_top = y0 - (int)std::ceil((wrap.height-1)/2.0f);
-				cutoff_bottom = cutoff_top + wrap.height-1;
-				break;
-			default: // Top
-				y = y0;
-				cutoff_top = y0;
-				cutoff_bottom = y0 + (wrap.height-1);
-				break;
+				y = y0 + std::ceil(wrap.height/2.0f - total_height/2.0f);
 			}
+			else if ((vertical_align & TK_ALIGN_BOTTOM) == TK_ALIGN_BOTTOM)
+			{
+				y = y0 + std::max(wrap.height, 1) - total_height;
+			}
+			else // TK_ALIGN_TOP or default
+			{
+				y = y0;
+			}
+
+			int cutoff_top = y0;
+			int cutoff_bottom = cutoff_top + wrap.height-1;
 
 			for (auto& line: lines)
 			{
@@ -1580,17 +1507,17 @@ namespace BearLibTerminal
 
 				if (wrap.height == 0 || (y >= cutoff_top && y <= cutoff_bottom) || (line_bottom >= cutoff_top && line_bottom <= cutoff_bottom))
 				{
-					switch (alignment.horisontal)
+					if ((horizontal_align & TK_ALIGN_CENTER) == TK_ALIGN_CENTER)
 					{
-					case Alignment::Right:
-						x = x0 - (line.size.width - 1);
-						break;
-					case Alignment::Center:
-						x = x0 - (int)std::ceil((line.size.width-1)/2.0f); // NOTE: floor for lower-or-equal origin
-						break;
-					default: // Left
+						x = x0 + std::ceil(wrap.width/2.0f - (line.size.width-0)/2.0f);
+					}
+					else if ((horizontal_align & TK_ALIGN_RIGHT) == TK_ALIGN_RIGHT)
+					{
+						x = x0 + std::max(wrap.width, 1) - line.size.width;
+					}
+					else // TK_ALIGN_LEFT or default
+					{
 						x = x0;
-						break;
 					}
 
 					w = -1;
@@ -1617,7 +1544,9 @@ namespace BearLibTerminal
 			m_world.state.bkcolor = original_back;
 		}
 
-		return wrap.width > 0? total_height: total_width;
+		if (wrap.height)
+			total_height = std::min(total_height, wrap.height);
+		return Size{total_width, total_height};
 	}
 
 	bool Terminal::IsEventFiltered(int code)
@@ -1757,7 +1686,7 @@ namespace BearLibTerminal
 
 		auto put_buffer = [&](bool put_cursor)
 		{
-			Print(x, y, buffer, true, false);
+			Print(x, y, 0, 0, TK_ALIGN_DEFAULT, buffer, true, false);
 			if (put_cursor && cursor < max) Put(x+cursor, y, m_options.input_cursor_symbol);
 		};
 

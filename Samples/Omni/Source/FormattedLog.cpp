@@ -124,7 +124,7 @@ int UpdateHeights()
 	int total_height = 0;
 	for (auto& message: messages)
 	{
-		message.height = terminal_measuref("[bbox=%d]%s", frame_width, message.text.c_str());
+		message.height = terminal_measure_ext(frame_width, 0, message.text.c_str()).height;
 		total_height += message.height;
 	}
 
@@ -223,7 +223,7 @@ void TestFormattedLog()
 		for (; index < messages.size() && delta <= frame_height; index++)
 		{
 			auto& message = messages[index];
-			terminal_printf(padding_left, padding_top+delta, "[bbox=%d]%s", frame_width, message.text.c_str());
+			terminal_print_ext(padding_left, padding_top+delta, frame_width, 0, TK_ALIGN_DEFAULT, message.text.c_str());
 			delta += message.height + 1;
 		}
 		terminal_crop(padding_left, padding_top, frame_width, frame_height);

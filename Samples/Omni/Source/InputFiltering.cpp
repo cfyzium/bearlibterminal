@@ -43,16 +43,16 @@ void TestInputFiltering()
 		terminal_clear();
 		terminal_color("white");
 
-		int h = terminal_printf
+		int h = terminal_printf_ext
 		(
-			2, 1,
-			"[bbox=76]Modify input filter by pressing corresponding numbers (digits are added "
+			76, 0, TK_ALIGN_DEFAULT, 2, 1,
+			"Modify input filter by pressing corresponding numbers (digits are added "
 			"to filter automatically). Gray color ([color=%s]like this[/color]) means that "
 			"event is disabled. Regular white color means keypress is enabled. Blueish color "
 			"([color=%s]like this[/color]) means both keypress and keyrelease are enabled.\n\n"
 			"Both CLOSE and ESCAPE close this demo.",
 			colors[0], colors[2]
-		);
+		).height;
 
 		for (size_t i = 0; i < events.size(); i++)
 		{
