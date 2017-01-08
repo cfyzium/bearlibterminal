@@ -945,6 +945,7 @@ namespace BearLibTerminal
 			if (scancode == VK_INSERT ||
 			    scancode == VK_DELETE ||
 			   (scancode >= VK_PRIOR && scancode <= VK_DOWN) ||
+			   (scancode >= VK_NUMPAD0 && scancode <= VK_DIVIDE) ||
 			   (charcode == '/' && extended))
 			{
 				// Ignore, handled by WM_KEYxxx
