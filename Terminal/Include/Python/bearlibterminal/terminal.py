@@ -186,7 +186,7 @@ _aprint_ext.argtypes = [c_int, c_int, c_int, c_int, c_int, c_char_p, POINTER(c_i
 _aprint_ext.restype = None
 _wprint_ext.argtypes = [c_int, c_int, c_int, c_int, c_int, c_wchar_p, POINTER(c_int), POINTER(c_int)]
 _wprint_ext.restype = None
-def print_(x, y, s, width=0, height=0, align=0):
+def puts(x, y, s, width=0, height=0, align=0):
 	out_width = c_int()
 	out_height = c_int()
 	if _version3 or isinstance(s, unicode):
@@ -195,8 +195,13 @@ def print_(x, y, s, width=0, height=0, align=0):
 		_aprint_ext(x, y, width, height, align, s, ctypes.byref(out_width), ctypes.byref(out_height))
 	return (out_width.value, out_height.value)
 
-def printf(x, y, s, *args, width=0, height=0, align=0):
-	return print_(x, y, s.format(*args), width=width, height=height, align=align)
+print_ = puts
+
+if _version3:
+	setattr(sys.modules[__name__], "print", puts)
+
+def printf(x, y, s, *args):
+	return puts(x, y, s.format(*args))
 
 _ameasure_ext = _library.terminal_measure_ext8
 _ameasure_ext.argtypes = [c_int, c_int, c_char_p, POINTER(c_int), POINTER(c_int)]
@@ -212,8 +217,8 @@ def measure(s, width=0, height=0):
 		_ameasure_ext(width, height, s, ctypes.byref(out_width), ctypes.byref(out_height))
 	return (out_width.value, out_height.value)
 
-def measuref(s, *args, width=0, height=0):
-	return measure(s.format(*args), width=width, height=height)
+def measuref(s, *args):
+	return measure(s.format(*args))
 
 def has_input():
 	return _library.terminal_has_input() == 1
