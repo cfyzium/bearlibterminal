@@ -37,6 +37,7 @@ namespace BearLibTerminal
 		m_font_library(nullptr),
 		m_font_face(nullptr),
 		m_render_mode(FT_RENDER_MODE_NORMAL),
+		m_hinting(FT_LOAD_DEFAULT),
 		m_use_box_drawing(false),
 		m_use_block_elements(false)
 	{
@@ -67,6 +68,19 @@ namespace BearLibTerminal
 				m_render_mode = FT_RENDER_MODE_LCD;
 			else
 				throw std::runtime_error("TrueTypeTileset: failed to parse 'mode' attribute");
+		}
+
+		if (options.attributes.count(L"hinting"))
+		{
+			std::wstring mode_str = options.attributes[L"hinting"];
+			if (mode_str == L"normal")
+				m_hinting = FT_LOAD_DEFAULT;
+			else if (mode_str == L"autohint")
+				m_hinting = FT_LOAD_FORCE_AUTOHINT;
+			else if (mode_str == L"none")
+				m_hinting = FT_LOAD_NO_HINTING;
+			else
+				throw std::runtime_error("TrueTypeTileset: failed to parse 'hinting' attribute");
 		}
 
 		if (!options.attributes.count(L"size"))
@@ -269,7 +283,7 @@ namespace BearLibTerminal
 		if (index == 0)
 			throw std::runtime_error("TrueTypeTileset: request for a tile that is not provided by the tileset");
 
-		if (FT_Load_Glyph(*m_font_face, index, FT_LOAD_FORCE_AUTOHINT))
+		if (FT_Load_Glyph(*m_font_face, index, m_hinting))
 			throw std::runtime_error("TrueTypeTileset: can't load character glyph");
 
 		if ((*m_font_face)->glyph->format != FT_GLYPH_FORMAT_BITMAP)

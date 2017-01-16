@@ -51,6 +51,7 @@ namespace BearLibTerminal
 		std::shared_ptr<FT_Library> m_font_library;
 		std::shared_ptr<FT_Face> m_font_face;
 		FT_Render_Mode m_render_mode;
+		FT_Int32 m_hinting;
 		bool m_monospace;
 		bool m_use_box_drawing;
 		bool m_use_block_elements;

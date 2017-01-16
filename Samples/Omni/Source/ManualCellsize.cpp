@@ -6,17 +6,21 @@
  */
 
 #include "Common.hpp"
+#include <string>
+#include <vector>
 
 void TestManualCellsize()
 {
 	terminal_set("window.title='Omni: manual cellsize'");
 
 	const char* font_name = "../Media/VeraMono.ttf";
+	std::vector<std::string> font_hintings = {"normal", "autohint", "none"};
+	int font_hinting = 0;
 	int font_size = 12;
 	int cell_width = 8;
 	int cell_height = 16;
 
-	auto setup_font = [&](){terminal_setf("font: %s, size=%d", font_name, font_size);};
+	auto setup_font = [&](){terminal_setf("font: %s, size=%d, hinting=%s", font_name, font_size, font_hintings[font_hinting].c_str());};
 	auto setup_cellsize = [&](){terminal_setf("window: cellsize=%dx%d", cell_width, cell_height);};
 
 	setup_cellsize();
@@ -27,11 +31,13 @@ void TestManualCellsize()
 		terminal_clear();
 		terminal_color("white");
 
-		terminal_printf(2, 1, L"Hello, world!");
-		terminal_printf(2, 3, L"[color=orange]Font size:[/color] %d", font_size);
-		terminal_printf(2, 4, L"[color=orange]Cell size:[/color] %dx%d", cell_width, cell_height);
-		terminal_printf(2, 6, L"[color=orange]TIP:[/color] Use arrow keys to change cell size");
-		terminal_printf(2, 7, L"[color=orange]TIP:[/color] Use Shift+Up/Down arrow keys to change font size");
+		terminal_printf(2, 1, "Hello, world!");
+		terminal_printf(2, 3, "[color=orange]Font size:[/color] %d", font_size);
+		terminal_printf(2, 4, "[color=orange]Font hinting:[/color] %s", font_hintings[font_hinting].c_str());
+		terminal_printf(2, 5, "[color=orange]Cell size:[/color] %dx%d", cell_width, cell_height);
+		terminal_printf(2, 7, "[color=orange]TIP:[/color] Use arrow keys to change cell size");
+		terminal_printf(2, 8, "[color=orange]TIP:[/color] Use Shift+Up/Down arrow keys to change font size");
+		terminal_printf(2, 9, "[color=orange]TIP:[/color] Use TAB to switch font hinting mode");
 
 		terminal_refresh();
 
@@ -69,6 +75,11 @@ void TestManualCellsize()
 		else if (key == TK_DOWN && terminal_state(TK_SHIFT) && font_size > 4)
 		{
 			font_size -= 1;
+			setup_font();
+		}
+		else if (key == TK_TAB)
+		{
+			font_hinting = (font_hinting + 1) % font_hintings.size();
 			setup_font();
 		}
 	}

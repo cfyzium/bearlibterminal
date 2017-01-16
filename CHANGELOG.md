@@ -1,3 +1,8 @@
+### 0.15.1 (Unreleased)
+
+- Change default hinting to font's native hinter.
+- Add `hinting` TrueType font attribute.
+
 ### 0.15.0 (2017-01-09)
 
 - Add bbox and alignment parameters to `print()` function (instead of using in-string formatting tags).
