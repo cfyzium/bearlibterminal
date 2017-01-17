@@ -2,6 +2,7 @@
 
 - Change default hinting to font's native hinter.
 - Add `hinting` TrueType font attribute.
+- Make Python wrapper look for the library binary near the executable (should help packaging the application). 
 - Minor fix in the sample application.
 
 ### 0.15.0 (2017-01-09)

@@ -27,33 +27,35 @@ _version3 = sys.version_info >= (3, 0)
 _integer = int if _version3 else (int, long)
 
 def _load_library():
-	from os import path
+	import os
 	
 	# Figure out where the library binary should be
+	places = [sys.argv[0]]
 	try:
 		# Try to search near the wrapper module
-		module_path = __file__
+		places.insert(0, __file__)
 	except NameError:
-		# If there is no module (e. g. it a standalone app)
-		# look in the CWD (usually near the executable file)
-		module_path = sys.argv[0]
-	library_path = path.dirname(path.abspath(module_path))
+		# There may be no module (e. g. a standalone app)
+		pass
+	places = [os.path.dirname(os.path.abspath(place)) for place in places]
 	
 	# Construct a platform-specific name of the library binary file
 	if 'win32' in sys.platform:
-		library_name = 'BearLibTerminal.dll'
+		name = 'BearLibTerminal.dll'
 	elif 'linux' in sys.platform:
-		library_name = 'libBearLibTerminal.so'
+		name = 'libBearLibTerminal.so'
 	elif 'darwin' in sys.platform:
-		library_name = 'libBearLibTerminal.dylib'
+		name = 'libBearLibTerminal.dylib'
 	else:
 		raise RuntimeError('Unsupported platform: ' + sys.platform)
 	
 	# Now actually try to load the library binary
-	try:
-		return ctypes.CDLL(library_path + path.sep + library_name)
-	except OSError:
-		raise RuntimeError('BearLibTerminal library cannot be loaded (looked for ' + library_name + ' in ' + library_path + ')')
+	for place in places:
+		try:
+			return ctypes.CDLL(os.path.join(place, name))
+		except OSError:
+			pass
+	raise RuntimeError('Cannot load BearLibTerminal library: no {} found in {}'.format(name, places))
 
 _library = _load_library()
 
