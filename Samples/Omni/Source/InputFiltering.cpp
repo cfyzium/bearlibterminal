@@ -45,7 +45,7 @@ void TestInputFiltering()
 
 		int h = terminal_printf_ext
 		(
-			76, 0, TK_ALIGN_DEFAULT, 2, 1,
+			2, 1, 76, 0, TK_ALIGN_DEFAULT,
 			"Modify input filter by pressing corresponding numbers (digits are added "
 			"to filter automatically). Gray color ([color=%s]like this[/color]) means that "
 			"event is disabled. Regular white color means keypress is enabled. Blueish color "
