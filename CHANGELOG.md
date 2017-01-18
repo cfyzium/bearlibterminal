@@ -1,4 +1,4 @@
-### 0.15.1 (Unreleased)
+### 0.15.1 (2017-01-18)
 
 - Change default hinting to font's native hinter.
 - Add `hinting` TrueType font attribute.
