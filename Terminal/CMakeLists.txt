@@ -63,8 +63,6 @@ include_directories(./Dependencies/NanoJPEG/Include)
 
 target_compile_definitions(BearLibTerminal PRIVATE TERMINAL_VERSION=\"${TERMINAL_VERSION}\")
 
-add_definitions(-DTERMINAL_VERSION=\"${TERMINAL_VERSION}\")
-
 target_link_libraries(BearLibTerminal freetype2)
 target_link_libraries(BearLibTerminal picopng)
 target_link_libraries(BearLibTerminal ${OPENGL_gl_LIBRARY})
