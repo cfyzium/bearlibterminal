@@ -442,6 +442,16 @@ namespace BearLibTerminal
         NSRect frame = [[m_impl->m_window contentView] frame];
         return Size(frame.size.width, frame.size.height);
     }
+
+    const char* CocoaWindow::GetClipboard() {
+        NSData *clipboardData = [[NSPasteboard generalPasteboard] dataForType:NSPasteboardTypeString];
+        if (clipboardData != nil)
+        {
+            NSString *asString = [[NSString alloc] initWithData:clipboardData encoding:NSUTF8StringEncoding];
+            return asString.UTF8String;
+        }
+        return NULL;
+    }
     
     void CocoaWindow::SetTitle(const std::wstring& title)
     {

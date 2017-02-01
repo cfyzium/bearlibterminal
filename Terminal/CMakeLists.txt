@@ -61,9 +61,9 @@ include_directories(./Dependencies/FreeType/Include)
 include_directories(./Dependencies/PicoPNG/Include)
 include_directories(./Dependencies/NanoJPEG/Include)
 
-add_library(BearLibTerminal ${TERMINAL_SOURCES} ${TERMINAL_HEADERS})
-
 target_compile_definitions(BearLibTerminal PRIVATE TERMINAL_VERSION=\"${TERMINAL_VERSION}\")
+
+add_definitions(-DTERMINAL_VERSION=\"${TERMINAL_VERSION}\")
 
 target_link_libraries(BearLibTerminal freetype2)
 target_link_libraries(BearLibTerminal picopng)

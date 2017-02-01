@@ -282,6 +282,7 @@ TERMINAL_API void terminal_delay(int period);
 TERMINAL_API const int8_t* terminal_get8(const int8_t* key, const int8_t* default_);
 TERMINAL_API const int16_t* terminal_get16(const int16_t* key, const int16_t* default_);
 TERMINAL_API const int32_t* terminal_get32(const int32_t* key, const int32_t* default_);
+TERMINAL_API const char* terminal_get_clipboard();
 TERMINAL_API color_t color_from_name8(const int8_t* name);
 TERMINAL_API color_t color_from_name16(const int16_t* name);
 TERMINAL_API color_t color_from_name32(const int32_t* name);
@@ -345,7 +346,7 @@ TERMINAL_INLINE const char* terminal_vsprintf(const char* s, va_list args)
 	else if (!buffer)
 		buffer = (char*)malloc(buffer_size);
 
-	while (true)
+	while (1)
 	{
 		buffer[buffer_size-1] = '\0';
 		rc = vsnprintf(buffer, buffer_size, s, args);
@@ -377,7 +378,7 @@ TERMINAL_INLINE const wchar_t* terminal_vswprintf(const wchar_t* s, va_list args
 	else if (!buffer)
 		buffer = (wchar_t*)malloc(buffer_size * sizeof(wchar_t));
 
-	while (true)
+	while (1)
 	{
 		buffer[buffer_size-1] = L'\0';
 #if defined(_WIN32)

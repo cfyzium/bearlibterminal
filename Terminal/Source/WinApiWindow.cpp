@@ -429,6 +429,10 @@ namespace BearLibTerminal
 		return Size(rect.right-rect.left, rect.bottom-rect.top);
 	}
 
+	const char* WinApiWindow::GetClipboard() {
+		return NULL;
+	}
+
 	void WinApiWindow::Show()
 	{
 		if (m_handle != nullptr)
