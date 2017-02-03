@@ -36,7 +36,6 @@ namespace BearLibTerminal
         CocoaWindow(EventHandler handler);
         ~CocoaWindow();
         Size GetActualSize();
-        const char* GetClipboard();
         void SetTitle(const std::wstring& title);
         void SetIcon(const std::wstring& filename);
         void SetClientSize(const Size& size);
@@ -55,6 +54,8 @@ namespace BearLibTerminal
         void ApplySizeHints();
         std::unique_ptr<Impl> m_impl;
     };
+
+    std::wstring GetCocoaPasteboardString();
 }
 
 #endif // __APPLE__

@@ -624,10 +624,6 @@ namespace BearLibTerminal
 		return Size(width, height);
 	}
 
-	const char* X11Window::GetClipboard() {
-		return NULL;
-	}
-
 	int X11Window::TranslateKeycode(KeyCode kc)
 	{
 		if (kc >= 0 && kc <= 0xFF && m_keymaps[0][kc])

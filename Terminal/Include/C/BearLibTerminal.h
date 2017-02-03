@@ -282,7 +282,6 @@ TERMINAL_API void terminal_delay(int period);
 TERMINAL_API const int8_t* terminal_get8(const int8_t* key, const int8_t* default_);
 TERMINAL_API const int16_t* terminal_get16(const int16_t* key, const int16_t* default_);
 TERMINAL_API const int32_t* terminal_get32(const int32_t* key, const int32_t* default_);
-TERMINAL_API const char* terminal_get_clipboard();
 TERMINAL_API color_t color_from_name8(const int8_t* name);
 TERMINAL_API color_t color_from_name16(const int16_t* name);
 TERMINAL_API color_t color_from_name32(const int32_t* name);

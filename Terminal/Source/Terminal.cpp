@@ -1582,11 +1582,6 @@ namespace BearLibTerminal
 		return (code >= 0 && code < (int)m_vars.size())? m_vars[code]: 0;
 	}
 
-	const char* Terminal::GetClipboard()
-	{
-		return m_window->GetClipboard();
-	}
-
 	Event Terminal::ReadEvent(int timeout) // FIXME: more precise wait
 	{
 		if (m_state != kVisible)

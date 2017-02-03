@@ -160,6 +160,8 @@ namespace BearLibTerminal
 	void EnsureStandardOutput();
 
 	void WriteStandardError(const char* what);
+
+	std::wstring GetClipboardContents();
 }
 
 #endif // BEARLIBTERMINAL_PLATFORM_HPP

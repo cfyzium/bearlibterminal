@@ -355,11 +355,6 @@ func Delay(period int) {
 	C.terminal_delay(C.int(period))
 }
 
-func GetClipboard() string {
-	cstring := C.terminal_get_clipboard()
-	return C.GoString(cstring)
-}
-
 func Get(key, defaultValue string) string {
 	cstringKey := C.CString(key)
 	defer C.free(unsafe.Pointer(cstringKey))

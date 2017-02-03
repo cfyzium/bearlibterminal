@@ -207,6 +207,11 @@ namespace BearLibTerminal
 			out = UTF8Encoding().Convert(TERMINAL_VERSION);
 			return true;
 		}
+		else if (name == L"clipboard")
+		{
+			out = GetClipboardContents();
+			return true;
+		}
 		else if (!starts_with<wchar_t>(name, L"sys.") && !starts_with<wchar_t>(name, L"ini."))
 		{
 			name = L"sys." + name;

@@ -309,11 +309,6 @@ int terminal_read_str32(int x, int y, int32_t* buffer, int max)
 	return read_str(x, y, (char32_t*)buffer, max, BearLibTerminal::UCS4Encoding());
 }
 
-const char* terminal_get_clipboard() {
-	if (!g_instance) return NULL;
-	return g_instance->GetClipboard();
-}
-
 int terminal_peek()
 {
 	if (!g_instance) return TK_CLOSE;

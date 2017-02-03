@@ -46,6 +46,10 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#if defined(__APPLE__)
+#include "CocoaWindow.h"
+#endif
+
 #if defined(GetCurrentDirectory)
 #undef GetCurrentDirectory
 #endif
@@ -520,6 +524,19 @@ namespace BearLibTerminal
 		WriteFile(stderr_handle, what, strlen(what), &written, NULL);
 #else
 		std::cerr << what;
+#endif
+	}
+
+	std::wstring GetClipboardContents()
+	{
+#if defined(_WIN32)
+		// TODO
+		return std::wstring();
+#elif defined(__APPLE__)
+		return GetCocoaPasteboardString();
+#else
+		// TODO: X11
+		return std::wstring();
 #endif
 	}
 }

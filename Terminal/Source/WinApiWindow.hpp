@@ -65,7 +65,6 @@ namespace BearLibTerminal
 		void SetFullscreen(bool fullscreen);
 		void SetCursorVisibility(bool visible);
 		Size GetActualSize();
-		const char* GetClipboard();
 		int PumpEvents();
 	protected:
 		bool Construct();

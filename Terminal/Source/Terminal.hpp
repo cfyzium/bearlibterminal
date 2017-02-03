@@ -58,7 +58,6 @@ namespace BearLibTerminal
 		Size Print(int x, int y, int w, int h, int align, std::wstring str, bool raw, bool measure_only);
 		int HasInput();
 		int GetState(int code);
-		const char* GetClipboard();
 		int Read();
 		int ReadString(int x, int y, wchar_t* buffer, int max);
 		int Peek();
