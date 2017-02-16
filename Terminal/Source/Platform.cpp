@@ -530,8 +530,24 @@ namespace BearLibTerminal
 	std::wstring GetClipboardContents()
 	{
 #if defined(_WIN32)
-		// TODO
-		return std::wstring();
+		if (!OpenClipboard(NULL))
+		{
+			LOG(Error, "Failed to open clipboard");
+			return L"";
+		}
+
+		std::wstring text;
+		if (HGLOBAL handle = GetClipboardData(CF_UNICODETEXT))
+		{
+			if (auto ptr = (const wchar_t*)GlobalLock(handle))
+			{
+				text = ptr;
+				GlobalUnlock(handle);
+			}
+		}
+
+		CloseClipboard();
+		return text;
 #elif defined(__APPLE__)
 		return GetCocoaPasteboardString();
 #else

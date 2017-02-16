@@ -1,3 +1,7 @@
+### 0.15.2 (Unreleased)
+
+- Retrieve clipboard contents via `terminal_get("clipboard")` (OS X and Windows).
+
 ### 0.15.1 (2017-01-18)
 
 - Change default hinting to font's native hinter.
