@@ -89,24 +89,20 @@ namespace BearLibTerminal
 
 		auto parse_point = [](const std::wstring& s) -> int
 		{
-			if (s.length() == 1)
-			{
-				// Single character notation
-				return (int)s[0];
-			}
+			int result = 0;
 
-			if (s.length() > 2)
+			if (s.length() > 2 && (((s[0] == L'u' || s[0] == L'U') && s[1] == '+') || ((s[0] == L'0' && s[1] == L'x'))))
 			{
-				// Hexadecimal notation
-				if (((s[0] == L'u' || s[0] == L'U') && s[1] == '+') || // U+1234
-				    ((s[0] == L'0' && (s[1] == L'x'))))                // 0x1234
-				{
-					int result = 0;
-					std::wistringstream ss(s.substr(2));
-					ss >> std::hex;
-					ss >> result;
-					return ss? result: -2;
-				}
+				// Hexadecimal notation: U+1234 or 0x1234.
+				std::wistringstream ss(s.substr(2));
+				ss >> std::hex;
+				ss >> result;
+				return ss? result: -2;
+			}
+			else
+			{
+				// Decimal notation.
+				return try_parse(s, result)? result: -2;
 			}
 
 			return -1;
@@ -155,7 +151,7 @@ namespace BearLibTerminal
 			for (const wchar_t* p = line.c_str(); ; p++)
 			{
 				if (read_set(p), *p == L'\0')
-				break;
+					break;
 			}
 		}
 	}

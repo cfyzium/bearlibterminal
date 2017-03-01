@@ -202,12 +202,12 @@ namespace BearLibTerminal
 		}
 		else
 		{
-			// Tileset.
+			// Tileset: uses a reverese codepage (linear index 0..N -> tile index).
 			for (int i = 0; m_cache.size() < grid_size.Area(); i++)
 			{
-				int index = codepage->Convert((wchar_t)i);
+				int index = codepage->Convert(i);
 
-				if (index == -1)
+				if (index == kUnicodeReplacementCharacter)
 					break;
 				else if (index < 0 || index >= grid_size.Area())
 					continue;
