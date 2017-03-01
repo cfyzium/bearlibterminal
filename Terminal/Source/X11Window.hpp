@@ -50,6 +50,7 @@ namespace BearLibTerminal
 		int PumpEvents();
 		void SetResizeable(bool resizeable);
 		Size GetActualSize();
+		std::wstring GetClipboard();
 		void SetFullscreen(bool fullscreen);
 		void SetCursorVisibility(bool visible);
 	protected:
@@ -83,6 +84,10 @@ namespace BearLibTerminal
 		Atom m_wm_name;
 		Atom m_wm_maximized_horz;
 		Atom m_wm_maximized_vert;
+		Atom m_wm_clipboard;
+		Atom m_wm_selection;
+		Atom m_wm_utf8_string;
+		Atom m_wm_compound_string;
 		XSizeHints* m_size_hints;
 		int m_keymaps[2][256]; // TODO: static
 		PFN_GLXSWAPINTERVALEXT m_glXSwapIntervalEXT;

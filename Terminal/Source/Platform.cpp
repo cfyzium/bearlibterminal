@@ -24,6 +24,7 @@
 #include "Encoding.hpp"
 #include "Utility.hpp"
 #include "Log.hpp"
+#include "Terminal.hpp"
 #include <vector>
 #include <fstream>
 #include <iostream>
@@ -551,8 +552,8 @@ namespace BearLibTerminal
 #elif defined(__APPLE__)
 		return GetCocoaPasteboardString();
 #else
-		// TODO: X11
-		return std::wstring();
+		// XXX: Another refactoring is imminent.
+		return g_instance? g_instance->GetClipboard(): std::wstring{};
 #endif
 	}
 }

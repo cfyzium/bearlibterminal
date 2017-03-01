@@ -34,12 +34,10 @@
 #include <iostream>
 #include <thread>
 
+using namespace BearLibTerminal;
+
 namespace
 {
-	static std::unique_ptr<BearLibTerminal::Terminal> g_instance;
-
-	// --------------------------------
-
 	struct cached_setting_t
 	{
 		cached_setting_t();
@@ -88,8 +86,6 @@ namespace
 
 int terminal_open()
 {
-	using namespace BearLibTerminal;
-
 	if (g_instance)
 	{
 		LOG(Error, "terminal_open: BearLibTerminal instance already initialized");

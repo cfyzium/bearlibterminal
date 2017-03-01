@@ -35,6 +35,7 @@
 #include <limits.h>
 #include <string.h>
 #include <X11/Xatom.h>
+#include <poll.h>
 
 #define BEARLIBTERMINAL_BUILDING_LIBRARY
 #include "BearLibTerminal.h"
@@ -57,6 +58,76 @@ namespace BearLibTerminal
 		Atom type_atom = XInternAtom(display, type.c_str(), False);
 		Atom value_atom = XInternAtom(display, value.c_str(), False);
 		ChangeWindowProperty(display, window, type_atom, value_atom);
+	}
+
+	unsigned long GetWindowProperty(Display* display, ::Window window, Atom property, Atom type, unsigned char** value)
+	{
+	    Atom actual_type;
+	    int actual_format;
+	    unsigned long nitems, bytes_after;
+
+	    XGetWindowProperty(
+			display,
+			window,
+			property,
+			0,
+			LONG_MAX,
+			False,
+			type,
+			&actual_type,
+			&actual_format,
+			&nitems,
+			&bytes_after,
+			value
+		);
+
+	    return nitems;
+	}
+
+	std::wstring GetStringWindowProperty(Display* display, ::Window window, Atom property, Atom type)
+	{
+		std::wstring result;
+		char* data = nullptr;
+
+		if (GetWindowProperty(display, window, property, type, (unsigned char**)&data))
+		{
+			result = UTF8Encoding().Convert(data);
+		}
+
+		if (data != nullptr)
+		{
+			XFree(data);
+		}
+
+		return result;
+	}
+
+	bool WaitForEvent(Display* display, int timeout_ms)
+	{
+		int fd = ConnectionNumber(display);
+
+		for (int left = timeout_ms; left > 0 || timeout_ms < 0; )
+		{
+			pollfd pfd = {fd, POLLIN, 0};
+			int64_t started = gettime();
+
+			int rc = poll(&pfd, 1, left);
+			if (rc > 0)
+			{
+				// Completed.
+				return true;
+			}
+			else if (rc < 0 && errno == EINTR)
+			{
+				// Interrupted.
+				return false;
+			}
+
+			left -= (gettime() - started);
+		}
+
+		// Timed out.
+		return false;
 	}
 
 	void SendExposeEvent(Display* display, ::Window window)
@@ -395,6 +466,11 @@ namespace BearLibTerminal
 		m_wm_maximized_horz = XInternAtom(m_display, "_NET_WM_STATE_MAXIMIZED_HORZ", False);
 		m_wm_maximized_vert = XInternAtom(m_display, "_NET_WM_STATE_MAXIMIZED_VERT", False);
 
+		m_wm_clipboard = XInternAtom(m_display, "CLIPBOARD", False);
+		m_wm_selection = XInternAtom(m_display, "BEARLIB_SELECTION", False);
+		m_wm_utf8_string = XInternAtom(m_display, "UTF8_STRING", False);
+		m_wm_compound_string = XInternAtom(m_display, "COMPOUND_STRING", False);
+
 		ChangeWindowProperty(m_display, m_window, "_NET_WM_WINDOW_TYPE", "_NET_WM_WINDOW_TYPE_DIALOG");
 	}
 
@@ -622,6 +698,46 @@ namespace BearLibTerminal
 		);
 
 		return Size(width, height);
+	}
+
+	std::wstring X11Window::GetClipboard()
+	{
+		std::wstring result;
+		std::vector<Atom> formats = {m_wm_utf8_string, m_wm_compound_string, XA_STRING};
+
+		for (size_t i = 0; i < formats.size() && result.empty(); i++)
+		{
+			XConvertSelection(
+				m_display,
+				m_wm_clipboard,
+				formats[i],
+				m_wm_selection,
+				m_window,
+				CurrentTime
+			);
+
+			XEvent event;
+			while (!XCheckTypedWindowEvent(m_display, m_window, SelectionNotify, &event))
+			{
+				WaitForEvent(m_display, -1);
+			}
+
+			if (event.xselection.property == None)
+			{
+				continue;
+			}
+
+			result = GetStringWindowProperty(
+				m_display,
+				event.xselection.requestor,
+				event.xselection.property,
+				event.xselection.target
+			);
+
+			XDeleteProperty(m_display, event.xselection.requestor, event.xselection.property);
+		}
+
+		return result;
 	}
 
 	int X11Window::TranslateKeycode(KeyCode kc)

@@ -63,6 +63,7 @@ namespace BearLibTerminal
 		int Peek();
 		void Delay(int period);
 		const Encoding8& GetEncoding() const;
+		std::wstring GetClipboard();
 	private:
 		void SetOptionsInternal(const std::wstring& params);
 		void UpdateDynamicTileset(Size size);
@@ -102,6 +103,8 @@ namespace BearLibTerminal
 		SizeF m_stage_area_factor;
 		bool m_alt_pressed; // For alt-functions interception.
 	};
+
+	extern std::unique_ptr<Terminal> g_instance;
 }
 
 #endif // BEARLIBTERMINAL_TERMINAL_HPP

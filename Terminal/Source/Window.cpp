@@ -59,6 +59,11 @@ namespace BearLibTerminal
 		return m_fullscreen;
 	}
 
+	std::wstring Window::GetClipboard()
+	{
+		return std::wstring{};
+	}
+
 	std::unique_ptr<Window> Window::Create(EventHandler handler)
 	{
 #if defined(__linux)

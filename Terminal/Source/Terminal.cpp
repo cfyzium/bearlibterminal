@@ -51,6 +51,8 @@ namespace BearLibTerminal
 
 namespace BearLibTerminal
 {
+	std::unique_ptr<Terminal> g_instance;
+
 	static std::vector<float> kScaleSteps =
 	{
 		0.75f, 1.0f, 1.25f, 1.5f, 2.0f, 3.0f
@@ -1771,6 +1773,11 @@ namespace BearLibTerminal
 	const Encoding<char>& Terminal::GetEncoding() const
 	{
 		return *m_encoding;
+	}
+
+	std::wstring Terminal::GetClipboard()
+	{
+		return m_window->GetClipboard();
 	}
 
 	void Terminal::ConfigureViewport()

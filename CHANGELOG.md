@@ -1,6 +1,6 @@
 ### 0.15.2 (Unreleased)
 
-- Retrieve clipboard contents via `terminal_get("clipboard")` (OS X and Windows).
+- Retrieve clipboard contents via `terminal_get("clipboard")`.
 
 ### 0.15.1 (2017-01-18)
 
