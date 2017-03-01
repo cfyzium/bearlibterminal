@@ -897,7 +897,7 @@ namespace BearLibTerminal
 
 	void Terminal::ValidateOutputOptions(OptionGroup& group, Options& options)
 	{
-		// Possible options: postformatting, vsync
+		// Possible options: postformatting, vsync, tab-width
 
 		// TODO: deprecated
 		if (group.attributes.count(L"postformatting") && !try_parse(group.attributes[L"postformatting"], options.output_postformatting))
@@ -909,6 +909,14 @@ namespace BearLibTerminal
 		{
 			throw std::runtime_error("output.vsync cannot be parsed");
 		}
+
+		if (group.attributes.count(L"tab-width") && !try_parse(group.attributes[L"tab-width"], options.output_tab_width))
+		{
+			throw std::runtime_error("output.tab-width cannot be parsed");
+		}
+
+		if (options.output_tab_width < 0)
+			options.output_tab_width = 0;
 	}
 
 	void Terminal::ValidateLoggingOptions(OptionGroup& group, Options& options)
@@ -1403,6 +1411,13 @@ namespace BearLibTerminal
 				else if (str[i] == L']') // escaped right bracket
 				{
 					AppendSymbol(L']');
+				}
+			}
+			else if (c == L'\t')
+			{
+				for (int i = 0; i < m_options.output_tab_width; i++)
+				{
+					AppendSymbol(L' ');
 				}
 			}
 			else if (c == L'\n') // forced line-break

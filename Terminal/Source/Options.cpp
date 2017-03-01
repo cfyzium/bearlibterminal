@@ -36,6 +36,7 @@ namespace BearLibTerminal
 		window_fullscreen(false),
 		output_postformatting(true),
 		output_vsync(true),
+		output_tab_width(4),
 		input_precise_mouse(false),
 		input_cursor_symbol('_'),
 		input_cursor_blink_rate(500),
