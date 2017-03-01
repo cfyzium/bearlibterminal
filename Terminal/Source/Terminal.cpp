@@ -777,7 +777,8 @@ namespace BearLibTerminal
 			throw std::runtime_error("input.cursor-blink-rate cannot be parsed");
 		}
 
-		if (options.input_cursor_blink_rate <= 0) options.input_cursor_blink_rate = 1;
+		if (options.input_cursor_blink_rate < 0)
+			options.input_cursor_blink_rate = 0;
 
 		if (group.attributes.count(L"mouse-cursor") && !try_parse(group.attributes[L"mouse-cursor"], options.input_mouse_cursor))
 		{
@@ -1710,7 +1711,8 @@ namespace BearLibTerminal
 			put_buffer(show_cursor);
 			Refresh();
 
-			auto event = ReadEvent(m_options.input_cursor_blink_rate);
+			int blink_rate = m_options.input_cursor_blink_rate;
+			auto event = ReadEvent(blink_rate? blink_rate: std::numeric_limits<int>::max());
 
 			if (event.code == TK_INPUT_NONE)
 			{

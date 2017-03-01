@@ -2,6 +2,7 @@
 
 - Retrieve clipboard contents via `terminal_get("clipboard")`.
 - Fix bitmap tileset reverse codepage (sparse tileset) handling.
+- `input.cursor-blink-rate=0` disables cursor blinking in `terminal_read_str()`. 
 
 ### 0.15.1 (2017-01-18)
 
