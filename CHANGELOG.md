@@ -4,6 +4,7 @@
 - Fix bitmap tileset reverse codepage (sparse tileset) handling.
 - `input.cursor-blink-rate=0` disables cursor blinking in `terminal_read_str()`. 
 - Fix printing tab characters (configured by `output.tab-width` option).
+- Fix app hanging on reopening terminal in macOS (see [issue #23](https://bitbucket.org/cfyzium/bearlibterminal/issues/23/reopening-a-closed-terminal-hangs-forever)).
 
 ### 0.15.1 (2017-01-18)
 

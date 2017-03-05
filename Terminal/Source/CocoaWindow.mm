@@ -365,10 +365,13 @@ namespace BearLibTerminal
 	
     void CocoaWindow::Construct()
     {
-        [CocoaTerminalApplication sharedApplication];
-        [NSApp setDelegate:[[CocoaTerminalApplicationDelegate alloc] initWithImpl:m_impl.get()]];
-        [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
-        [NSApp run];
+        if (!NSApp)
+        {
+            [CocoaTerminalApplication sharedApplication];
+            [NSApp setDelegate:[[CocoaTerminalApplicationDelegate alloc] initWithImpl:m_impl.get()]];
+            [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
+            [NSApp run];
+        }
         
         NSUInteger styleMask =
             NSTitledWindowMask|
