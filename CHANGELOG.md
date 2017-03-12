@@ -1,4 +1,4 @@
-### 0.15.2 (Unreleased)
+### 0.15.2 (2017-03-12)
 
 - Retrieve clipboard contents via `terminal_get("clipboard")`.
 - Fix bitmap tileset reverse codepage (sparse tileset) handling.
