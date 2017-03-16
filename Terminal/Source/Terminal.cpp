@@ -375,18 +375,25 @@ namespace BearLibTerminal
 			}
 		}
 
-		char32_t relative_code = (code & Tileset::kCharOffsetMask);
-		if (relative_code < 0x2500 || relative_code > 0x259F)
-			relative_code = kUnicodeReplacementCharacter;
-
 		auto fallback = g_tilesets.find(kDynamicTilesetOffset);
 		if (fallback == g_tilesets.end())
+		{
+			// Dynamic fallback tileset is already the last resort.
 			return nullptr;
+		}
 
-		auto tile = fallback->second->Get(relative_code);
-		g_codespace[code] = tile;
-		g_atlas.Add(tile);
-		return tile.get();
+		char32_t relative = (code & Tileset::kCharOffsetMask);
+		if (code != kUnicodeReplacementCharacter && !fallback->second->Provides(relative))
+		{
+			return GetTileInfo(kUnicodeReplacementCharacter);
+		}
+		else
+		{
+			auto tile = fallback->second->Get(relative);
+			g_codespace[code] = tile;
+			g_atlas.Add(tile);
+			return tile.get();
+		}
 	}
 
 	void Terminal::SetOptionsInternal(const std::wstring& value)
@@ -2072,6 +2079,7 @@ namespace BearLibTerminal
 		bool layer_scissors_applied = false;
 
 		AtlasTexture* current_texture = nullptr;
+		auto replacement_tile = GetTileInfo(kUnicodeReplacementCharacter);
 
 		glBegin(GL_QUADS);
 		glColor4f(1, 1, 1, 1);
@@ -2100,9 +2108,7 @@ namespace BearLibTerminal
 					for (auto& leaf: layer.cells[i].leafs)
 					{
 						auto i = g_codespace.find(leaf.code);
-						if (i == g_codespace.end())
-							continue;
-						auto tile = i->second.get();
+						auto tile = (i == g_codespace.end()? replacement_tile: i->second.get());
 
 						if (tile->texture != current_texture)
 						{

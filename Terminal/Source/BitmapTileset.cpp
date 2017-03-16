@@ -1,6 +1,6 @@
 /*
 * BearLibTerminal
-* Copyright (C) 2013-2016 Cfyz
+* Copyright (C) 2013-2017 Cfyz
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -196,7 +196,10 @@ namespace BearLibTerminal
 				for (int x = 0; x < columns; x++)
 				{
 					char32_t code = offset + codepage->Convert(y * columns + x);
-					keep_tile(x, y, code);
+					if (code != kUnicodeReplacementCharacter)
+					{
+						keep_tile(x, y, code);
+					}
 				}
 			}
 		}
