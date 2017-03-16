@@ -1,6 +1,6 @@
 /*
 * BearLibTerminal
-* Copyright (C) 2013-2016 Cfyz
+* Copyright (C) 2013-2017 Cfyz
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -138,6 +138,30 @@ namespace BearLibTerminal
 		m_canvas(initial_size, Color{})
 	{
 		m_spaces.emplace_back(initial_size);
+	}
+
+	AtlasTexture::AtlasTexture(std::shared_ptr<TileInfo> sprite)
+	{
+		Size size = sprite->bitmap.GetSize();
+		if (!g_has_texture_npot)
+		{
+			size.width = RoundUpToPow2(size.width);
+			size.height = RoundUpToPow2(size.height);
+		}
+		if (size.width > g_max_texture_size || size.height > g_max_texture_size)
+		{
+			throw std::runtime_error("Sprite requires a texture bigger than supported by the hardware");
+		}
+
+		m_canvas = Bitmap{size, Color{}};
+		m_canvas.Blit(sprite->bitmap, {});
+
+		// Update the tile info.
+		sprite->texture = this;
+		sprite->useful_space = Rectangle{size};
+		sprite->total_space = Rectangle{size};
+		sprite->texture_coords = CalcTexCoords(sprite->useful_space);
+		m_tiles.push_back(sprite);
 	}
 
 	bool AtlasTexture::IsEmpty() const
@@ -373,18 +397,7 @@ namespace BearLibTerminal
 
 		if (tile->bitmap.GetSize().Area() >= 100*100) // Arbitrary chosen size.
 		{
-			Size texture_size = tile->bitmap.GetSize();
-			if (!g_has_texture_npot)
-			{
-				texture_size.width = RoundUpToPow2(texture_size.width);
-				texture_size.height = RoundUpToPow2(texture_size.height);
-			}
-
-			auto texture = std::make_shared<AtlasTexture>(texture_size);
-			if (!texture->Add(tile))
-				throw std::runtime_error("Failed to add a sprite tile to a newly constructed texture");
-
-			m_textures.push_back(texture);
+			m_textures.push_back(std::make_shared<AtlasTexture>(tile));
 		}
 		else
 		{

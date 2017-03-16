@@ -1,6 +1,6 @@
 /*
 * BearLibTerminal
-* Copyright (C) 2013-2016 Cfyz
+* Copyright (C) 2013-2017 Cfyz
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -82,6 +82,7 @@ namespace BearLibTerminal
 	{
 	public:
 		AtlasTexture(Size initial_size);
+		AtlasTexture(std::shared_ptr<TileInfo> sprite);
 		bool IsEmpty() const;
 		bool Add(std::shared_ptr<TileInfo> tile);
 		void Remove(std::shared_ptr<TileInfo> tile, bool copy_bitmap_back=false);
