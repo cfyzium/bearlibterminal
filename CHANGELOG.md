@@ -3,6 +3,7 @@
 - Fix adding sprite tiles to an atlas (closes issue #30).
 - Fix excess generation of 'character replacement' tiles.
 - Fix dynamic tile generation (individual to a font, closes issue #32).
+- Fix configuring several fonts in one `set()` call (closes issue #34).
 
 ### 0.15.2 (2017-03-12)
 

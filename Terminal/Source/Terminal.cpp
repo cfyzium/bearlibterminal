@@ -284,14 +284,14 @@ namespace BearLibTerminal
 
 	std::map<std::wstring, int> g_fonts;
 
-	int AllocateFontIndex(std::wstring name)
+	int AllocateFontIndex(std::wstring name, std::map<std::wstring, int>& preallocated_fonts)
 	{
 		// Clean up.
 		for (auto i = g_fonts.begin(); i != g_fonts.end(); )
 		{
 			char32_t font_offset = i->second * 0x1000000;
 			auto j = g_tilesets.lower_bound(font_offset);
-			if ((j->first & Tileset::kFontOffsetMask) != font_offset)
+			if (j == g_tilesets.end() || (j->first & Tileset::kFontOffsetMask) != font_offset)
 			{
 				// The first tileset with offset >= font_offset does not belong to this font.
 				// Meaning there is no tilesets belonging to this font.
@@ -303,13 +303,26 @@ namespace BearLibTerminal
 			}
 		}
 
+		auto contains_value = [](std::map<std::wstring, int>& map, int value)
+		{
+			for (auto kv: map)
+			{
+				if (kv.second == value)
+				{
+					return true;
+				}
+			}
+
+			return false;
+		};
+
 		// Look up first available index.
 		for (int i = 0; ; i++)
 		{
-			if (std::find_if(g_fonts.begin(), g_fonts.end(), [i](std::pair<std::wstring, int> kv){return kv.second == i;}) == g_fonts.end())
+			if (!contains_value(preallocated_fonts, i) && !contains_value(g_fonts, i))
 			{
 				LOG(Info, "New font '" << name << "' -> index " << i);
-				g_fonts[name] = i;
+				preallocated_fonts[name] = i;
 				return i;
 			}
 		}
@@ -317,7 +330,7 @@ namespace BearLibTerminal
 		return -1;
 	}
 
-	char32_t ParseTilesetOffset(std::wstring name)
+	char32_t ParseTilesetOffset(std::wstring name, std::map<std::wstring, int>& preallocated_fonts)
 	{
 		char32_t font_offset = 0;
 		std::wstring font_name = L"main";
@@ -328,18 +341,27 @@ namespace BearLibTerminal
 			name = name.substr(space_pos+1);
 		}
 
-		auto i = g_fonts.find(font_name);
-		if (i != g_fonts.end())
+		std::map<std::wstring, int>::iterator i;
+		if ((i = g_fonts.find(font_name)) != g_fonts.end() ||
+		    (i = preallocated_fonts.find(font_name)) != preallocated_fonts.end())
+		{
 			font_offset = i->second * 0x01000000;
+		}
 		else
-			font_offset = AllocateFontIndex(font_name) * 0x01000000;
+		{
+			font_offset = AllocateFontIndex(font_name, preallocated_fonts) * 0x01000000;
+		}
 
 		if (name == L"font")
+		{
 			return font_offset;
+		}
 
 		char32_t tileset_offset = 0;
 		if (!try_parse(name, tileset_offset))
+		{
 			throw std::runtime_error("Failed to parse tileset offset from '" + UTF8Encoding().Convert(name) + "'");
+		}
 
 		return font_offset + tileset_offset;
 	}
@@ -395,6 +417,7 @@ namespace BearLibTerminal
 		Options updated = m_options;
 		std::unordered_map<char32_t, std::shared_ptr<Tileset>> new_tilesets;
 		std::unordered_map<std::wstring, Color> palette_update;
+		std::map<std::wstring, int> preallocated_fonts;
 
 		// Validate options
 		for (auto& group: groups)
@@ -442,7 +465,7 @@ namespace BearLibTerminal
 			}
 			else
 			{
-				char32_t offset = ParseTilesetOffset(group.name);
+				char32_t offset = ParseTilesetOffset(group.name, preallocated_fonts);
 				if (group.attributes[L"_"] == L"none")
 				{
 					// Remove tileset.
@@ -463,6 +486,10 @@ namespace BearLibTerminal
 		}
 
 		// All options and parameters must be validated, may try to apply them
+		for (auto& kv: preallocated_fonts)
+		{
+			g_fonts[kv.first] = kv.second;
+		}
 		for (auto& kv: new_tilesets)
 		{
 			RemoveTileset(kv.first);
