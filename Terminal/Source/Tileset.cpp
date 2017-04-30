@@ -37,6 +37,8 @@ namespace BearLibTerminal
 
 	std::map<char32_t, std::shared_ptr<Tileset>> g_tilesets;
 
+	std::shared_ptr<Tileset> g_dynamic_tileset;
+
 	std::string GuessResourceFormat(const std::vector<uint8_t>& data)
 	{
 		auto compare = [&data](const char* magic, size_t size) -> bool
@@ -69,6 +71,11 @@ namespace BearLibTerminal
 	char32_t Tileset::GetOffset() const
 	{
 		return m_offset;
+	}
+
+	Size Tileset::GetSpacing() const
+	{
+		return m_spacing;
 	}
 
 	bool Tileset::Provides(char32_t code)
@@ -192,5 +199,15 @@ namespace BearLibTerminal
 		auto i = g_tilesets.find(offset);
 		if (i != g_tilesets.end())
 			RemoveTileset(i->second);
+	}
+
+	void UpdateDynamicTileset(Size cell_size)
+	{
+		if (g_dynamic_tileset)
+		{
+			RemoveTileset(g_dynamic_tileset);
+		}
+
+		g_dynamic_tileset = std::make_shared<DynamicTileset>(0xFFFFFF, cell_size);
 	}
 }

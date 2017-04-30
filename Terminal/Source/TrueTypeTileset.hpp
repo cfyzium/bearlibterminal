@@ -44,7 +44,6 @@ namespace BearLibTerminal
 	private:
 		FT_UInt GetGlyphIndex(char32_t code);
 		Size m_tile_size;
-		Size m_spacing;
 		TileAlignment m_alignment;
 		std::unique_ptr<Encoding8> m_codepage;
 		std::vector<uint8_t> m_font_data;

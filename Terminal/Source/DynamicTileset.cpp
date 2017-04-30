@@ -44,6 +44,11 @@ namespace BearLibTerminal
 		}
 	}
 
+	DynamicTileset::DynamicTileset(char32_t offset, Size cell_size):
+		Tileset(offset),
+		m_tile_size(cell_size)
+	{ }
+
 	Bitmap MakeBoxLines(Size size, std::vector<int> pattern)
 	{
 		Bitmap result(size, Color(0, 0, 0, 0));
@@ -307,14 +312,7 @@ namespace BearLibTerminal
 
 	bool DynamicTileset::Provides(char32_t code)
 	{
-		// Unicode replacement character
-		if (code == kUnicodeReplacementCharacter) return true;
-
-		// Box drawing symbols
-		if (code >= 0x2500 && code <= 0x257F) return true;
-		if (code >= 0x2580 && code <= 0x259F) return true;
-
-		return false;
+		return IsDynamicTile(code);
 	}
 
 	const char box_lines[][25] =
@@ -475,6 +473,125 @@ namespace BearLibTerminal
 		{1, 1.0f-0.125f, 1.0f}     // 2595:▕ RIGHT ONE EIGHTH BLOCK
 	};
 
+	const bool quadrants[][4] =
+	{
+		{false, false, true,  false}, // 2596: ▖ QUADRANT LOWER LEFT
+		{false, false, false, true},  // 2597: ▗ QUADRANT LOWER RIGHT
+		{true,  false, false, false}, // 2598: ▘ QUADRANT UPPER LEFT
+		{true,  false, true,  true},  // 2599: ▙ QUADRANT UPPER LEFT AND LOWER LEFT AND LOWER RIGHT
+		{true,  false, false, true},  // 259A:  ▚ QUADRANT UPPER LEFT AND LOWER RIGHT
+		{true,  true,  true,  false}, // 259B: ▛ QUADRANT UPPER LEFT AND UPPER RIGHT AND LOWER LEFT
+		{true,  true,  false, true},  // 259C: ▜ QUADRANT UPPER LEFT AND UPPER RIGHT AND LOWER RIGHT
+		{false, true,  false, false}, // 259D: ▝ QUADRANT UPPER RIGHT
+		{false, true,  true,  false}, // 259E: ▞ QUADRANT UPPER RIGHT AND LOWER LEFT
+		{false, true,  true,  true}   // 259F: ▟ QUADRANT UPPER RIGHT AND LOWER LEFT AND LOWER RIGHT
+	};
+
+	bool IsDynamicTile(char32_t code)
+	{
+		code = (code & Tileset::kCharOffsetMask);
+
+		return (code >= 0x2500 && code <= 0x259F) || code == kUnicodeReplacementCharacter;
+	}
+
+	Bitmap GenerateDynamicTile(char32_t code, Size size)
+	{
+		code = (code & Tileset::kCharOffsetMask);
+
+		if ((code >= 0x2500 && code <= 0x2503) ||
+			(code >= 0x250C && code <= 0x254B) ||
+			(code >= 0x2550 && code <= 0x256C) ||
+			(code >= 0x2574 && code <= 0x257F))
+		{
+			int i = code - 0x2500;
+			std::vector<int> tmp;
+			for (int j=0; j<25; j++)
+				tmp.push_back(box_lines[i][j]);
+			return MakeBoxLines(size, tmp);
+		}
+		else if ((code >= 0x2580 && code <= 0x2590) || (code >= 0x2594 && code <= 0x2595))
+		{
+			int i = code - 0x2580;
+			if (splits[i][0] > 0)
+				return MakeHorisontalSplit(size, splits[i][1], splits[i][2]);
+			else
+				return MakeVerticalSplit(size, splits[i][1], splits[i][2]);
+		}
+		else if (code >= 0x2596 && code <= 0x259F)
+		{
+			int i = code - 0x2596;
+			return MakeQuadrandTile(size, quadrants[i][0], quadrants[i][1], quadrants[i][2], quadrants[i][3]);
+		}
+		else
+		{
+			switch (code)
+			{
+			// U+2500..U+2503: Light and heavy solid lines
+			// U+2504..U+250B: Light and heavy dashed lines
+			case 0x2504:
+				return MakeDashLines(size, false, false, 3); // Single triple horisontal dash
+				break;
+			case 0x2505:
+				return MakeDashLines(size, false, true, 3); // Wide triple horisontal dash
+				break;
+			case 0x2506:
+				return MakeDashLines(size, true, false, 3); // Single triple vertical dash
+				break;
+			case 0x2507:
+				return MakeDashLines(size, true, true, 3); // Wide triple horisontal dash
+				break;
+			case 0x2508:
+				return MakeDashLines(size, false, false, 4); // Singlee quadruple horisontal dash
+				break;
+			case 0x2509:
+				return MakeDashLines(size, false, true, 4); // Wide quadruple horisontal dash
+				break;
+			case 0x250A:
+				return MakeDashLines(size, true, false, 4); // Single quadruple vertical dash
+				break;
+			case 0x250B:
+				return MakeDashLines(size, true, true, 4); // Wide quadruple vertical dash
+				break;
+			// U+250C..U+254B: Light and heavy line box components
+			// U+254C..U+254F: Light and heavy dashed lines
+			case 0x254C:
+				return MakeDashLines(size, false, false, 2); // BOX DRAWINGS LIGHT DOUBLE DASH HORIZONTAL
+				break;
+			case 0x254D:
+				return MakeDashLines(size, false, true, 2); // BOX DRAWINGS HEAVY DOUBLE DASH HORIZONTAL
+				break;
+			case 0x254E:
+				return MakeDashLines(size, true, false, 2); // BOX DRAWINGS LIGHT DOUBLE DASH VERTICAL
+				break;
+			case 0x254F:
+				return MakeDashLines(size, true, true, 2); // BOX DRAWINGS HEAVY DOUBLE DASH VERTICAL
+				break;
+			// U+2550..U+2551: Double lines
+			// U+2552..U+256C: Light and double line box components
+			// U+2574..U+257B: Light and heavy half lines
+			// U+257C..U+257F: Mixed light and heavy lines
+			// U+2580..U+2590: Block elements 1
+			// U+2591..U+2593: Shade characters
+			case 0x2591:
+				return Bitmap(size, Color(64, 255, 255, 255)); // ░ LIGHT SHADE
+				break;
+			case 0x2592:
+				return Bitmap(size, Color(128, 255, 255, 255)); // ▒ MEDIUM SHADE
+				break;
+			case 0x2593:
+				return Bitmap(size, Color(192, 255, 255, 255)); // ▓ DARK SHADE
+				break;
+			// U+2594..U+2595: Block elements 2
+			// U+2596..U+259F: Block elements 3 (quadrants)
+			default:
+				return MakeNotACharacterTile(size);
+				break;
+			}
+		}
+
+		return MakeNotACharacterTile(size);
+	}
+
 	std::shared_ptr<TileInfo> DynamicTileset::Get(char32_t code)
 	{
 		if (!Provides(code))
@@ -484,526 +601,26 @@ namespace BearLibTerminal
 
 		auto i = m_cache.find(code);
 		if (i != m_cache.end())
+		{
 			return i->second;
-
-		Bitmap tile;
-
-		if ((code >= 0x2500 && code <= 0x2503) ||
-			(code >= 0x250C && code <= 0x254B) ||
-			(code >= 0x2550 && code <= 0x256C) ||
-			(code >= 0x2574 && code <= 0x257F))
-		{
-			std::vector<int> tmp;
-			for (int i=0; i<25; i++)
-				tmp.push_back(box_lines[code-0x2500][i]);
-			tile = MakeBoxLines(m_tile_size, tmp);//box_lines[code-0x2500]);
-		}
-		else if ((code >= 0x2580 && code <= 0x2590) || (code >= 0x2594 && code <= 0x2595))
-		{
-			int i = code-0x2580;
-			if (splits[i][0] > 0)
-				tile = MakeHorisontalSplit(m_tile_size, splits[i][1], splits[i][2]);
-			else
-				tile = MakeVerticalSplit(m_tile_size, splits[i][1], splits[i][2]);
-		}
-		else
-
-		switch (code)
-		{
-		// Light and heavy solid lines
-		/*
-		case 0x2500:
-			tile = MakeBoxLines(m_tile_size, {0,0,0,0,0, 0,0,0,0,0, 1,1,1,1,1, 0,0,0,0,0, 0,0,0,0,0}); // Single horisontal
-			break;
-		case 0x2501:
-			tile = MakeBoxLines(m_tile_size, {0,0,0,0,0, 1,1,1,1,1, 1,1,1,1,1, 1,1,1,1,1, 0,0,0,0,0}); // Wide horisontal
-			break;
-		case 0x2502:
-			tile = MakeBoxLines(m_tile_size, {0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0}); // Single vertical
-			break;
-		case 0x2503:
-			tile = MakeBoxLines(m_tile_size, {0,1,1,1,0, 0,1,1,1,0, 0,1,1,1,0, 0,1,1,1,0, 0,1,1,1,0}); // Wide vertical
-			break;
-		//*/
-		// Light and heavy dashed lines
-		case 0x2504:
-			tile = MakeDashLines(m_tile_size, false, false, 3); // Single triple horisontal dash
-			break;
-		case 0x2505:
-			tile = MakeDashLines(m_tile_size, false, true, 3); // Wide triple horisontal dash
-			break;
-		case 0x2506:
-			tile = MakeDashLines(m_tile_size, true, false, 3); // Single triple vertical dash
-			break;
-		case 0x2507:
-			tile = MakeDashLines(m_tile_size, true, true, 3); // Wide triple horisontal dash
-			break;
-		case 0x2508:
-			tile = MakeDashLines(m_tile_size, false, false, 4); // Singlee quadruple horisontal dash
-			break;
-		case 0x2509:
-			tile = MakeDashLines(m_tile_size, false, true, 4); // Wide quadruple horisontal dash
-			break;
-		case 0x250A:
-			tile = MakeDashLines(m_tile_size, true, false, 4); // Single quadruple vertical dash
-			break;
-		case 0x250B:
-			tile = MakeDashLines(m_tile_size, true, true, 4); // Wide quadruple vertical dash
-			break;
-		/*
-		// Light and heavy line box components
-		case 0x250C:
-			tile = MakeBoxLines(m_tile_size, {0,0,0,0,0, 0,0,0,0,0, 0,0,1,1,1, 0,0,1,0,0, 0,0,1,0,0}); // Single right and bottom
-			break;
-		case 0x250D:
-			tile = MakeBoxLines(m_tile_size, {0,0,0,0,0, 0,0,1,1,1, 0,0,1,1,1, 0,0,1,1,1, 0,0,1,0,0}); // Wide right and single bottom
-			break;
-		case 0x250E:
-			tile = MakeBoxLines(m_tile_size, {0,0,0,0,0, 0,0,0,0,0, 0,0,1,1,1, 0,1,1,1,0, 0,1,1,1,0}); // Single right and wide bottom
-			break;
-		case 0x250F:
-			tile = MakeBoxLines(m_tile_size, {0,0,0,0,0, 0,1,1,1,1, 0,1,1,1,1, 0,1,1,1,1, 0,1,1,1,0}); // Wide right and bottom
-			break;
-		case 0x2510:
-			tile = MakeBoxLines(m_tile_size, {0,0,0,0,0, 0,0,0,0,0, 1,1,1,0,0, 0,0,1,0,0, 0,0,1,0,0}); // Single left and bottom
-			break;
-		case 0x2511:
-			tile = MakeBoxLines(m_tile_size, {0,0,0,0,0, 1,1,1,0,0, 1,1,1,0,0, 1,1,1,0,0, 0,0,1,0,0}); // Wide left and single bottom
-			break;
-		case 0x2512:
-			tile = MakeBoxLines(m_tile_size, {0,0,0,0,0, 0,0,0,0,0, 1,1,1,1,0, 0,1,1,1,0, 0,1,1,1,0}); // Single left and wide bottom
-			break;
-		case 0x2513:
-			tile = MakeBoxLines(m_tile_size, {0,0,0,0,0, 1,1,1,1,0, 1,1,1,1,0, 1,1,1,1,0, 0,1,1,1,0}); // Wide left and bottom
-			break;
-		case 0x2514:
-			tile = MakeBoxLines(m_tile_size, {0,0,1,0,0, 0,0,1,0,0, 0,0,1,1,1, 0,0,0,0,0, 0,0,0,0,0}); // Single top and right
-			break;
-		case 0x2515:
-			tile = MakeBoxLines(m_tile_size, {0,0,1,0,0, 0,0,1,1,1, 0,0,1,1,1, 0,0,1,1,1, 0,0,0,0,0}); // Single top and wide right
-			break;
-		case 0x2516:
-			tile = MakeBoxLines(m_tile_size, {0,1,1,1,0, 0,1,1,1,0, 0,1,1,1,1, 0,0,0,0,0, 0,0,0,0,0}); // Wide top and single right
-			break;
-		case 0x2517:
-			tile = MakeBoxLines(m_tile_size, {0,1,1,1,0, 0,1,1,1,1, 0,1,1,1,1, 0,1,1,1,1, 0,0,0,0,0}); // Wide top and right
-			break;
-		case 0x2518:
-			tile = MakeBoxLines(m_tile_size, {0,0,1,0,0, 0,0,1,0,0, 1,1,1,0,0, 0,0,0,0,0, 0,0,0,0,0}); // Single left and top
-			break;
-		case 0x2519:
-			tile = MakeBoxLines(m_tile_size, {0,0,1,0,0, 1,1,1,0,0, 1,1,1,0,0, 1,1,1,0,0, 0,0,0,0,0}); // Wide left and single top
-			break;
-		case 0x251A:
-			tile = MakeBoxLines(m_tile_size, {0,1,1,1,0, 0,1,1,1,0, 1,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0}); // Single left and wide top
-			break;
-		case 0x251B:
-			tile = MakeBoxLines(m_tile_size, {0,1,1,1,0, 1,1,1,1,0, 1,1,1,1,0, 1,1,1,1,0, 0,0,0,0,0}); // Wide left and top
-			break;
-		case 0x251C:
-			tile = MakeBoxLines(m_tile_size, {0,0,1,0,0, 0,0,1,0,0, 0,0,1,1,1, 0,0,1,0,0, 0,0,1,0,0}); // Single top, right and bottom
-			break;
-		case 0x251D:
-			tile = MakeBoxLines(m_tile_size, {0,0,1,0,0, 0,0,1,1,1, 0,0,1,1,1, 0,0,1,1,1, 0,0,1,0,0}); // Single top and bottom, wide right
-			break;
-		case 0x251E:
-			tile = MakeBoxLines(m_tile_size, {0,1,1,1,0, 0,1,1,1,0, 0,1,1,1,1, 0,0,1,0,0, 0,0,1,0,0}); // Wide top, single right and bottom
-			break;
-		case 0x251F:
-			tile = MakeBoxLines(m_tile_size, {0,0,1,0,0, 0,0,1,0,0, 0,1,1,1,1, 0,1,1,1,0, 0,1,1,1,0}); // Single top and right, wide bottom
-			break;
-		case 0x2520:
-			tile = MakeBoxLines(m_tile_size, {0,1,1,1,0, 0,1,1,1,0, 0,1,1,1,1, 0,1,1,1,0, 0,1,1,1,0}); // Wide top and bottom, single right
-			break;
-		case 0x2521:
-			tile = MakeBoxLines(m_tile_size, {0,1,1,1,0, 0,1,1,1,1, 0,1,1,1,1, 0,1,1,1,1, 0,0,1,0,0}); // Wide top and right, single bottom
-			break;
-		case 0x2522:
-			tile = MakeBoxLines(m_tile_size, {0,0,1,0,0, 0,1,1,1,1, 0,1,1,1,1, 0,1,1,1,1, 0,1,1,1,0}); // Single top, wide right and bottom
-			break;
-		case 0x2523:
-			tile = MakeBoxLines(m_tile_size, {0,1,1,1,0, 0,1,1,1,1, 0,1,1,1,1, 0,1,1,1,1, 0,0,0,0,0}); // Wide top, right and bottom
-			break;
-		case 0x2524:
-			tile = MakeBoxLines(m_tile_size, {0,0,1,0,0, 0,0,1,0,0, 1,1,1,0,0, 0,0,1,0,0, 0,0,1,0,0}); // Single left, top and bottom
-			break;
-		case 0x2525:
-			tile = MakeBoxLines(m_tile_size, {0,0,1,0,0, 1,1,1,0,0, 1,1,1,0,0, 1,1,1,0,0, 0,0,1,0,0}); // Wide left, single top and bottom
-			break;
-		case 0x2526:
-			tile = MakeBoxLines(m_tile_size, {0,1,1,1,0, 0,1,1,1,0, 1,1,1,1,0, 0,0,1,0,0, 0,0,1,0,0}); // Single left and bottom, wide top
-			break;
-		case 0x2527:
-			tile = MakeBoxLines(m_tile_size, {0,0,1,0,0, 0,0,1,0,0, 1,1,1,1,0, 0,1,1,1,0, 0,1,1,1,0}); // Single left and top, wide bottom
-			break;
-		case 0x2528:
-			tile = MakeBoxLines(m_tile_size, {0,1,1,1,0, 0,1,1,1,0, 1,1,1,1,0, 0,1,1,1,0, 0,1,1,1,0}); // Single left, wide top and bottom
-			break;
-		case 0x2529:
-			tile = MakeBoxLines(m_tile_size, {0,1,1,1,0, 1,1,1,1,0, 1,1,1,1,0, 1,1,1,1,0, 0,0,1,0,0}); // Wide left and top, single bottom
-			break;
-		case 0x252A:
-			tile = MakeBoxLines(m_tile_size, {0,0,1,0,0, 1,1,1,1,0, 1,1,1,1,0, 1,1,1,1,0, 0,1,1,1,0}); // Wide left and bottom, single top
-			break;
-		case 0x252B:
-			tile = MakeBoxLines(m_tile_size, {0,1,1,1,0, 1,1,1,1,0, 1,1,1,1,0, 1,1,1,1,0, 0,1,1,1,0}); // Wide left, top and bottom
-			break;
-		case 0x252C:
-			tile = MakeBoxLines(m_tile_size, {0,0,0,0,0, 0,0,0,0,0, 1,1,1,1,1, 0,0,1,0,0, 0,0,1,0,0}); // Single left, right and bottom
-			break;
-		case 0x252D:
-			tile = MakeBoxLines(m_tile_size, {0,0,0,0,0, 1,1,1,0,0, 1,1,1,1,1, 1,1,1,0,0, 0,0,1,0,0}); // Wide left, single right and bottom
-			break;
-		case 0x252E:
-			tile = MakeBoxLines(m_tile_size, {0,0,0,0,0, 0,0,1,1,1, 1,1,1,1,1, 0,0,1,1,1, 0,0,1,0,0}); // Single left and bottom, wide right
-			break;
-		case 0x252F:
-			tile = MakeBoxLines(m_tile_size, {0,0,0,0,0, 1,1,1,1,1, 1,1,1,1,1, 1,1,1,1,1, 0,1,1,1,0}); // Wide left and right, signle bottom
-			break;
-		case 0x2530:
-			tile = MakeBoxLines(m_tile_size, {0,0,0,0,0, 0,0,0,0,0, 1,1,1,1,1, 0,1,1,1,0, 0,1,1,1,0}); // Single left and right, wide bottom
-			break;
-		case 0x2531:
-			tile = MakeBoxLines(m_tile_size, {0,0,0,0,0, 1,1,1,1,0, 1,1,1,1,1, 1,1,1,1,0, 0,1,1,1,0}); // Wide left and bottom, single right
-			break;
-		case 0x2532:
-			tile = MakeBoxLines(m_tile_size, {0,0,0,0,0, 0,1,1,1,1, 1,1,1,1,1, 0,1,1,1,1, 0,1,1,1,0}); // Single left, wide right and bottom
-			break;
-		case 0x2533:
-			tile = MakeBoxLines(m_tile_size, {0,0,0,0,0, 1,1,1,1,1, 1,1,1,1,1, 1,1,1,1,1, 0,1,1,1,0}); // Wide left, right and bottom
-			break;
-		case 0x2534:
-			tile = MakeBoxLines(m_tile_size, {0,0,1,0,0, 0,0,1,0,0, 1,1,1,1,1, 0,0,0,0,0, 0,0,0,0,0}); // Single left, top and right
-			break;
-		case 0x2535:
-			tile = MakeBoxLines(m_tile_size, {0,0,1,0,0, 1,1,1,0,0, 1,1,1,1,1, 1,1,1,0,0, 0,0,0,0,0}); // Wide left, single top and right
-			break;
-		case 0x2536:
-			tile = MakeBoxLines(m_tile_size, {0,0,1,0,0, 0,0,1,1,1, 1,1,1,1,1, 0,0,1,1,1, 0,0,0,0,0}); // Single left and top, wide right
-			break;
-		case 0x2537:
-			tile = MakeBoxLines(m_tile_size, {0,0,1,0,0, 1,1,1,1,1, 1,1,1,1,1, 1,1,1,1,1, 0,0,0,0,0}); // Wide left and right, single top
-			break;
-		case 0x2538:
-			tile = MakeBoxLines(m_tile_size, {0,1,1,1,0, 0,1,1,1,0, 1,1,1,1,1, 0,0,0,0,0, 0,0,0,0,0}); // Single left and right, wide top
-			break;
-		case 0x2539:
-			tile = MakeBoxLines(m_tile_size, {0,1,1,1,0, 1,1,1,1,0, 1,1,1,1,1, 1,1,1,1,0, 0,0,0,0,0}); // Wide left and top, single right
-			break;
-		case 0x253A:
-			tile = MakeBoxLines(m_tile_size, {0,1,1,1,0, 0,1,1,1,0, 0,1,1,1,1, 0,1,1,1,0, 0,1,1,1,0}); // Wide top and bottom, single right
-			break;
-		case 0x253B:
-			tile = MakeBoxLines(m_tile_size, {0,1,1,1,0, 1,1,1,1,0, 1,1,1,1,0, 1,1,1,1,0, 0,1,1,1,0}); // Wide left, top and bottom
-			break;
-		case 0x253C:
-			tile = MakeBoxLines(m_tile_size, {0,0,1,0,0, 0,0,1,0,0, 1,1,1,1,1, 0,0,1,0,0, 0,0,1,0,0}); // Single left, top, right and bottom
-			break;
-		case 0x253D:
-			tile = MakeBoxLines(m_tile_size, {0,0,1,0,0, 1,1,1,0,0, 1,1,1,1,1, 1,1,1,0,0, 0,0,1,0,0}); // Wide left, single top, right and bottom
-			break;
-		case 0x253E:
-			tile = MakeBoxLines(m_tile_size, {0,0,1,0,0, 0,0,1,1,1, 1,1,1,1,1, 0,0,1,1,1, 0,0,1,0,0}); // Single left, top and bottom, wide right
-			break;
-		case 0x253F:
-			tile = MakeBoxLines(m_tile_size, {0,0,1,0,0, 1,1,1,1,1, 1,1,1,1,1, 1,1,1,1,1, 0,0,1,0,0}); // Wide left and right, single top and bottom
-			break;
-		case 0x2540:
-			tile = MakeBoxLines(m_tile_size, {0,1,1,1,0, 0,1,1,1,0, 1,1,1,1,1, 0,0,1,0,0, 0,0,1,0,0}); // Single left, right and bottom, wide top
-			break;
-		case 0x2541:
-			tile = MakeBoxLines(m_tile_size, {0,0,1,0,0, 0,0,1,0,0, 1,1,1,1,1, 0,1,1,1,0, 0,1,1,1,0}); // Single left, top and right, wide bottom
-			break;
-		case 0x2542:
-			tile = MakeBoxLines(m_tile_size, {0,1,1,1,0, 0,1,1,1,0, 1,1,1,1,1, 0,1,1,1,0, 0,1,1,1,0}); // Single left and right, wide top and bottom
-			break;
-		case 0x2543:
-			tile = MakeBoxLines(m_tile_size, {0,1,1,1,0, 1,1,1,1,0, 1,1,1,1,1, 1,1,1,1,0, 0,0,1,0,0}); // Wide left and top, single right and bottom
-			break;
-		case 0x2544:
-			tile = MakeBoxLines(m_tile_size, {0,1,1,1,0, 0,1,1,1,1, 1,1,1,1,1, 0,1,1,1,1, 0,0,1,0,0}); // Single left and bottom, wide top and right
-			break;
-		case 0x2545:
-			tile = MakeBoxLines(m_tile_size, {0,0,1,0,0, 1,1,1,1,0, 1,1,1,1,1, 1,1,1,1,0, 0,1,1,1,0}); // Wide left and bottom, single top and right
-			break;
-		case 0x2546:
-			tile = MakeBoxLines(m_tile_size, {0,0,1,0,0, 0,0,1,1,1, 1,1,1,1,1, 0,1,1,1,1, 0,1,1,1,0}); // Single left and top, wide right and bottom
-			break;
-		case 0x2547:
-			tile = MakeBoxLines(m_tile_size, {0,1,1,1,0, 1,1,1,1,1, 1,1,1,1,1, 1,1,1,1,1, 0,0,1,0,0}); // Wide left, top and right, single bottom
-			break;
-		case 0x2548:
-			tile = MakeBoxLines(m_tile_size, {0,0,1,0,0, 1,1,1,1,1, 1,1,1,1,1, 1,1,1,1,1, 0,1,1,1,0}); // Wide left, right and bottom, single top
-			break;
-		case 0x2549:
-			tile = MakeBoxLines(m_tile_size, {0,1,1,1,0, 1,1,1,1,0, 1,1,1,1,1, 1,1,1,1,0, 0,1,1,1,0}); // Wide left, top and bottom, single right
-			break;
-		case 0x254A:
-			tile = MakeBoxLines(m_tile_size, {0,1,1,1,0, 0,1,1,1,1, 1,1,1,1,1, 0,1,1,1,1, 0,1,1,1,0}); // Single left, wide top, right and bottom
-			break;
-		case 0x254B:
-			tile = MakeBoxLines(m_tile_size, {0,1,1,1,0, 1,1,1,1,1, 1,1,1,1,1, 1,1,1,1,1, 0,1,1,1,0}); // Wide left, top, right and bottom
-			break;
-		//*/
-		// Light and heavy dashed lines
-		case 0x254C:
-			tile = MakeDashLines(m_tile_size, false, false, 2); // BOX DRAWINGS LIGHT DOUBLE DASH HORIZONTAL
-			break;
-		case 0x254D:
-			tile = MakeDashLines(m_tile_size, false, true, 2); // BOX DRAWINGS HEAVY DOUBLE DASH HORIZONTAL
-			break;
-		case 0x254E:
-			tile = MakeDashLines(m_tile_size, true, false, 2); // BOX DRAWINGS LIGHT DOUBLE DASH VERTICAL
-			break;
-		case 0x254F:
-			tile = MakeDashLines(m_tile_size, true, true, 2); // BOX DRAWINGS HEAVY DOUBLE DASH VERTICAL
-			break;
-		/*
-		// Double lines
-		case 0x2550:
-			tile = MakeBoxLines(m_tile_size, {0,0,0,0,0, 1,1,1,1,1, 0,0,0,0,0, 1,1,1,1,1, 0,0,0,0,0}); // Horisontal double
-			break;
-		case 0x2551:
-			tile = MakeBoxLines(m_tile_size, {0,1,0,1,0, 0,1,0,1,0, 0,1,0,1,0, 0,1,0,1,0, 0,1,0,1,0}); // Vertical double
-			break;
-		// Light and double line box components
-		case 0x2552:
-			tile = MakeBoxLines(m_tile_size, {0,0,0,0,0, 0,0,1,1,1, 0,0,1,0,0, 0,0,1,1,1, 0,0,1,0,0}); // Double right, single bottom
-			break;
-		case 0x2553:
-			tile = MakeBoxLines(m_tile_size, {0,0,0,0,0, 0,0,0,0,0, 0,1,1,1,1, 0,1,0,1,0, 0,1,0,1,0}); // Single right, double bottom
-			break;
-		case 0x2554:
-			tile = MakeBoxLines(m_tile_size, {0,0,0,0,0, 0,1,1,1,1, 0,1,0,0,0, 0,1,0,1,1, 0,1,0,1,0}); // Double right and bottom
-			break;
-		case 0x2555:
-			tile = MakeBoxLines(m_tile_size, {0,0,0,0,0, 1,1,1,0,0, 0,0,1,0,0, 1,1,1,0,0, 0,0,1,0,0}); // Double left and single bottom
-			break;
-		case 0x2556:
-			tile = MakeBoxLines(m_tile_size, {0,0,0,0,0, 0,0,0,0,0, 1,1,1,1,0, 0,1,0,1,0, 0,1,0,1,0}); // Single left and double bottom
-			break;
-		case 0x2557:
-			tile = MakeBoxLines(m_tile_size, {0,0,0,0,0, 1,1,1,1,0, 0,0,0,1,0, 1,1,0,1,0, 0,1,0,1,0}); // Double left and bottom
-			break;
-		case 0x2558:
-			tile = MakeBoxLines(m_tile_size, {0,0,1,0,0, 0,0,1,1,1, 0,0,1,0,0, 0,0,1,1,1, 0,0,0,0,0}); // Single top and double right
-			break;
-		case 0x2559:
-			tile = MakeBoxLines(m_tile_size, {0,1,0,1,0, 0,1,0,1,0, 0,1,1,1,1, 0,0,0,0,0, 0,0,0,0,0}); // Double top and single right
-			break;
-		case 0x255A:
-			tile = MakeBoxLines(m_tile_size, {0,1,0,1,0, 0,1,0,1,1, 0,1,0,0,0, 0,1,1,1,1, 0,0,0,0,0}); // Double top and right
-			break;
-		case 0x255B:
-			tile = MakeBoxLines(m_tile_size, {0,0,1,0,0, 1,1,1,0,0, 0,0,1,0,0, 1,1,1,0,0, 0,0,0,0,0}); // Double left, single up
-			break;
-		case 0x255C:
-			tile = MakeBoxLines(m_tile_size, {0,1,0,1,0, 0,1,0,1,0, 1,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0}); // Single left and double top
-			break;
-		case 0x255D:
-			tile = MakeBoxLines(m_tile_size, {0,1,0,1,0, 1,1,0,1,0, 0,0,0,1,0, 1,1,1,1,0, 0,0,0,0,0}); // Double left and top
-			break;
-		case 0x255E:
-			tile = MakeBoxLines(m_tile_size, {0,0,1,0,0, 0,0,1,1,1, 0,0,1,0,0, 0,0,1,1,1, 0,0,1,0,0}); // Single top and bottom, double right
-			break;
-		case 0x255F:
-			tile = MakeBoxLines(m_tile_size, {0,1,0,1,0, 0,1,0,1,0, 0,1,0,1,1, 0,1,0,1,0, 0,1,0,1,0}); // Double top and bottom, single right
-			break;
-		case 0x2560:
-			tile = MakeBoxLines(m_tile_size, {0,1,0,1,0, 0,1,0,1,1, 0,1,0,0,0, 0,1,0,1,1, 0,1,0,1,0}); // Double top, right and bottom
-			break;
-		case 0x2561:
-			tile = MakeBoxLines(m_tile_size, {0,0,1,0,0, 1,1,1,0,0, 0,0,1,0,0, 1,1,1,0,0, 0,0,1,0,0}); // Double left, single top and bottom
-			break;
-		case 0x2562:
-			tile = MakeBoxLines(m_tile_size, {0,1,0,1,0, 0,1,0,1,0, 1,1,0,1,0, 0,1,0,1,0, 0,1,0,1,0}); // Single left, double top and bottom
-			break;
-		case 0x2563:
-			tile = MakeBoxLines(m_tile_size, {0,1,0,1,0, 1,1,0,1,0, 0,0,0,1,0, 1,1,0,1,0, 0,1,0,1,0}); // Double left, top bottom
-			break;
-		case 0x2564:
-			tile = MakeBoxLines(m_tile_size, {0,0,0,0,0, 1,1,1,1,1, 0,0,0,0,0, 1,1,1,1,1, 0,0,1,0,0}); // Double left and right, single bottom
-			break;
-		case 0x2565:
-			tile = MakeBoxLines(m_tile_size, {0,0,0,0,0, 0,0,0,0,0, 1,1,1,1,1, 0,1,0,1,0, 0,1,0,1,0}); // Single left and right, double bottom
-			break;
-		case 0x2566:
-			tile = MakeBoxLines(m_tile_size, {0,0,0,0,0, 1,1,1,1,1, 0,0,0,0,0, 1,1,0,1,1, 0,1,0,1,0}); // Double left, right and bottom
-			break;
-		case 0x2567:
-			tile = MakeBoxLines(m_tile_size, {0,0,1,0,0, 1,1,1,1,1, 0,0,0,0,0, 1,1,1,1,1, 0,0,0,0,0}); // Double left and right, single top
-			break;
-		case 0x2568:
-			tile = MakeBoxLines(m_tile_size, {0,1,0,1,0, 0,1,0,1,0, 1,1,1,1,1, 0,0,0,0,0, 0,0,0,0,0}); // Single left and right, double top
-			break;
-		case 0x2569:
-			tile = MakeBoxLines(m_tile_size, {0,1,0,1,0, 1,1,0,1,1, 0,0,0,0,0, 1,1,1,1,1, 0,0,0,0,0}); // Double left, top and right
-			break;
-		case 0x256A:
-			tile = MakeBoxLines(m_tile_size, {0,0,1,0,0, 1,1,1,1,1, 0,0,0,0,0, 1,1,1,1,1, 0,0,1,0,0}); // Double left and right, single top and bottom
-			break;
-		case 0x256B:
-			tile = MakeBoxLines(m_tile_size, {0,1,0,1,0, 0,1,0,1,0, 1,1,0,1,1, 0,1,0,1,0, 0,1,0,1,0}); // Single left and right, double top and bottom
-			break;
-		case 0x256C:
-			tile = MakeBoxLines(m_tile_size, {0,1,0,1,0, 1,1,0,1,1, 0,0,0,0,0, 1,1,0,1,1, 0,1,0,1,0}); // Double horisontal and vertical
-			break;
-		// Light and heavy half lines
-		case 0x2574:
-			tile = MakeBoxLines(m_tile_size, {0,0,0,0,0, 0,0,0,0,0, 1,1,1,0,0, 0,0,0,0,0, 0,0,0,0,0}); // Single left
-			break;
-		case 0x2575:
-			tile = MakeBoxLines(m_tile_size, {0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,0,0,0, 0,0,0,0,0}); // Single up
-			break;
-		case 0x2576:
-			tile = MakeBoxLines(m_tile_size, {0,0,0,0,0, 0,0,0,0,0, 0,0,1,1,1, 0,0,0,0,0, 0,0,0,0,0}); // Single right
-			break;
-		case 0x2577:
-			tile = MakeBoxLines(m_tile_size, {0,0,0,0,0, 0,0,0,0,0, 0,0,1,0,0, 0,0,1,0,0, 0,0,1,0,0}); // Single down
-			break;
-		case 0x2578:
-			tile = MakeBoxLines(m_tile_size, {0,0,0,0,0, 1,1,1,0,0, 1,1,1,0,0, 1,1,1,0,0, 0,0,0,0,0}); // Wide left
-			break;
-		case 0x2579:
-			tile = MakeBoxLines(m_tile_size, {0,1,1,1,0, 0,1,1,1,0, 0,1,1,1,0, 0,0,0,0,0, 0,0,0,0,0}); // Wide up
-			break;
-		case 0x257A:
-			tile = MakeBoxLines(m_tile_size, {0,0,0,0,0, 0,0,1,1,1, 0,0,1,1,1, 0,0,1,1,1, 0,0,0,0,0}); // Wide right
-			break;
-		case 0x257B:
-			tile = MakeBoxLines(m_tile_size, {0,0,0,0,0, 0,0,0,0,0, 0,1,1,1,0, 0,1,1,1,0, 0,1,1,1,0}); // Wide down
-			break;
-		// Mixed light and heavy lines
-		case 0x257C:
-			tile = MakeBoxLines(m_tile_size, {0,0,0,0,0, 0,0,1,1,1, 1,1,1,1,1, 0,0,1,1,1, 0,0,0,0,0}); // Single left and wide right
-			break;
-		case 0x257D:
-			tile = MakeBoxLines(m_tile_size, {0,0,1,0,0, 0,0,1,0,0, 0,1,1,1,0, 0,1,1,1,0, 0,1,1,1,0}); // Single up and wide down
-			break;
-		case 0x257E:
-			tile = MakeBoxLines(m_tile_size, {0,0,0,0,0, 1,1,1,0,0, 1,1,1,1,1, 1,1,1,0,0, 0,0,0,0,0}); // Wide left and single right
-			break;
-		case 0x257F:
-			tile = MakeBoxLines(m_tile_size, {0,1,1,1,0, 0,1,1,1,0, 0,1,1,1,0, 0,0,1,0,0, 0,0,1,0,0}); // Wide up and single down
-			break;
-		//*/
-		/*
-		// Block elements
-		case 0x2580:
-			tile = MakeVerticalSplit(m_tile_size, 0.0f, 0.5f); // ▀ UPPER HALF BLOCK
-			break;
-		case 0x2581:
-			tile = MakeVerticalSplit(m_tile_size, 1.0f-0.125f, 1.0f); // ▁ LOWER ONE EIGHTH BLOCK
-			break;
-		case 0x2582:
-			tile = MakeVerticalSplit(m_tile_size, 0.75f, 1.0f); // ▂ LOWER ONE QUARTER BLOCK
-			break;
-		case 0x2583:
-			tile = MakeVerticalSplit(m_tile_size, 1.0f-3*0.125f, 1.0f); // ▃ LOWER THREE EIGHTHS BLOCK
-			break;
-		case 0x2584:
-			tile = MakeVerticalSplit(m_tile_size, 0.5f, 1.0f); // ▄ LOWER HALF BLOCK
-			break;
-		case 0x2585:
-			tile = MakeVerticalSplit(m_tile_size, 1.0f-5*0.125f, 1.0f); // ▅ LOWER FIVE EIGHTHS BLOCK
-			break;
-		case 0x2586:
-			tile = MakeVerticalSplit(m_tile_size, 0.25f, 1.0f); // ▆ LOWER THREE QUARTERS BLOCK
-			break;
-		case 0x2587:
-			tile = MakeVerticalSplit(m_tile_size, 0.125f, 1.0f); // ▇ LOWER SEVEN EIGHTHS BLOCK
-			break;
-		case 0x2588:
-			tile = MakeVerticalSplit(m_tile_size, 0.0f, 1.0f); // █ FULL BLOCK
-			break;
-		case 0x2589:
-			tile = MakeHorisontalSplit(m_tile_size, 0.0f, 7*0.125f); // ▉ LEFT SEVEN EIGHTHS BLOCK
-			break;
-		case 0x258A:
-			tile = MakeHorisontalSplit(m_tile_size, 0.0f, 0.75f); // ▊ LEFT THREE QUARTERS BLOCK
-			break;
-		case 0x258B:
-			tile = MakeHorisontalSplit(m_tile_size, 0.0f, 5*0.125f); // ▋ LEFT FIVE EIGHTHS BLOCK
-			break;
-		case 0x258C:
-			tile = MakeHorisontalSplit(m_tile_size, 0.0f, 0.5f); // ▌ LEFT HALF BLOCK
-			break;
-		case 0x258D:
-			tile = MakeHorisontalSplit(m_tile_size, 0.0f, 3*0.125f); // ▍ LEFT THREE EIGHTHS BLOCK
-			break;
-		case 0x258E:
-			tile = MakeHorisontalSplit(m_tile_size, 0.0f, 0.25f); // ▎ LEFT ONE QUARTER BLOCK
-			break;
-		case 0x258F:
-			tile = MakeHorisontalSplit(m_tile_size, 0.0f, 0.125f); // ▏ LEFT ONE EIGHTH BLOCK
-			break;
-		case 0x2590:
-			tile = MakeHorisontalSplit(m_tile_size, 0.5f, 1.0f); // ▐ RIGHT HALF BLOCK
-			break;
-		//*/
-		// Shade characters
-		case 0x2591:
-			tile = Bitmap(m_tile_size, Color(64, 255, 255, 255)); // ░ LIGHT SHADE
-			break;
-		case 0x2592:
-			tile = Bitmap(m_tile_size, Color(128, 255, 255, 255)); // ▒ MEDIUM SHADE
-			break;
-		case 0x2593:
-			tile = Bitmap(m_tile_size, Color(192, 255, 255, 255)); // ▓ DARK SHADE
-			break;
-		/*
-		// Block elements
-		case 0x2594:
-			tile = MakeVerticalSplit(m_tile_size, 0.0f, 0.125f); // ▔ UPPER ONE EIGHTH BLOCK
-			break;
-		case 0x2595:
-			tile = MakeHorisontalSplit(m_tile_size, 1.0f-0.125f, 1.0f); // ▕ RIGHT ONE EIGHTH BLOCK
-			break;
-		//*/
-		// Terminal graphic characters
-		case 0x2596:
-			tile = MakeQuadrandTile(m_tile_size, false, false, true, false); // ▖ QUADRANT LOWER LEFT
-			break;
-		case 0x2597:
-			tile = MakeQuadrandTile(m_tile_size, false, false, false, true); // ▗ QUADRANT LOWER RIGHT
-			break;
-		case 0x2598:
-			tile = MakeQuadrandTile(m_tile_size, true, false, false, false); // ▘ QUADRANT UPPER LEFT
-			break;
-		case 0x2599:
-			tile = MakeQuadrandTile(m_tile_size, true, false, true, true); // ▙ QUADRANT UPPER LEFT AND LOWER LEFT AND LOWER RIGHT
-			break;
-		case 0x259A:
-			tile = MakeQuadrandTile(m_tile_size, true, false, false, true); // ▚ QUADRANT UPPER LEFT AND LOWER RIGHT
-			break;
-		case 0x259B:
-			tile = MakeQuadrandTile(m_tile_size, true, true, true, false); // ▛ QUADRANT UPPER LEFT AND UPPER RIGHT AND LOWER LEFT
-			break;
-		case 0x259C:
-			tile = MakeQuadrandTile(m_tile_size, true, true, false, true); // ▜ QUADRANT UPPER LEFT AND UPPER RIGHT AND LOWER RIGHT
-			break;
-		case 0x259D:
-			tile = MakeQuadrandTile(m_tile_size, false, true, false, false); // ▝ QUADRANT UPPER RIGHT
-			break;
-		case 0x259E:
-			tile = MakeQuadrandTile(m_tile_size, false, true, true, false); // ▞ QUADRANT UPPER RIGHT AND LOWER LEFT
-			break;
-		case 0x259F:
-			tile = MakeQuadrandTile(m_tile_size, false, true, true, true); // ▟ QUADRANT UPPER RIGHT AND LOWER LEFT AND LOWER RIGHT
-			break;
-		default:
-			tile = MakeNotACharacterTile(m_tile_size);
-			break;
 		}
 
-		if (tile.IsEmpty())
-			tile = MakeNotACharacterTile(m_tile_size);
+		Size spacing{1, 1};
+		char32_t font_offset = (code & Tileset::kFontOffsetMask);
+		auto j = g_tilesets.find(font_offset);\
+		if (j != g_tilesets.end())
+		{
+			spacing = j->second->GetSpacing();
+		}
+
+		Bitmap tile = GenerateDynamicTile(code, m_tile_size * spacing);
 
 		auto tile_ref = std::make_shared<TileInfo>();
 		tile_ref->tileset = this;
 		tile_ref->alignment = TileAlignment::TopLeft;
-		tile_ref->spacing = Size{1, 1};
+		tile_ref->spacing = spacing;
 		tile_ref->bitmap = tile;
+		m_cache[code] = tile_ref;
 		return tile_ref;
 	}
 }

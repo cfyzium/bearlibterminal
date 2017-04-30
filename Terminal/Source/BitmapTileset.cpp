@@ -105,8 +105,8 @@ namespace BearLibTerminal
 		if (!codepage)
 			codepage = GetUnibyteEncoding(L"utf8");
 
-		Size spacing{1, 1};
-		if (options.attributes.count(L"spacing") && !try_parse(options.attributes[L"spacing"], spacing))
+		m_spacing = Size{1, 1};
+		if (options.attributes.count(L"spacing") && !try_parse(options.attributes[L"spacing"], m_spacing))
 			throw std::runtime_error("BitmapTileset: failed to parse 'spacing' attribute");
 
 		TileAlignment alignment = TileAlignment::Unknown;
@@ -172,7 +172,7 @@ namespace BearLibTerminal
 			tile->bitmap = image.Extract(Rectangle{Point{x * source_tile_size.width, y * source_tile_size.height}, source_tile_size});
 			if (resize_to.Area())
 				tile->bitmap = tile->bitmap.Resize(resize_to, resize_filter, resize_mode);
-			tile->spacing = spacing;
+			tile->spacing = m_spacing;
 			tile->alignment = alignment;
 			if (alignment == TileAlignment::Center)
 			{

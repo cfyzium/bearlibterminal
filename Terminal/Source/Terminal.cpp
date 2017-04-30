@@ -59,7 +59,6 @@ namespace BearLibTerminal
 	};
 
 	static const int kScaleDefault = 1;
-	static const char32_t kDynamicTilesetOffset = 0xFFFF;
 
 	static int GetInputEventNameByName(const std::wstring& name)
 	{
@@ -283,16 +282,6 @@ namespace BearLibTerminal
 		}
 	}
 
-	void Terminal::UpdateDynamicTileset(Size size)
-	{
-		RemoveTileset(kDynamicTilesetOffset);
-		OptionGroup options;
-		options.name = to_string<wchar_t>(kDynamicTilesetOffset);
-		options.attributes[L"_"] = L"dynamic";
-		options.attributes[L"size"] = to_string<wchar_t>(size);
-		AddTileset(Tileset::Create(options, kDynamicTilesetOffset));
-	}
-
 	std::map<std::wstring, int> g_fonts;
 
 	int AllocateFontIndex(std::wstring name)
@@ -361,10 +350,15 @@ namespace BearLibTerminal
 		if (i != g_codespace.end())
 			return i->second.get();
 
+		char32_t font_low = (code & Tileset::kFontOffsetMask);
+		char32_t font_high = font_low + Tileset::kCharOffsetMask;
+
 		for (auto j = g_tilesets.rbegin(); j != g_tilesets.rend(); ++j)
 		{
-			if (j->first == kDynamicTilesetOffset)
+			if (j->first < font_low || j->first > font_high)
+			{
 				continue;
+			}
 
 			if (j->second->Provides(code))
 			{
@@ -375,24 +369,23 @@ namespace BearLibTerminal
 			}
 		}
 
-		auto fallback = g_tilesets.find(kDynamicTilesetOffset);
-		if (fallback == g_tilesets.end())
+		if (IsDynamicTile(code))
 		{
-			// Dynamic fallback tileset is already the last resort.
-			return nullptr;
-		}
-
-		char32_t relative = (code & Tileset::kCharOffsetMask);
-		if (code != kUnicodeReplacementCharacter && !fallback->second->Provides(relative))
-		{
-			return GetTileInfo(kUnicodeReplacementCharacter);
+			if (g_dynamic_tileset)
+			{
+				auto tile = g_dynamic_tileset->Get(code);
+				g_codespace[code] = tile;
+				g_atlas.Add(tile);
+				return tile.get();
+			}
+			else
+			{
+				return nullptr;
+			}
 		}
 		else
 		{
-			auto tile = fallback->second->Get(relative);
-			g_codespace[code] = tile;
-			g_atlas.Add(tile);
-			return tile.get();
+			return GetTileInfo(font_low + kUnicodeReplacementCharacter);
 		}
 	}
 

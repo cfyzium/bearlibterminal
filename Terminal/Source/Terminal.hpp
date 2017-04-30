@@ -66,7 +66,6 @@ namespace BearLibTerminal
 		std::wstring GetClipboard();
 	private:
 		void SetOptionsInternal(const std::wstring& params);
-		void UpdateDynamicTileset(Size size);
 		void ValidateWindowOptions(OptionGroup& group, Options& options);
 		void ValidateInputOptions(OptionGroup& group, Options& options);
 		void ValidateOutputOptions(OptionGroup& group, Options& options);
