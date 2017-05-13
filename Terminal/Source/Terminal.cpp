@@ -345,11 +345,11 @@ namespace BearLibTerminal
 		if ((i = g_fonts.find(font_name)) != g_fonts.end() ||
 		    (i = preallocated_fonts.find(font_name)) != preallocated_fonts.end())
 		{
-			font_offset = i->second * 0x01000000;
+			font_offset = i->second * Tileset::kFontOffsetMultiplier;
 		}
 		else
 		{
-			font_offset = AllocateFontIndex(font_name, preallocated_fonts) * 0x01000000;
+			font_offset = AllocateFontIndex(font_name, preallocated_fonts) * Tileset::kFontOffsetMultiplier;
 		}
 
 		if (name == L"font")
@@ -1130,6 +1130,22 @@ namespace BearLibTerminal
 		m_vars[TK_COMPOSITION] = mode;
 	}
 
+	void Terminal::SetFont(std::wstring name)
+	{
+		if (name.empty() || name == L"main")
+		{
+			m_world.state.font_offset = 0;
+		}
+		else
+		{
+			auto i = g_fonts.find(name);
+			if (i != g_fonts.end())
+			{
+				m_world.state.font_offset = i->second * Tileset::kFontOffsetMultiplier;
+			}
+		}
+	}
+
 	void Terminal::PutInternal(int x, int y, int dx, int dy, char32_t code, Color* colors)
 	{
 		if (x < 0 || y < 0 || x >= m_world.stage.size.width || y >= m_world.stage.size.height) return;
@@ -1199,7 +1215,7 @@ namespace BearLibTerminal
 			code = m_encoding->Convert(code);
 		}
 
-		PutInternal(x, y, dx, dy, code, corners);
+		PutInternal(x, y, dx, dy, m_world.state.font_offset + code, corners);
 	}
 
 	int Terminal::Pick(int x, int y, int index)
@@ -1280,12 +1296,11 @@ namespace BearLibTerminal
 
 	Size Terminal::Print(int x0, int y0, int w0, int h0, int align, std::wstring str, bool raw, bool measure_only)
 	{
-		char32_t font_offset = 0;
+		char32_t font_offset = m_world.state.font_offset;
 		bool combine = false;
 		Point offset = Point(0, 0);
 		Size wrap = Size{w0, h0};
-		Color original_fore = m_world.state.color;
-		Color original_back = m_world.state.bkcolor;
+		State original_state = m_world.state;
 
 		int x, y, w;
 
@@ -1367,7 +1382,7 @@ namespace BearLibTerminal
 				}
 				else if (name == L"/color" || name == L"/c")
 				{
-					tag = [&]{m_world.state.color = original_fore;};
+					tag = [&]{m_world.state.color = original_state.color;};
 				}
 				else if ((name == L"bkcolor" || name == L"b") && !params.empty())
 				{
@@ -1376,7 +1391,7 @@ namespace BearLibTerminal
 				}
 				else if (name == L"/bkcolor" || name == L"/b")
 				{
-					tag = [&]{m_world.state.bkcolor = original_back;};
+					tag = [&]{m_world.state.bkcolor = original_state.bkcolor;};
 				}
 				else if (name == L"offset")
 				{
@@ -1585,8 +1600,7 @@ namespace BearLibTerminal
 				y += line.size.height;
 			}
 
-			m_world.state.color = original_fore;
-			m_world.state.bkcolor = original_back;
+			m_world.state = original_state;
 		}
 
 		if (wrap.height)

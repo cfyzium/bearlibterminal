@@ -66,6 +66,7 @@ namespace BearLibTerminal
 		color(255, 255, 255, 255),
 		bkcolor(),
 		composition(TK_OFF),
-		layer(0)
+		layer(0),
+		font_offset(0)
 	{ }
 }

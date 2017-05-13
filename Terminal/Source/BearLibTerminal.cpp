@@ -185,6 +185,24 @@ void terminal_composition(int mode)
 	g_instance->SetComposition(mode);
 }
 
+void terminal_font8(const int8_t* name)
+{
+	if (g_instance)
+		g_instance->SetFont(g_instance->GetEncoding().Convert((const char*)name));
+}
+
+void terminal_font16(const int16_t* name)
+{
+	if (g_instance)
+		g_instance->SetFont(UCS2Encoding().Convert((const char16_t*)name));
+}
+
+void terminal_font32(const int32_t* name)
+{
+	if (g_instance)
+		g_instance->SetFont(UCS4Encoding().Convert((const char32_t*)name));
+}
+
 void terminal_put(int x, int y, int code)
 {
 	if (!g_instance) return;

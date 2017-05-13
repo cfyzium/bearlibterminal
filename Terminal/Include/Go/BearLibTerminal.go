@@ -250,6 +250,12 @@ func Layer(index int) {
 	C.terminal_layer(C.int(index))
 }
 
+func Font(name string) {
+	cstring := C.CString(name)
+	defer C.free(unsafe.Pointer(cstring))
+	C.terminal_font(cstring)
+}
+
 //
 // Output
 //

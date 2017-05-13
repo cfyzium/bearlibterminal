@@ -41,6 +41,7 @@ namespace BearLibTerminal
 		virtual Size GetBoundingBoxSize() = 0; // FIXME: refactor to tile property
 		virtual Size GetSpacing() const;
 
+		static const char32_t kFontOffsetMultiplier = 0x01000000;
 		static const char32_t kFontOffsetMask = 0xFF000000;
 		static const char32_t kCharOffsetMask = 0x00FFFFFF;
 		static std::shared_ptr<Tileset> Create(OptionGroup& options, char32_t offset);

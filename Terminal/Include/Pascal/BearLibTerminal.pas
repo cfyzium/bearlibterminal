@@ -250,6 +250,11 @@ procedure terminal_composition(Mode: Int32);
 procedure terminal_layer(Mode: Int32);
   cdecl; external 'BearLibTerminal' name 'terminal_layer';
 
+// Font
+procedure terminal_font(const Name: AnsiString); overload;
+
+procedure terminal_font(const Name: WideString); overload;
+
 // Put
 procedure terminal_put(X, Y, Code: Int32); overload;
 
@@ -390,6 +395,22 @@ end;
 procedure terminal_bkcolor(Color: WideString); overload;
 begin
     terminal_bkcolor(color_from_name(Color));
+end;
+
+procedure terminal_font_ansi(const Name: PAnsiChar);
+  cdecl; external 'BearLibTerminal' name 'terminal_font8';
+
+procedure terminal_font_unicode(const Name: PWideChar);
+  cdecl; external 'BearLibTerminal' name 'terminal_font16';
+
+procedure terminal_font(const Name: AnsiString); overload;
+begin
+	terminal_font_ansi(PAnsiChar(Name));
+end;
+
+procedure terminal_font(const Name: WideString); overload;
+begin
+	terminal_font_unicode(PWideChar(Name));
 end;
 
 procedure terminal_put_integer(X, Y: Int32; Code: Int32);

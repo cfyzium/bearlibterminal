@@ -4,6 +4,7 @@
 - Fix excess generation of 'character replacement' tiles.
 - Fix dynamic tile generation (individual to a font, closes issue #32).
 - Fix configuring several fonts in one `set()` call (closes issue #34).
+- Add `font()` function (select the current font by name, closes issue #33).
 
 ### 0.15.2 (2017-03-12)
 

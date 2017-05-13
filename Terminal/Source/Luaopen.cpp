@@ -299,6 +299,13 @@ int luaterminal_layer(lua_State* L)
 	return 0;
 }
 
+int luaterminal_font(lua_State* L)
+{
+	const char* name = lua_tostring(L, 1);
+	terminal_font8((const int8_t*)name);
+	return 0;
+}
+
 int luaterminal_color(lua_State* L)
 {
 	int type = lua_type(L, 1);
@@ -640,6 +647,7 @@ static const luaL_Reg luaterminal_lib[] =
 	{"color", luaterminal_color},
 	{"bkcolor", luaterminal_bkcolor},
 	{"composition", luaterminal_composition},
+	{"font", luaterminal_font},
 	{"put", luaterminal_put},
 	{"put_ext", luaterminal_put_ext},
 	{"pick", luaterminal_pick},

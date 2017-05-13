@@ -77,6 +77,7 @@ namespace BearLibTerminal
 		Color bkcolor;
 		int composition;
 		int layer;
+		char32_t font_offset;
 		State();
 	};
 

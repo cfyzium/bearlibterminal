@@ -67,6 +67,7 @@ if ctypes.sizeof(ctypes.c_wchar()) == 4:
 	_read_wstr = _library.terminal_read_str32
 	_color_from_wname = _library.color_from_name32
 	_wget = _library.terminal_get32
+	_wfont = _library.terminal_font32
 else:
 	_wset = _library.terminal_set16
 	_wprint_ext = _library.terminal_print_ext16
@@ -74,6 +75,7 @@ else:
 	_read_wstr = _library.terminal_read_str16
 	_color_from_wname = _library.color_from_name16
 	_wget = _library.terminal_get16
+	_wfont = _library.terminal_font16
 
 # color/bkcolor accept uint32, color_from_name returns uint32
 _library.terminal_color.argtypes = [c_uint32]
@@ -157,6 +159,17 @@ def bkcolor(v):
 
 composition = _library.terminal_composition
 composition.restype = None
+
+_afont = _library.terminal_font8
+_afont.restype = None
+_afont.argtypes = [c_char_p]
+_wfont.restype = None
+_wfont.argtypes = [c_wchar_p]
+def font(name):
+	if _version3 or isinstance(name, unicode):
+		_wfont(name)
+	else:
+		_afont(name)
 
 def put(x, y, c):
 	if not isinstance(c, _integer):

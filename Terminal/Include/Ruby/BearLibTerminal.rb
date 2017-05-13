@@ -72,6 +72,7 @@ module Terminal
 	Color = Fiddle::Function.new(Lib['terminal_color'], [-Fiddle::TYPE_INT], Fiddle::TYPE_VOID)
 	BkColor = Fiddle::Function.new(Lib['terminal_bkcolor'], [-Fiddle::TYPE_INT], Fiddle::TYPE_VOID)
 	Composition = Fiddle::Function.new(Lib['terminal_composition'], [Fiddle::TYPE_INT], Fiddle::TYPE_VOID)
+	Font = Fiddle::Function.new(Lib['terminal_font8'], [Fiddle::TYPE_VOIDP], Fiddle::TYPE_VOID)
 	Put = Fiddle::Function.new(Lib['terminal_put'], [Fiddle::TYPE_INT, Fiddle::TYPE_INT, Fiddle::TYPE_INT], Fiddle::TYPE_VOID)
 	PutExt = Fiddle::Function.new(Lib['terminal_put_ext'], [Fiddle::TYPE_INT, Fiddle::TYPE_INT, Fiddle::TYPE_INT, Fiddle::TYPE_INT, Fiddle::TYPE_INT, Fiddle::TYPE_VOIDP], Fiddle::TYPE_VOID)
 	Pick = Fiddle::Function.new(Lib['terminal_pick'], [Fiddle::TYPE_INT, Fiddle::TYPE_INT, Fiddle::TYPE_INT], Fiddle::TYPE_INT)
@@ -111,6 +112,7 @@ module Terminal
 		BkColor.call v
 	end
 	def self.composition mode; Composition.call mode; end
+	def self.font name; Font.call(Ptr[name]); end
 	def self.put x, y, code; Put.call x, y, code; end
 	def self.put_ext x, y, dx, dy, code, corners=nil
 		if corners.nil?

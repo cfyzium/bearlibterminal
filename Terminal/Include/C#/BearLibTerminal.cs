@@ -310,6 +310,9 @@ namespace BearLib
         [DllImport("BearLibTerminal.dll", EntryPoint = "terminal_layer", CallingConvention = CallingConvention.Cdecl)]
         public static extern void Layer(int index);
 
+        [DllImport("BearLibTerminal.dll", CharSet = CharSet.Unicode, EntryPoint = "terminal_font16", CallingConvention = CallingConvention.Cdecl)]
+        public static extern void Font(string name);
+
         [DllImport("BearLibTerminal.dll", EntryPoint = "terminal_put", CallingConvention = CallingConvention.Cdecl)]
         public static extern void Put(int x, int y, int code);
 

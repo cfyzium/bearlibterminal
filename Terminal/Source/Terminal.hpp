@@ -50,6 +50,7 @@ namespace BearLibTerminal
 		void SetForeColor(Color color);
 		void SetBackColor(Color color);
 		void SetComposition(int mode);
+		void SetFont(std::wstring name);
 		void Put(int x, int y, int code);
 		void PutExtended(int x, int y, int dx, int dy, int code, Color* corners);
 		int Pick(int x, int y, int index);
