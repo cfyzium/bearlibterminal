@@ -269,6 +269,14 @@ namespace BearLibTerminal
 	{
 		CHECK_THREAD("set", 0);
 
+		// XXX: hack.
+		if (value.find(L"log(") == 0)
+		{
+			if (value.length() > 7) // Seven because quotes.
+				LOG(Info, value.substr(5, value.length() - 7));
+			return 1;
+		}
+
 		LOG(Info, "Trying to set \"" << value << "\"");
 		try
 		{
@@ -423,6 +431,7 @@ namespace BearLibTerminal
 		for (auto& group: groups)
 		{
 			LOG(Debug, L"Group \"" << group.name << "\":");
+
 			for (auto attribute: group.attributes)
 			{
 				LOG(Debug, L"* \"" << attribute.first << "\" = \"" << attribute.second << "\"");
