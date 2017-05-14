@@ -1,4 +1,4 @@
-### 0.15.3 (Unreleased)
+### 0.15.3 (2017-05-14)
 
 - Fix adding sprite tiles to an atlas (closes issue #30).
 - Fix excess generation of 'character replacement' tiles.
