@@ -1270,6 +1270,7 @@ namespace BearLibTerminal
 			Size spacing;
 		};
 
+		Line();
 		void UpdateSize();
 		std::vector<Symbol> symbols;
 		Size size;
@@ -1288,9 +1289,12 @@ namespace BearLibTerminal
 		spacing(spacing)
 	{ }
 
+	Line::Line():
+		size(0, 1)
+	{ }
+
 	void Line::UpdateSize()
 	{
-		size = Size(0, 1);
 		for (auto& symbol: symbols)
 		{
 			if (symbol.code <= 0)
@@ -1474,6 +1478,7 @@ namespace BearLibTerminal
 			else if (c == L'\n') // forced line-break
 			{
 				lines.emplace_back();
+				lines.back().size.height = GetTileSpacing(font_offset + L' ').height;
 			}
 			else if (c == L'\r')
 			{
