@@ -455,6 +455,7 @@ namespace BearLibTerminal
 			ButtonPressMask |
 			ButtonReleaseMask |
 			PointerMotionMask |
+			FocusChangeMask |
 			im_event_mask;
 
 		XSelectInput(m_display, m_window, event_mask);
@@ -940,6 +941,10 @@ namespace BearLibTerminal
 			else if (e.type == ClientMessage && e.xclient.data.l[0] == (long)m_wm_close_message)
 			{
 				m_event_handler(TK_CLOSE);
+			}
+			else if (e.type == FocusIn)
+			{
+				m_event_handler(TK_ACTIVATED);
 			}
 		}
 

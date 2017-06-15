@@ -1,3 +1,7 @@
+### 0.15.4 (Unreleased)
+
+- Fix Alt key being stuck after regaining focus (e. g. after Alt-Tab).
+
 ### 0.15.3 (2017-05-14)
 
 - Fix adding sprite tiles to an atlas (closes issue #30).

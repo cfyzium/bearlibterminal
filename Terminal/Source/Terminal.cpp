@@ -2239,6 +2239,9 @@ namespace BearLibTerminal
 					PushEvent(Event(i|TK_KEY_RELEASED, {{i, 0}}));
 			}
 
+			// Clear Alt state which is commonly remain stuck, e. g. after Alt-Tab.
+			m_alt_pressed = false;
+
 			return 0;
 		}
 		else if (event.code == TK_RESIZED)
