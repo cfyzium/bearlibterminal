@@ -2,6 +2,7 @@
 
 - Fix Alt key being stuck after regaining focus (e. g. after Alt-Tab).
 - Fix blank line height/spacing in print (resolves [issue #41](https://bitbucket.org/cfyzium/bearlibterminal/issues/41/terminal_print-ignores-font-spacing-for)). 
+- Fix memory leak in Cocoa event processing (resolves [issue #44](https://bitbucket.org/cfyzium/bearlibterminal/issues/44/possible-memory-issue-with-terminalread)).
 
 ### 0.15.3 (2017-05-14)
 

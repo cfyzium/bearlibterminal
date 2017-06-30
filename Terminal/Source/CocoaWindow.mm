@@ -184,6 +184,7 @@ namespace BearLibTerminal
         bool m_has_been_shown;
         id m_window;
         id m_view;
+        id m_autorelease_pool;
     };
     
     CocoaWindow::Impl::Impl(EventHandler handler):
@@ -375,7 +376,9 @@ namespace BearLibTerminal
         }
         
         [[NSApp delegate] setImpl:m_impl.get()];
-		
+
+        m_impl->m_autorelease_pool = [[NSAutoreleasePool alloc] init];
+
         NSUInteger styleMask =
             NSTitledWindowMask|
             NSClosableWindowMask|
@@ -440,6 +443,11 @@ namespace BearLibTerminal
             [m_impl->m_window setDelegate:nil];
             [m_impl->m_window close];
             m_impl->m_window = nil;
+        }
+
+        if (m_impl->m_autorelease_pool != nil)
+        {
+            [m_impl->m_autorelease_pool drain];
         }
 		
         [[NSApp delegate] setImpl:NULL];
@@ -580,6 +588,9 @@ namespace BearLibTerminal
             [NSApp sendEvent:event];
             processed += 1;
         }
+
+        [m_impl->m_autorelease_pool drain];
+        m_impl->m_autorelease_pool = [[NSAutoreleasePool alloc] init];
         
         return processed;
     }
