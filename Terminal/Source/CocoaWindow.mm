@@ -167,6 +167,8 @@ namespace BearLibTerminal
         {0x7D, TK_DOWN},
         {0x7E, TK_UP}
     };
+
+    static bool g_library_owns_nsapp = false;
     
     struct CocoaWindow::Impl
     {
@@ -193,7 +195,8 @@ namespace BearLibTerminal
         m_cursor_visible(true),
         m_has_been_shown(false),
         m_window(nil),
-        m_view(nil)
+        m_view(nil),
+        m_autorelease_pool(nil)
     { }
     
     void CocoaWindow::Impl::HandleApplicationDidBecomeActive()
@@ -373,6 +376,11 @@ namespace BearLibTerminal
             [NSApp setDelegate:[[CocoaTerminalApplicationDelegate alloc] init]];
             [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
             [NSApp run];
+            g_library_owns_nsapp = true;
+        }
+        else if (!g_library_owns_nsapp)
+        {
+            throw std::runtime_error("Window system has already been initialized! (probably by another library)");
         }
         
         [[NSApp delegate] setImpl:m_impl.get()];
@@ -449,8 +457,11 @@ namespace BearLibTerminal
         {
             [m_impl->m_autorelease_pool drain];
         }
-		
-        [[NSApp delegate] setImpl:NULL];
+	
+        if (g_library_owns_nsapp)
+        {
+            [[NSApp delegate] setImpl:NULL];
+        }
     }
     
     Size CocoaWindow::GetActualSize()

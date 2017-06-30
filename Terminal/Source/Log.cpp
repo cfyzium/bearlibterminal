@@ -86,11 +86,12 @@ namespace BearLibTerminal
 		std::wostringstream ss;
 		ss << FormatTime().c_str() << " [" << level << "] " << what << std::endl;
 
-		if (filename.empty())
+		if (filename.empty() || level <= Level::Error)
 		{
 			WriteStandardError(UTF8Encoding().Convert(ss.str()).c_str());
 		}
-		else
+		
+		if (!filename.empty())
 		{
 			std::ofstream stream;
 			std::ios_base::openmode flags = std::ios_base::out;
