@@ -1,4 +1,4 @@
-### 0.15.4 (Unreleased)
+### 0.15.4 (2017-06-30)
 
 - Fix Alt key being stuck after regaining focus (e. g. after Alt-Tab).
 - Fix blank line height/spacing in print (resolves [issue #41](https://bitbucket.org/cfyzium/bearlibterminal/issues/41/terminal_print-ignores-font-spacing-for)). 
