@@ -1160,8 +1160,12 @@ namespace BearLibTerminal
 		if (x < 0 || y < 0 || x >= m_world.stage.size.width || y >= m_world.stage.size.height) return;
 
 		// Prepare tile if necessary.
-		if (g_codespace.find(code) == g_codespace.end())
-			GetTileInfo(code);
+		TileInfo* tile_info = nullptr;
+		auto it = g_codespace.find(code);
+		if (it != g_codespace.end())
+			tile_info = it->second.get();
+		else
+			tile_info = GetTileInfo(code);
 
 		// NOTE: layer must be already allocated by SetLayer
 		int index = y*m_world.stage.size.width+x;
@@ -1198,7 +1202,13 @@ namespace BearLibTerminal
 			// Background color
 			if (m_world.state.layer == 0 && m_world.state.bkcolor)
 			{
-				m_world.stage.backbuffer.background[index] = m_world.state.bkcolor;
+				for (int by = y; by < std::min(y+tile_info->spacing.height, m_world.stage.size.height); by++)
+				{
+					for (int bx = x; bx < std::min(x+tile_info->spacing.width, m_world.stage.size.width); bx++)
+					{
+						m_world.stage.backbuffer.background[by*m_world.stage.size.width+bx] = m_world.state.bkcolor;
+					}
+				}
 			}
 		}
 		else

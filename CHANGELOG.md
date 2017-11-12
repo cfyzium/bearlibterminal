@@ -1,3 +1,7 @@
+### 0.15.5 (Unreleased)
+
+- Fix background color for tiles with spacing bigger than 1x1.
+
 ### 0.15.4 (2017-06-30)
 
 - Fix Alt key being stuck after regaining focus (e. g. after Alt-Tab).
