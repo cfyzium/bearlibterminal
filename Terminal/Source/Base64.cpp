@@ -25,7 +25,7 @@
 
 namespace BearLibTerminal
 {
-	static const char b64_indexes[] = // TODO: reformat
+	static const signed char b64_indexes[] = // TODO: reformat
 	{
 		/* 0 - 31 / 0x00 - 0x1f */
 			-1, -1, -1, -1, -1, -1, -1, -1
