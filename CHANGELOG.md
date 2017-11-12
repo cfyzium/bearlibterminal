@@ -1,4 +1,4 @@
-### 0.15.5 (Unreleased)
+### 0.15.5 (2017-11-13)
 
 - Fix background color for tiles with spacing bigger than 1x1.
 - Fix char type signedness (resolves [issue #47](https://bitbucket.org/cfyzium/bearlibterminal/issues/47/g-arm-default-char-is-not-signed)).
