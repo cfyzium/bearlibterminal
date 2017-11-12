@@ -2,6 +2,7 @@
 
 - Fix background color for tiles with spacing bigger than 1x1.
 - Fix char type signedness (resolves [issue #47](https://bitbucket.org/cfyzium/bearlibterminal/issues/47/g-arm-default-char-is-not-signed)).
+- Add missing include to sample's Main.cpp (resolves [issue #48](https://bitbucket.org/cfyzium/bearlibterminal/issues/48/sample-program-doesnt-build-on-osx)).
 
 ### 0.15.4 (2017-06-30)
 
