@@ -1,3 +1,7 @@
+### 0.15.6 (2017-11-20)
+
+- Relax restriction on maximum terminal size from 256x256 to 1024x1024 cells. 
+
 ### 0.15.5 (2017-11-13)
 
 - Fix background color for tiles with spacing bigger than 1x1.

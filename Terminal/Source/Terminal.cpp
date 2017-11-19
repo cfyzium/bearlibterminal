@@ -713,7 +713,7 @@ namespace BearLibTerminal
 				throw std::runtime_error("window.size value cannot be parsed");
 			}
 
-			if (value.width <= 0 || value.width >= 256 || value.height <= 0 || value.height >= 256)
+			if (value.width <= 0 || value.width >= 1024 || value.height <= 0 || value.height >= 1024)
 			{
 				throw std::runtime_error("window.size value is out of range");
 			}
