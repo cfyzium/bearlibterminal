@@ -494,6 +494,11 @@ namespace BearLibTerminal
 			m_viewport_modified = true;
 		}
 
+		if (updated.output_texture_filter != m_options.output_texture_filter)
+		{
+			g_texture_filter = updated.output_texture_filter;
+		}
+
 		// All options and parameters must be validated, may try to apply them
 		for (auto& kv: preallocated_fonts)
 		{
@@ -953,6 +958,16 @@ namespace BearLibTerminal
 
 		if (options.output_tab_width < 0)
 			options.output_tab_width = 0;
+
+		if (group.attributes.count(L"texture-filter"))
+		{
+			if (group.attributes[L"texture-filter"] == L"linear")
+				options.output_texture_filter = GL_LINEAR;
+			else if (group.attributes[L"texture-filter"] == L"nearest")
+				options.output_texture_filter = GL_NEAREST;
+			else
+				throw std::runtime_error("output.texture-filter cannot be parsed");
+		}
 	}
 
 	void Terminal::ValidateLoggingOptions(OptionGroup& group, Options& options)

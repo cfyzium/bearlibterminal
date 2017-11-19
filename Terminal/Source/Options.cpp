@@ -22,6 +22,7 @@
 
 #include "Options.hpp"
 #include "Keystroke.hpp"
+#include "OpenGL.hpp"
 
 namespace BearLibTerminal
 {
@@ -37,6 +38,7 @@ namespace BearLibTerminal
 		output_postformatting(true),
 		output_vsync(true),
 		output_tab_width(4),
+		output_texture_filter(GL_LINEAR),
 		input_precise_mouse(false),
 		input_cursor_symbol('_'),
 		input_cursor_blink_rate(500),

@@ -50,6 +50,7 @@ namespace BearLibTerminal
 		bool output_postformatting;
 		bool output_vsync;
 		int output_tab_width;
+		int output_texture_filter;
 
 		// Input
 		bool input_precise_mouse;

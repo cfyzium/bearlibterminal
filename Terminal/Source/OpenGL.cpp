@@ -29,6 +29,7 @@ namespace BearLibTerminal
 {
 	int g_max_texture_size = 256;
 	bool g_has_texture_npot = false;
+	int g_texture_filter = GL_LINEAR;
 
 	void ProbeOpenGL()
 	{
