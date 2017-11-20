@@ -497,6 +497,7 @@ namespace BearLibTerminal
 		if (updated.output_texture_filter != m_options.output_texture_filter)
 		{
 			g_texture_filter = updated.output_texture_filter;
+			g_atlas.ApplyTextureFilter();
 		}
 
 		// All options and parameters must be validated, may try to apply them
@@ -2419,6 +2420,14 @@ namespace BearLibTerminal
 					m_window->SetClientSize(m_options.window_client_size * scale);
 				}
 
+				return 0;
+			}
+			else if (event.code == TK_F)
+			{
+				m_options.output_texture_filter = g_texture_filter =
+					(g_texture_filter == GL_LINEAR)? GL_NEAREST: GL_LINEAR;
+				g_atlas.ApplyTextureFilter();
+				Render();
 				return 0;
 			}
 		}

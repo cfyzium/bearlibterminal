@@ -1,7 +1,8 @@
-### 0.15.6 (2017-11-20)
+### 0.15.7 (2017-11-20)
 
 - Relax restriction on maximum terminal size from 256x256 to 1024x1024 cells. 
 - Add `output.texture-filter` option (value is `linear` or `nearest`).
+- Make output.texture-filter toggleable at runtime, e. g. by Alt+F.
 
 ### 0.15.5 (2017-11-13)
 

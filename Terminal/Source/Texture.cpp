@@ -168,6 +168,16 @@ namespace BearLibTerminal
 		glTexSubImage2D(GL_TEXTURE_2D, 0, area.left, area.top, area.width, area.height, color_format, GL_UNSIGNED_BYTE, (uint8_t*)bitmap.GetData());
 	}
 
+	void Texture::ApplyTextureFilter()
+	{
+		if (m_handle != 0)
+		{
+			Bind();
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, g_texture_filter);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, g_texture_filter);
+		}
+	}
+
 	Size Texture::GetSize() const
 	{
 		return m_size;

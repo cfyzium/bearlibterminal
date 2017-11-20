@@ -388,6 +388,11 @@ namespace BearLibTerminal
 		m_spaces.sort([](Rectangle& lhs, Rectangle& rhs){return lhs.Area() < rhs.Area();});
 	}
 
+	void AtlasTexture::ApplyTextureFilter()
+	{
+		m_texture.ApplyTextureFilter();
+	}
+
 
 
 	void Atlas::Add(std::shared_ptr<TileInfo> tile)
@@ -436,5 +441,11 @@ namespace BearLibTerminal
 	void Atlas::Clear()
 	{
 		m_textures.clear();
+	}
+
+	void Atlas::ApplyTextureFilter()
+	{
+		for (auto texture: m_textures)
+			texture->ApplyTextureFilter();
 	}
 }

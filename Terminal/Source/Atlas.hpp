@@ -88,6 +88,7 @@ namespace BearLibTerminal
 		void Remove(std::shared_ptr<TileInfo> tile, bool copy_bitmap_back=false);
 		void Bind();
 		void Defragment();
+		void ApplyTextureFilter();
 
 	private:
 		bool TryGrow();
@@ -107,6 +108,7 @@ namespace BearLibTerminal
 		void Defragment();
 		void CleanUp();
 		void Clear();
+		void ApplyTextureFilter();
 
 	private:
 		std::list<std::shared_ptr<AtlasTexture>> m_textures;

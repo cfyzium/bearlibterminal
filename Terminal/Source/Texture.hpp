@@ -43,6 +43,7 @@ namespace BearLibTerminal
 		void Bind();
 		void Update(const Bitmap& bitmap);
 		void Update(Rectangle area, const Bitmap& bitmap);
+		void ApplyTextureFilter();
 		Bitmap Download();
 		Size GetSize() const;
 		handle_t GetHandle() const;
