@@ -572,7 +572,10 @@ namespace BearLibTerminal
     
     void CocoaWindow::SetFullscreen(bool fullscreen)
     {
-        LOG(Error, "CocoaWindow::SetFullscreen: not yet implemented");
+        bool is_fullscreen = ([m_impl->m_window styleMask] & NSFullScreenWindowMask) == NSFullScreenWindowMask;
+        if (is_fullscreen != fullscreen) {
+            [m_impl->m_window toggleFullScreen: nil];
+        }
     }
     
     void CocoaWindow::SetCursorVisibility(bool visible)
