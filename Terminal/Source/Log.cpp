@@ -37,8 +37,8 @@ namespace BearLibTerminal
 		auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
 		time_t time = std::chrono::system_clock::to_time_t(now);
 		struct tm tm = {0};
-#if defined(_MSC_VER)
-		localtime_s(&tm, &time); // MSVC
+#if defined(_MSC_VER) || defined(__MINGW32__)
+		localtime_s(&tm, &time); // MSVC/MinGW
 #else
 		localtime_r(&time, &tm); // SUSv2
 #endif
