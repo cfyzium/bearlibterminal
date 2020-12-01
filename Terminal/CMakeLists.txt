@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 2.8)
 
+include(GNUInstallDirs)
+
 if (UNIX AND NOT APPLE)
 	set(LINUX TRUE)
 endif()
@@ -95,3 +97,5 @@ elseif (APPLE)
 		BUILD_WITH_INSTALL_RPATH TRUE
 		INSTALL_NAME_DIR "@executable_path")
 endif()
+
+install(TARGETS BearLibTerminal)
