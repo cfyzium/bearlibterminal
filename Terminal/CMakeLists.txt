@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 2.8.12)
 
 include(GNUInstallDirs)
 
@@ -53,6 +53,7 @@ if (NOT BUILD_SHARED_LIBS)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBEARLIBTERMINAL_STATIC_BUILD")
 endif()
 
+set(OpenGL_GL_PREFERENCE LEGACY)
 find_package(OpenGL)
 if (APPLE)
 	find_library(COCOA_LIBRARY Cocoa)
@@ -98,4 +99,5 @@ elseif (APPLE)
 		INSTALL_NAME_DIR "@executable_path")
 endif()
 
-install(TARGETS BearLibTerminal)
+install(TARGETS BearLibTerminal LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+install(FILES Include/C/BearLibTerminal.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
