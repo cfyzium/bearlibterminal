@@ -23,7 +23,7 @@
 #ifndef BEARLIBTERMINAL_COCOAWINDOW_H
 #define BEARLIBTERMINAL_COCOAWINDOW_H
 
-#if defined(__APPLE__)
+#if defined(__APPLE____DISABLED)
 
 #include "Window.hpp"
 

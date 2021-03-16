@@ -166,6 +166,27 @@
  */
 #define TK_KEY_RELEASED     0x100
 
+// Events categories
+#define TK_EVENT_TYPE        0xF0
+
+// TK_CLOSE is already defined above
+#define TK_KEY_DOWN          0xF1        // | TK_KEY_CODE, TK_KEY_SCANCODE, TK_KEY_REPEAT, TK_xxx
+#define TK_KEY_UP            0xF2        // | TK_KEY_CODE, TK_KEY_SCANCODE, TK_xxx
+#define TK_MOUSE_BUTTON_DOWN 0xF3        // | TK_MOUSE_BUTTON, TK_MOUSE_CLICKS, TK_xxx
+#define TK_MOUSE_BUTTON_UP   0xF4        // | TK_MOUSE_BUTTON, TK_xxx
+// TK_MOUSE_MOVE is already defined above   | TK_MOUSE_X, TK_MOUSE_Y, TK_MOUSE_PIXEL_X, TK_MOUSE_PIXEL_Y
+// TK_MOUSE_SCROLL is already defined above | TK_MOUSE_WHEEL
+#define TK_TEXT              0xF7
+
+// Keyboard event properties
+#define TK_KEY_CODE          0xD0
+#define TK_KEY_SCANCODE      0xD1
+#define TK_KEY_REPEAT        0xD2
+
+// Mouse event properties
+#define TK_MOUSE_BUTTON      0xD3
+// TK_MOUSE_CLICKS, TK_MOUSE_X, _Y, _PIXEL_X, _PIXEL_Y, TK_MOUSE_WHEEL are already defined above
+
 /*
  * Virtual key-codes for internal terminal states/variables.
  * These can be accessed via terminal_state function.

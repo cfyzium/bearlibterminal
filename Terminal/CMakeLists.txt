@@ -7,6 +7,7 @@ if (UNIX AND NOT APPLE)
 endif()
 
 option(BUILD_SHARED_LIBS "Build dynamic version of library" ON)
+set(SDL_LIB "SDL2-static" CACHE STRING "SDL link target, SDL2 or SDL2-static")
 
 add_subdirectory(Dependencies/FreeType)
 add_subdirectory(Dependencies/PicoPNG)
@@ -42,7 +43,7 @@ set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g3")
 
 # Common flags
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
-set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fvisibility=hidden")
+set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fvisibility=hidden")  # XXX: is it even a linker option?
 if(WIN32)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUNICODE")
 	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -static")
@@ -58,6 +59,7 @@ find_package(OpenGL)
 if (APPLE)
 	find_library(COCOA_LIBRARY Cocoa)
 endif()
+find_package(SDL2)
 
 include_directories(./Include/C)
 include_directories(./Dependencies/FreeType/Include)
@@ -66,10 +68,12 @@ include_directories(./Dependencies/NanoJPEG/Include)
 
 add_library(BearLibTerminal ${TERMINAL_SOURCES} ${TERMINAL_HEADERS})
 
+target_compile_options(BearLibTerminal PRIVATE -fvisibility=hidden)
 target_compile_definitions(BearLibTerminal PRIVATE TERMINAL_VERSION=\"${TERMINAL_VERSION}\")
 
 target_link_libraries(BearLibTerminal freetype2)
 target_link_libraries(BearLibTerminal picopng)
+target_link_libraries(BearLibTerminal SDL2::${SDL_LIB})
 target_link_libraries(BearLibTerminal ${OPENGL_gl_LIBRARY})
 if(WIN32)
 	target_link_libraries(BearLibTerminal winmm.lib)

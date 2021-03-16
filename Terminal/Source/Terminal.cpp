@@ -218,7 +218,7 @@ namespace BearLibTerminal
 		m_window = Window::Create(std::bind(&Terminal::OnWindowEvent, this, std::placeholders::_1));
 
 		// Default parameters
-		SetOptionsInternal(L"window: size=80x25, icon=default; font: default; terminal.encoding=utf8; input.filter={keyboard}");
+		SetOptionsInternal(L"window: size=80x25, icon=default; font: default; terminal.encoding=utf8");
 
 		// Apply parameters from configuration file:
 		// Each group (line) is applied separately to allow some error resilience.
@@ -678,7 +678,6 @@ namespace BearLibTerminal
 		C.Set(L"window.fullscreen", bool_to_wstring(m_options.window_fullscreen));
 		// input
 		C.Set(L"input.precise-mouse", bool_to_wstring(m_options.input_precise_mouse));
-		//C.Set(L"input.filter", m_options.input_filter_str); // FIXME
 		C.Set(L"input.cursor-symbol", std::wstring(1, (wchar_t)m_options.input_cursor_symbol));
 		C.Set(L"input.cursor-blink-rate", to_string<wchar_t>(m_options.input_cursor_blink_rate));
 		C.Set(L"input.mouse-cursor", bool_to_wstring(m_options.input_mouse_cursor));
@@ -804,11 +803,6 @@ namespace BearLibTerminal
 			throw std::runtime_error("input.precise-mouse cannot be parsed");
 		}
 
-		if (group.attributes.count(L"filter") && !ParseInputFilter(group.attributes[L"filter"], options.input_filter))
-		{
-			throw std::runtime_error("input.filter cannot be parsed");
-		}
-
 		if (group.attributes.count(L"cursor-symbol") && !try_parse(group.attributes[L"cursor-symbol"], options.input_cursor_symbol))
 		{
 			throw std::runtime_error("input.cursor-symbol cannot be parsed");
@@ -831,110 +825,6 @@ namespace BearLibTerminal
 		{
 			throw std::runtime_error("input.alt-functions cannot be parsed");
 		}
-	}
-
-	bool Terminal::ParseInputFilter(const std::wstring& s, std::set<int>& out)
-	{
-		// s: list of case-insensitive input event names separated by a comma.
-		// macro names: keyboard, mouse
-
-		std::set<int> result;
-
-		auto add = [&result](int code, bool release_too)
-		{
-			result.insert(code);
-
-			if (release_too)
-				result.insert(code | TK_KEY_RELEASED);
-		};
-
-		for (size_t start = 0, end = 0; start < s.length(); )
-		{
-			end = s.find(L",", start);
-			if (end == std::wstring::npos) end = s.length();
-
-			if (end > start)
-			{
-				std::wstring name = trim(s.substr(start, end-start));
-				for (auto& c: name) if (c == L'_') c = L'-';
-
-				bool release_too = false;
-				if (!name.empty() && name.back() == L'+')
-				{
-					release_too = true;
-					name.resize(name.length()-1);
-				}
-
-				if (!name.empty())
-				{
-					if (name == L"false" || name == L"none")
-					{
-						result.clear();
-					}
-					else if (name == L"keyboard")
-					{
-						for (int i = TK_A; i <= TK_ALT; i++)
-							add(i, release_too);
-					}
-					else if (name == L"arrows")
-					{
-						for (int i = TK_RIGHT; i <= TK_UP; i++)
-							add(i, release_too);
-					}
-					else if (name == L"keypad")
-					{
-						for (int i = TK_KP_DIVIDE; i <= TK_KP_PERIOD; i++)
-							add(i, release_too);
-					}
-					else if (name == L"mouse")
-					{
-						for (int i = TK_MOUSE_LEFT; i <= TK_MOUSE_X2; i++)
-							add(i, release_too);
-
-						add(TK_MOUSE_MOVE, false);
-						add(TK_MOUSE_SCROLL, false);
-					}
-					else if (int code = GetInputEventNameByName(name))
-					{
-						add(code, release_too);
-					}
-					else
-					{
-						// Maybe, shortened list of alphanumeric keys?
-						bool correct = true;
-
-						for (auto& c: name) // TODO: shorter check
-						{
-							if (!::isalpha((int)c) && !::isdigit((int)c))
-							{
-								correct = false;
-								break;
-							}
-						}
-
-						if (correct)
-						{
-							for (auto& c: name)
-							{
-								add(GetInputEventNameByName(std::wstring(1, c)), release_too);
-							}
-						}
-					}
-				}
-			}
-
-			start = end+1;
-		}
-
-		if (!result.empty())
-		{
-			result.insert(TK_CLOSE);
-			result.insert(TK_RESIZED);
-		}
-
-		out = result;
-
-		return true;
 	}
 
 	void Terminal::ValidateOutputOptions(OptionGroup& group, Options& options)
@@ -1648,22 +1538,6 @@ namespace BearLibTerminal
 		return Size{total_width, total_height};
 	}
 
-	bool Terminal::IsEventFiltered(int code)
-	{
-		return m_options.input_filter.empty() || m_options.input_filter.count(code);
-	}
-
-	bool Terminal::HasFilteredInput()
-	{
-		for (auto& e: m_input_queue)
-		{
-			if (IsEventFiltered(e.code))
-				return true;
-		}
-
-		return false;
-	}
-
 	int Terminal::HasInput()
 	{
 		CHECK_THREAD("has_input", 0);
@@ -1673,7 +1547,7 @@ namespace BearLibTerminal
 		if (m_state != kVisible)
 			return 1;
 
-		return HasFilteredInput();
+		return !m_input_queue.empty();
 	}
 
 	int Terminal::GetState(int code)
@@ -1692,18 +1566,12 @@ namespace BearLibTerminal
 		{
 			m_window->PumpEvents();
 
-			if (HasFilteredInput())
+			if (!m_input_queue.empty())
 			{
-				while (!m_input_queue.empty())
-				{
-					Event e = m_input_queue.front();
-					m_input_queue.pop_front();
-					ConsumeEvent(e);
-					if (IsEventFiltered(e.code))
-						return e;
-				}
-
-				return 0;
+				Event e = std::move(m_input_queue.front());
+				m_input_queue.pop_front();
+				ConsumeEvent(e);
+				return e;
 			}
 			else
 			{
@@ -1733,14 +1601,10 @@ namespace BearLibTerminal
 		{
 			return TK_CLOSE;
 		}
-		else if (HasFilteredInput())
+		else if (!m_input_queue.empty())
 		{
-			for (auto& e: m_input_queue)
-			{
-				ConsumeEvent(e);
-				if (IsEventFiltered(e.code))
-					return e.code;
-			}
+			ConsumeEvent(m_input_queue.front());
+			return m_input_queue.front().code;
 		}
 		else
 		{
@@ -1801,6 +1665,9 @@ namespace BearLibTerminal
 		int rc = 0;
 		bool show_cursor = true;
 
+		uint64_t start = gettime();
+		bool filter_out_first_text = true;
+
 		while (true)
 		{
 			restore_scene();
@@ -1833,8 +1700,19 @@ namespace BearLibTerminal
 					show_cursor = true;
 				}
 			}
-			else if (wchar_t ch = GetState(TK_WCHAR))
+			else if (event.code == TK_TEXT)
 			{
+				if (filter_out_first_text)
+				{
+					filter_out_first_text = false;
+					if (gettime() - start < 50000)
+					{
+						std::cout << "DEBUG: skipping '" << UTF8Encoding{}.Convert(std::wstring(1, (wchar_t)GetState(TK_WCHAR))) << "'\n";
+						continue;
+					}
+				}
+
+				wchar_t ch = GetState(TK_WCHAR);
 				if (cursor < max)
 				{
 					buffer[cursor++] = ch;

@@ -23,7 +23,7 @@
 #ifndef BEARLIBTERMINAL_X11WINDOW3_HPP
 #define BEARLIBTERMINAL_X11WINDOW3_HPP
 
-#ifdef __linux__
+#ifdef __linux____DISABLED
 
 #include <memory>
 #include "Window.hpp"

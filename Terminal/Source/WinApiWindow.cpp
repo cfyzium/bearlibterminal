@@ -20,7 +20,7 @@
 * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#ifdef _WIN32
+#ifdef _WIN32__DISABLED
 
 #include <map>
 #include <set>

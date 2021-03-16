@@ -20,7 +20,7 @@
 * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#if defined(__APPLE__)
+#if defined(__APPLE____DISABLED)
 
 #include "CocoaWindow.h"
 #include <map>

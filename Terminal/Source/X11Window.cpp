@@ -20,7 +20,7 @@
 * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#ifdef __linux__
+#ifdef __linux____DISABLED
 
 #include "X11Window.hpp"
 #include "OpenGL.hpp"
@@ -988,4 +988,3 @@ namespace BearLibTerminal
 }
 
 #endif
-

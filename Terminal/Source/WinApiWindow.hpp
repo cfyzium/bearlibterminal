@@ -23,7 +23,7 @@
 #ifndef BEARLIBTERMINAL_WINAPIWINDOW_HPP
 #define BEARLIBTERMINAL_WINAPIWINDOW_HPP
 
-#ifdef _WIN32
+#ifdef _WIN32__DISABLED
 
 #include <list>
 #include <string>

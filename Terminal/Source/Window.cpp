@@ -30,6 +30,7 @@
 #if defined(__APPLE__)
 #include "CocoaWindow.h"
 #endif
+#include "SDL2Window.hpp"
 #include "Log.hpp"
 #include "Utility.hpp"
 
@@ -66,6 +67,8 @@ namespace BearLibTerminal
 
 	std::unique_ptr<Window> Window::Create(EventHandler handler)
 	{
+		return std::make_unique<SDL2Window>(handler);
+		/*
 #if defined(__linux)
 		return std::make_unique<X11Window>(handler);
 #endif
@@ -75,5 +78,6 @@ namespace BearLibTerminal
 #if defined(__APPLE__)
         return std::make_unique<CocoaWindow>(handler);
 #endif
+		//*/
     }
 }
