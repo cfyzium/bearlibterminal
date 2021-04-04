@@ -55,10 +55,8 @@ namespace BearLibTerminal
 
 	static std::vector<float> kScaleSteps =
 	{
-		0.75f, 1.0f, 1.25f, 1.5f, 2.0f, 3.0f
+		0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f, 3.0f
 	};
-
-	static const int kScaleDefault = 1;
 
 	static int GetInputEventNameByName(const std::wstring& name)
 	{
@@ -191,7 +189,7 @@ namespace BearLibTerminal
 		m_state{kHidden},
 		m_show_grid{false},
 		m_viewport_modified{false},
-		m_scale_step(kScaleDefault),
+		m_user_scale(1.0f),
 		m_alt_pressed(false)
 	{
 #if defined(__APPLE__)
@@ -639,14 +637,18 @@ namespace BearLibTerminal
 		if (viewport_size_changed)
 		{
 			// Resize window object
-			float scale_factor = kScaleSteps[m_scale_step];
 			Size viewport_size = m_options.window_client_size.Area() > 0? // client-size overrides viewport dimensions
-				m_options.window_client_size:
-				m_world.stage.size * m_world.state.cellsize * scale_factor;
+				m_options.window_client_size: (m_world.stage.size * m_world.state.cellsize);
+			viewport_size = viewport_size * m_user_scale;
+
+			// XXX: are these properties even used anywhere? they don't seem to be exposed anywhere
 			m_vars[TK_CLIENT_WIDTH] = viewport_size.width;
 			m_vars[TK_CLIENT_HEIGHT] = viewport_size.height;
 
-			m_window->SetSizeHints(m_world.state.cellsize*scale_factor, updated.window_minimum_size);
+			m_window->SetSizeHints(
+				m_world.state.cellsize * m_user_scale,
+				updated.window_minimum_size * m_user_scale
+			);
 			m_window->SetClientSize(viewport_size);
 
 			m_viewport_modified = true;
@@ -1558,7 +1560,7 @@ namespace BearLibTerminal
 	Event Terminal::ReadEvent(int timeout) // FIXME: more precise wait
 	{
 		if (m_state != kVisible)
-			return {TK_CLOSE};
+			return {TK_CLOSE, TK_CLOSE};
 
 		auto started = std::chrono::system_clock::now();
 
@@ -1581,7 +1583,7 @@ namespace BearLibTerminal
 		}
 		while (std::chrono::system_clock::now() - started < std::chrono::milliseconds{timeout});
 
-		return {TK_INPUT_NONE};
+		return {TK_EVENT, TK_INPUT_NONE}; // FIXME: a type for internal events
 	}
 
 	int Terminal::Read()
@@ -1758,81 +1760,42 @@ namespace BearLibTerminal
 
 	void Terminal::ConfigureViewport()
 	{
-		Size viewport_size = m_window->GetActualSize();
+		Size scene_size = m_world.stage.size * m_world.state.cellsize;
+		Size screen_size = m_window->GetActualSize();
+		Size drawable_size = m_window->GetDrawableSize();
 
-		Size stage_size = m_world.stage.size * m_world.state.cellsize;
-		m_stage_area = Rectangle(stage_size);
-		m_stage_area_factor = SizeF(1, 1);
+		float wf = drawable_size.width / (float)scene_size.width;
+		float hf = drawable_size.height / (float)scene_size.height;
+		float af =
+			(drawable_size.width / (float)drawable_size.height) /
+			(scene_size.width / (float)scene_size.height);
+		m_pixels_per_scene_point = af <= 1.0f? wf: hf;
+		m_pixels_per_screen_point = drawable_size.width / (float)screen_size.width;
+		m_screen_points_per_scene_point = m_pixels_per_scene_point / m_pixels_per_screen_point;
 
-		if (viewport_size != stage_size)
-		{
-			if (m_vars[TK_FULLSCREEN])
-			{
-				// Stretch
-				float viewport_ratio = viewport_size.width / (float)viewport_size.height;
-				float stage_ratio = stage_size.width / (float)stage_size.height;
+		SizeF canvas_size = drawable_size.As<float>() / m_pixels_per_scene_point;
+		float left = (scene_size.width - canvas_size.width) / 2.0f;
+		float right = (scene_size.width + canvas_size.width) / 2.0f;
+		float top = (scene_size.height - canvas_size.height) / 2.0f;
+		float bottom = (scene_size.height + canvas_size.height) / 2.0f;
 
-				if (viewport_ratio >= stage_ratio)
-				{
-					// Viewport is wider
-					float factor = viewport_size.height / (float)stage_size.height;
-					m_stage_area.height = viewport_size.height;
-					m_stage_area.width = stage_size.width * factor;
-					m_stage_area.left = (viewport_size.width - m_stage_area.width)/2;
-				}
-				else
-				{
-					// Stage is wider
-					float factor = viewport_size.width / (float)stage_size.width;
-					m_stage_area.width = viewport_size.width;
-					m_stage_area.height = stage_size.height * factor;
-					m_stage_area.top = (viewport_size.height - m_stage_area.height)/2;
-				}
-			}
-			else
-			{
-				// Center
-				float scale_factor = kScaleSteps[m_scale_step];
-				m_stage_area.width *= scale_factor;
-				m_stage_area.height *= scale_factor;
-				m_stage_area.left += (viewport_size.width-m_stage_area.width)/2;
-				m_stage_area.top += (viewport_size.height-m_stage_area.height)/2;
-			}
+		m_mouse_screen_offset = Point(-left, -top) * m_screen_points_per_scene_point;
 
-			m_stage_area_factor = stage_size/m_stage_area.Size().As<float>();
-		}
+		m_viewport_scissors = Rectangle(Point(-left, -top), scene_size) * m_pixels_per_scene_point;
+		m_viewport_scissors_enabled = m_viewport_scissors != Rectangle(scene_size); // left != 0 || top != 0
 
 		glDisable(GL_DEPTH_TEST);
 		glClearColor(0, 0, 0, 1);
-		glViewport(0, 0, viewport_size.width, viewport_size.height);
+		glViewport(0, 0, drawable_size.width, drawable_size.height);
 		glMatrixMode(GL_PROJECTION);
 		glLoadIdentity();
-		glOrtho
-		(
-			-m_stage_area.left * m_stage_area_factor.width,
-			(viewport_size.width - m_stage_area.left) * m_stage_area_factor.width,
-			(viewport_size.height - m_stage_area.top) * m_stage_area_factor.height,
-			-m_stage_area.top * m_stage_area_factor.height,
-			-1,
-			+1
-		);
+		glOrtho(left, right, bottom, top, -1.0, +1.0);
 
 		glMatrixMode(GL_MODELVIEW);
 		glLoadIdentity();
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-		m_viewport_scissors = Rectangle
-		(
-			m_stage_area.left,
-			viewport_size.height - m_stage_area.height - m_stage_area.top,
-			m_stage_area.width,
-			m_stage_area.height
-		);
-
-		m_viewport_scissors_enabled = viewport_size != stage_size;
-
-		// ?..
 		m_window->SetVSync(m_options.output_vsync);
 	}
 
@@ -2039,7 +2002,7 @@ namespace BearLibTerminal
 		{
 			if (layer.crop.Area() > 0)
 			{
-				Rectangle scissors = layer.crop * m_world.state.cellsize / m_stage_area_factor;
+				Rectangle scissors = layer.crop * m_world.state.cellsize * m_pixels_per_scene_point;
 				scissors.top = m_viewport_scissors.height - (scissors.top+scissors.height);
 				scissors += m_viewport_scissors.Location();
 
@@ -2145,7 +2108,7 @@ namespace BearLibTerminal
 			for (int i = TK_A; i <= TK_ALT; i++)
 			{
 				if (m_vars[i])
-					PushEvent(Event(i|TK_KEY_RELEASED, {{i, 0}}));
+					PushEvent(Event(TK_KEY_UP, i|TK_KEY_RELEASED, {{i, 0}}));
 			}
 
 			// Clear Alt state which is commonly remain stuck, e. g. after Alt-Tab.
@@ -2164,7 +2127,7 @@ namespace BearLibTerminal
 					i++;
 			}
 
-			float scale_factor = kScaleSteps[m_scale_step];
+			float scale_factor = m_user_scale;
 			Size& cellsize = m_world.state.cellsize;
 			Size size
 			(
@@ -2186,25 +2149,16 @@ namespace BearLibTerminal
 		}
 		else if (event.code == TK_MOUSE_MOVE)
 		{
-			int& pixel_x = event[TK_MOUSE_PIXEL_X];
-			int& pixel_y = event[TK_MOUSE_PIXEL_Y];
+			// TODO: clamp this too
+			Point scene_pixels = (Point(event[TK_MOUSE_PIXEL_X], event[TK_MOUSE_PIXEL_Y]) - m_mouse_screen_offset) / m_screen_points_per_scene_point;
+			Point scene_cells = Rectangle(m_world.stage.size).Clamp(scene_pixels / m_world.state.cellsize);
 
-			// Shift coordinates relative to stage area
-			pixel_x -= m_stage_area.left;
-			pixel_y -= m_stage_area.top;
+			event[TK_MOUSE_PIXEL_X] = scene_pixels.x;
+			event[TK_MOUSE_PIXEL_Y] = scene_pixels.y;
+			event[TK_MOUSE_X] = scene_cells.x;
+			event[TK_MOUSE_Y] = scene_cells.y;
 
-			// Scale coordinates back to virtual pixels.
-			pixel_x *= m_stage_area_factor.width;
-			pixel_y *= m_stage_area_factor.height;
-
-			// Cell location of mouse pointer
-			Size& cellsize = m_world.state.cellsize;
-			Point location(pixel_x / cellsize.width, pixel_y / cellsize.height);
-			location = Rectangle(m_world.stage.size).Clamp(location);
-			event[TK_MOUSE_X] = location.x;
-			event[TK_MOUSE_Y] = location.y;
-
-			// If application do not read events fast enough, do not flood it with mouse moves.
+			// If application does not read events fast enough, do not flood it with mouse moves.
 			if (!m_input_queue.empty() && m_input_queue.back().code == TK_MOUSE_MOVE)
 			{
 				// Replace the last, yet unread event with the most recent one.
@@ -2227,7 +2181,7 @@ namespace BearLibTerminal
 					}
 				}
 
-				if (location == last_location)
+				if (scene_cells == last_location)
 				{
 					return 0;
 				}
@@ -2270,32 +2224,40 @@ namespace BearLibTerminal
 					return 0;
 				}
 
-				// Alt+(plus/minus/zero): adjust user window scaling.
-				if ((event.code == TK_MINUS || event.code == TK_KP_MINUS) && m_scale_step > 0)
+				int closest_index = -1;
+				float closest_delta = 1E+3;
+				for (size_t i = 0; i < kScaleSteps.size(); i++)
 				{
-					m_scale_step -= 1;
+					float delta = std::abs(m_user_scale / kScaleSteps[i] - 1.0f);
+					if (delta < closest_delta)
+					{
+						closest_delta = delta;
+						closest_index = i;
+					}
 				}
-				else if ((event.code == TK_EQUALS || event.code == TK_KP_PLUS) && m_scale_step < kScaleSteps.size()-1)
+				if ((event.code == TK_MINUS || event.code == TK_KP_MINUS) && closest_index > 0)
 				{
-					m_scale_step += 1;
+					m_user_scale = kScaleSteps[closest_index - 1];
 				}
-				else if ((event.code == TK_0 || event.code == TK_KP_0) && m_scale_step != 1)
+				else if ((event.code == TK_EQUALS || event.code == TK_KP_PLUS) && closest_index < (int)kScaleSteps.size()-1)
 				{
-					m_scale_step = 1;
+					m_user_scale = kScaleSteps[closest_index + 1];
 				}
-
-				float scale = kScaleSteps[m_scale_step];
+				else if ((event.code == TK_0 || event.code == TK_KP_0) && m_user_scale != 1.0f)
+				{
+					m_user_scale = 1.0f;
+				}
 
 				if (m_options.window_resizeable || m_options.window_client_size.Area() == 0)
 				{
 					// Resizeable window always snaps to cell borders.
-					m_window->SetSizeHints(m_world.state.cellsize * scale, m_options.window_minimum_size);
-					m_window->SetClientSize(m_world.state.cellsize * m_world.stage.size * scale);
+					m_window->SetSizeHints(m_world.state.cellsize * m_user_scale, m_options.window_minimum_size);
+					m_window->SetClientSize(m_world.state.cellsize * m_world.stage.size * m_user_scale);
 				}
 				else
 				{
 					// Overriden client-size is scaled with everything else.
-					m_window->SetClientSize(m_options.window_client_size * scale);
+					m_window->SetClientSize(m_options.window_client_size * m_user_scale);
 				}
 
 				return 0;

@@ -67,6 +67,16 @@ namespace BearLibTerminal
 			height(from.height)
 		{ }
 
+		bool operator==(const BasicRectangle<T>& rhs) const
+		{
+			return left == rhs.left && top == rhs.top && width == rhs.width && height == rhs.height;
+		}
+
+		bool operator!=(const BasicRectangle<T>& rhs) const
+		{
+			return !(*this == rhs);
+		}
+
 		BasicPoint<T> Location() const
 		{
 			return BasicPoint<T>(left, top);
@@ -154,6 +164,11 @@ namespace BearLibTerminal
 		template<typename U> BasicRectangle<T> operator-(BasicSize<U> delta) const
 		{
 			return BasicRectangle<T>(left, top, width - delta.width, height - delta.height);
+		}
+
+		template<typename U> BasicRectangle<T> operator*(U factor) const
+		{
+			return BasicRectangle<T>(left * factor, top * factor, width * factor, height * factor);
 		}
 
 		template<typename U> BasicRectangle<T> operator*(BasicSize<U> factor) const

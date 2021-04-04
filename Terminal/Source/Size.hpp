@@ -23,6 +23,7 @@
 #ifndef BEARLIBTERMINAL_SIZE_HPP
 #define BEARLIBTERMINAL_SIZE_HPP
 
+#include "Point.hpp"
 #include <type_traits>
 #include <cmath>
 
@@ -117,6 +118,12 @@ namespace BearLibTerminal
 	typedef BasicSize<int> Size;
 
 	typedef BasicSize<float> SizeF;
+
+
+	template<typename T, typename U> auto operator/(BasicPoint<T> point, BasicSize<U> factor) -> BasicPoint<T>
+	{
+		return BasicPoint<T>(point.x / factor.width, point.y / factor.height);
+	}
 }
 
 namespace std

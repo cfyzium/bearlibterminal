@@ -98,10 +98,12 @@ namespace BearLibTerminal
 		bool m_viewport_modified;
 		Rectangle m_viewport_scissors;
 		bool m_viewport_scissors_enabled;
-		int m_scale_step;
-		Rectangle m_stage_area;
-		SizeF m_stage_area_factor;
 		bool m_alt_pressed; // For alt-functions interception.
+		float m_user_scale;
+		float m_pixels_per_scene_point;
+		float m_pixels_per_screen_point;
+		float m_screen_points_per_scene_point;
+		Point m_mouse_screen_offset;
 	};
 
 	extern std::unique_ptr<Terminal> g_instance;

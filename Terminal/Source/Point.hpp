@@ -65,6 +65,16 @@ namespace BearLibTerminal
 		{
 			return BasicPoint<T>(x-other.x, y-other.y);
 		}
+
+		template<typename U> BasicPoint<T> operator*(U factor)
+		{
+			return BasicPoint<T>(x * factor, y * factor);
+		}
+
+		template<typename U> BasicPoint<T> operator/(U factor)
+		{
+			return BasicPoint<T>(x / factor, y / factor);
+		}
 	};
 
 	typedef BasicPoint<int> Point;
