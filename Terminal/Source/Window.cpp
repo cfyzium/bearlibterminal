@@ -60,6 +60,11 @@ namespace BearLibTerminal
 		return m_fullscreen;
 	}
 
+	Size Window::GetDrawableSize()
+	{
+		return GetActualSize();
+	}
+
 	std::wstring Window::GetClipboard()
 	{
 		return std::wstring{};

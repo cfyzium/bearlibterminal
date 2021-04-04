@@ -45,6 +45,7 @@ namespace BearLibTerminal
 		typedef std::function<int(Event)> EventHandler;
 		virtual ~Window();
 		virtual Size GetActualSize() = 0; // XXX: GetClientSize?
+		virtual Size GetDrawableSize();
 		virtual std::wstring GetClipboard();
 		virtual void SetTitle(const std::wstring& title) = 0;
 		virtual void SetIcon(const std::wstring& filename) = 0;

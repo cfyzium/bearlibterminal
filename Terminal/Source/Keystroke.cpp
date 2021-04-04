@@ -27,14 +27,18 @@
 
 namespace BearLibTerminal
 {
-	Event::Event(int code):
+	Event::Event(int type, int code):
 		code(code)
-	{ }
+	{
+		properties[TK_EVENT_TYPE] = type; // FIXME: make it a field like the code
+	}
 
-	Event::Event(int code, std::unordered_map<int, int> properties):
+	Event::Event(int type, int code, std::unordered_map<int, int> properties):
 		code(code),
 		properties(std::move(properties))
-	{ }
+	{
+		properties[TK_EVENT_TYPE] = type;
+	}
 
 	int& Event::operator[](int index)
 	{

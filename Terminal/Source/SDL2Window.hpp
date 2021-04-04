@@ -34,6 +34,7 @@ public:
 	SDL2Window(EventHandler handler);
 	~SDL2Window();
 	virtual Size GetActualSize() override;
+	virtual Size GetDrawableSize() override;
 	virtual std::wstring GetClipboard() override;
 	virtual void SetTitle(const std::wstring& title) override;
 	virtual void SetIcon(const std::wstring& filename) override;

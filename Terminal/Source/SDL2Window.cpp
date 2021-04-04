@@ -22,6 +22,7 @@
 
 #include "SDL2Window.hpp"
 #include "Encoding.hpp"
+#include "Log.hpp"
 #include "BearLibTerminal.h"
 #include <unordered_map>
 #include <iostream>
@@ -115,14 +116,21 @@ Size SDL2Window::GetActualSize()
 	return Size{w, h};
 }
 
+Size SDL2Window::GetDrawableSize()
+{
+	int w, h;
+	SDL_GL_GetDrawableSize(m_Window, &w, &h);
+	return Size{w, h};
+}
+
 std::wstring SDL2Window::GetClipboard()
 {
-	const char* s = SDL_GetClipboardText();
+	char* s = SDL_GetClipboardText();
 	if (s == nullptr)
 		return {};
 
 	std::wstring result = UTF8Encoding{}.Convert(s);
-	SDL_free((void*)s);
+	SDL_free(s);
 	return result;
 }
 
@@ -134,6 +142,7 @@ void SDL2Window::SetTitle(const std::wstring& title)
 void SDL2Window::SetIcon(const std::wstring& filename)
 {
 	// FIXME: NYI
+	// XXX: SDL uses a single image, but a set of resolutions may be necessary (e. g. window icon and icon in taskbar)
 }
 
 void SDL2Window::SetSizeHints(Size increment, Size minimum_size)
@@ -178,12 +187,11 @@ void SDL2Window::SetResizeable(bool resizeable)
 
 void SDL2Window::SetFullscreen(bool fullscreen)
 {
-	int rc = SDL_SetWindowFullscreen(m_Window, fullscreen? SDL_WINDOW_FULLSCREEN_DESKTOP: 0);
-	if (rc != 0)
+	if (SDL_SetWindowFullscreen(m_Window, fullscreen? SDL_WINDOW_FULLSCREEN_DESKTOP: 0) != 0)
 	{
-		std::cout << "Failed to set fullscreen to " << fullscreen << " (" << SDL_GetError() << ")\n";
+		LOG(Error, "Failed to set fullscreen to " << fullscreen << " (" << SDL_GetError() << ")");
 	}
-	// TODO: keep state
+	// TODO: keep window size state (or does SDL keep it by itself?)
 }
 
 void SDL2Window::SetCursorVisibility(bool visible)
@@ -306,44 +314,38 @@ int SDL2Window::PumpEvents()
 
 	while (SDL_PollEvent(&event))
 	{
-		if (event.type == SDL_QUIT)
+		if (event.type == SDL_QUIT || (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE))
 		{
-			m_event_handler(TK_CLOSE);
+			m_event_handler(Event{TK_CLOSE, TK_CLOSE});
 		}
 		else if (event.type == SDL_WINDOWEVENT)
 		{
-			if (event.window.event == SDL_WINDOWEVENT_CLOSE)
+			if (event.window.event == SDL_WINDOWEVENT_RESIZED || event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED)
 			{
-				m_event_handler(TK_CLOSE);
-			}
-			else if (event.window.event == SDL_WINDOWEVENT_RESIZED || event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED)
-			{
-				Event e(TK_RESIZED);
-				e[TK_EVENT_TYPE] = TK_RESIZED;
+				Event e{TK_RESIZED, TK_RESIZED};
 				e[TK_WIDTH] = event.window.data1;
 				e[TK_HEIGHT] = event.window.data2;
 				m_event_handler(e);
 			}
 			else if (event.window.event == SDL_WINDOWEVENT_EXPOSED)
 			{
-				m_event_handler(TK_INVALIDATE);
-				m_event_handler(TK_REDRAW);
+				m_event_handler(Event{TK_EVENT, TK_INVALIDATE});
+				m_event_handler(Event{TK_EVENT, TK_REDRAW});
 			}
 			else if (event.window.event == SDL_WINDOWEVENT_FOCUS_GAINED)
 			{
-				m_event_handler(TK_ACTIVATED);
+				m_event_handler(Event{TK_EVENT, TK_ACTIVATED});
 			}
 		}
 		else if (event.type == SDL_KEYDOWN || event.type == SDL_KEYUP)
 		{
-			std::cout << "[" << event.key.timestamp << "] SDL_KEY" << (event.type == SDL_KEYDOWN? "DOWN": "UP") << ": " << event.key.keysym.sym << " (" << event.key.keysym.scancode << ")" << "\n";
 			bool pressed = event.type == SDL_KEYDOWN;
+			int type = pressed? TK_KEY_DOWN: TK_KEY_UP;
 			auto i = g_keycode_map.find(event.key.keysym.sym);
 			if (i != g_keycode_map.end())
 			{
 				int code = i->second;
-				Event e{code | (pressed? 0: TK_KEY_RELEASED)};
-				e[TK_EVENT_TYPE] = pressed? TK_KEY_DOWN: TK_KEY_UP;
+				Event e{type, code | (pressed? 0: TK_KEY_RELEASED)};
 				e[TK_KEY_CODE] = code;
 				e[TK_KEY_SCANCODE] = event.key.keysym.scancode;
 				e[TK_KEY_REPEAT] = event.key.repeat;
@@ -352,8 +354,7 @@ int SDL2Window::PumpEvents()
 			}
 			else
 			{
-				Event e{pressed? TK_KEY_DOWN: TK_KEY_UP};
-				e[TK_EVENT_TYPE] = pressed? TK_KEY_DOWN: TK_KEY_UP;
+				Event e{type, type};
 				e[TK_KEY_CODE] = 0;
 				e[TK_KEY_SCANCODE] = event.key.keysym.scancode;
 				e[TK_KEY_REPEAT] = event.key.repeat;
@@ -362,13 +363,11 @@ int SDL2Window::PumpEvents()
 		}
 		else if (event.type == SDL_TEXTINPUT)
 		{
-			std::cout << "[" << event.text.timestamp << "] SDL_TEXTINPUT: '" << event.text.text << "'\n";
 			std::wstring s = UTF8Encoding{}.Convert(event.text.text);
-			if (!s.empty())
+			for (wchar_t c: s)
 			{
-				Event e{TK_TEXT};
-				e[TK_EVENT_TYPE] = TK_TEXT;
-				e[TK_WCHAR] = (int)s[0];
+				Event e{TK_TEXT, TK_TEXT};
+				e[TK_WCHAR] = c;
 				m_event_handler(std::move(e));
 			}
 		}
@@ -378,8 +377,7 @@ int SDL2Window::PumpEvents()
 			if (i != g_button_map.end())
 			{
 				bool pressed = (event.type == SDL_MOUSEBUTTONDOWN);
-				Event e{i->second | (pressed? 0: TK_KEY_RELEASED)};
-				e[TK_EVENT_TYPE] = pressed? TK_MOUSE_BUTTON_DOWN: TK_MOUSE_BUTTON_UP;
+				Event e{pressed? TK_MOUSE_BUTTON_DOWN: TK_MOUSE_BUTTON_UP, i->second | (pressed? 0: TK_KEY_RELEASED)};
 				e[TK_MOUSE_BUTTON] = i->second;
 				e[TK_MOUSE_CLICKS] = pressed? event.button.clicks: 0;
 				e[i->second] = pressed? 1: 0;
@@ -388,16 +386,14 @@ int SDL2Window::PumpEvents()
 		}
 		else if (event.type == SDL_MOUSEMOTION)
 		{
-			Event e{TK_MOUSE_MOVE};
-			e[TK_EVENT_TYPE] = TK_MOUSE_MOVE;
+			Event e{TK_MOUSE_MOVE, TK_MOUSE_MOVE};
 			e[TK_MOUSE_PIXEL_X] = event.motion.x;
 			e[TK_MOUSE_PIXEL_Y] = event.motion.y;
 			m_event_handler(std::move(e));
 		}
 		else if (event.type == SDL_MOUSEWHEEL)
 		{
-			Event e{TK_MOUSE_SCROLL};
-			e[TK_EVENT_TYPE] = TK_MOUSE_SCROLL;
+			Event e{TK_MOUSE_SCROLL, TK_MOUSE_SCROLL};
 			e[TK_MOUSE_WHEEL] = -event.wheel.y * (event.wheel.direction == SDL_MOUSEWHEEL_FLIPPED? -1: +1);
 			m_event_handler(std::move(e));
 		}

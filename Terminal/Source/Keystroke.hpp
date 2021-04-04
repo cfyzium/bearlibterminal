@@ -34,8 +34,8 @@ namespace BearLibTerminal
 		int code;
 		std::unordered_map<int, int> properties; // Slot -> value map
 
-		Event(int code);
-		Event(int code, std::unordered_map<int, int> properties);
+		Event(int type, int code);
+		Event(int type, int code, std::unordered_map<int, int> properties);
 		int& operator[](int index);
 	};
 }
