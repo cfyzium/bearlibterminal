@@ -73,8 +73,17 @@ target_compile_definitions(BearLibTerminal PRIVATE TERMINAL_VERSION=\"${TERMINAL
 
 target_link_libraries(BearLibTerminal freetype2)
 target_link_libraries(BearLibTerminal picopng)
-target_link_libraries(BearLibTerminal SDL2::${SDL_LIB})
 target_link_libraries(BearLibTerminal ${OPENGL_gl_LIBRARY})
+
+if(SDL::${SDL_LIB})
+	target_link_libraries(BearLibTerminal SDL2::${SDL_LIB})
+elseif(SDL2_LIBRARIES)
+	target_include_directories(BearLibTerminal PRIVATE ${SDL2_INCLUDE_DIRS})
+	target_link_libraries(BearLibTerminal ${SDL2_LIBRARIES})
+else()
+	message(FATAL_ERROR "Couldn't find SDL2")
+endif()
+
 if(WIN32)
 	target_link_libraries(BearLibTerminal winmm.lib)
 	target_link_libraries(BearLibTerminal ${PROJECT_SOURCE_DIR}/Resource/Terminal-${BITNESS}bit.res)
