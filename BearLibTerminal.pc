@@ -1,0 +1,6 @@
+Name: BearLibTerminal
+Description: rogue-like game library
+Version: 0.12
+URL: https://github.com/cfyzium/bearlibterminal
+Libs: -lBearLibTerminal
+Cflags: -D_GNU_SOURCE -D_DEFAULT_SOURCE
