@@ -384,3 +384,29 @@ color_t color_from_name32(const int32_t* name)
 	if (!g_instance || !name) return -1;
 	return BearLibTerminal::Palette::Instance.Get(BearLibTerminal::UCS4Encoding().Convert((const char32_t*)name));
 }
+
+int terminal_put_array(int x, int y, int w, int h, const uint8_t* data, int row_stride, int column_stride, const void* layout, int char_size)
+{
+	if (!g_instance)
+	{
+		return -1;
+	}
+
+	std::wstring s;
+	switch (char_size)
+	{
+	case 1:
+		s = g_instance->GetEncoding().Convert((const char*)layout);
+		break;
+	case 2:
+		s = BearLibTerminal::UCS2Encoding().Convert((const char16_t*)layout);
+		break;
+	case 4:
+		s = BearLibTerminal::UCS4Encoding().Convert((const char32_t*)layout);
+		break;
+	default:
+		return -1;
+	}
+
+	return g_instance->PutArray(x, y, w, h, data, row_stride, column_stride, s);
+}

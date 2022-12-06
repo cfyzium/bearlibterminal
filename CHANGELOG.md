@@ -1,3 +1,7 @@
+### 0.15.8 (2022-12-06)
+
+- Add support for drawing NumPy structured arrays.
+
 ### 0.15.7 (2017-11-20)
 
 - Relax restriction on maximum terminal size from 256x256 to 1024x1024 cells. 

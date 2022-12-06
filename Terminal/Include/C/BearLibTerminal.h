@@ -288,6 +288,7 @@ TERMINAL_API const int32_t* terminal_get32(const int32_t* key, const int32_t* de
 TERMINAL_API color_t color_from_name8(const int8_t* name);
 TERMINAL_API color_t color_from_name16(const int16_t* name);
 TERMINAL_API color_t color_from_name32(const int32_t* name);
+TERMINAL_API int terminal_put_array(int x, int y, int w, int h, const uint8_t* data, int row_stride, int column_stride, const void* layout, int char_size);
 
 #ifdef __cplusplus
 } /* End of extern "C" */

@@ -65,6 +65,7 @@ namespace BearLibTerminal
 		void Delay(int period);
 		const Encoding8& GetEncoding() const;
 		std::wstring GetClipboard();
+		int PutArray(int x, int y, int w, int h, const uint8_t* data, int row_stride, int column_stride, const std::wstring& layout);
 	private:
 		void SetOptionsInternal(const std::wstring& params);
 		void ValidateWindowOptions(OptionGroup& group, Options& options);
@@ -75,6 +76,7 @@ namespace BearLibTerminal
 		bool ParseInputFilter(const std::wstring& s, std::set<int>& out);
 		void ConfigureViewport();
 		void PutInternal(int x, int y, int dx, int dy, char32_t code, Color* colors);
+		void PutInternal2(int x, int y, int dx, int dy, char32_t code, Color fore, Color back, Color* colors);
 		void ConsumeEvent(Event& event);
 		Event ReadEvent(int timeout);
 		void Render();
@@ -102,6 +104,31 @@ namespace BearLibTerminal
 		Rectangle m_stage_area;
 		SizeF m_stage_area_factor;
 		bool m_alt_pressed; // For alt-functions interception.
+
+		struct PutArrayTileLayout
+		{
+			struct Field
+			{
+				Field();
+				bool present;
+				int offset;
+			};
+
+			struct ColorField: Field
+			{
+				ColorField();
+				std::array<int8_t, 4> indices;
+				uint32_t mask;
+			};
+
+			bool Parse(const std::wstring& s);
+
+			Field code;
+			ColorField color;
+			ColorField back_color;
+		};
+
+		std::unordered_map<std::wstring, PutArrayTileLayout> m_put_array_tile_layouts;
 	};
 
 	extern std::unique_ptr<Terminal> g_instance;

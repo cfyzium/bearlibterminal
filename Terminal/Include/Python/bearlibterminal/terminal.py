@@ -21,10 +21,11 @@
 #
 
 import sys, ctypes, atexit
-from ctypes import c_int, c_uint32, c_char_p, c_wchar_p, POINTER
+from ctypes import c_int, c_uint32, c_char_p, c_wchar_p, c_void_p, POINTER
 
 _version3 = sys.version_info >= (3, 0)
 _integer = int if _version3 else (int, long)
+_c_byte_p = ctypes.POINTER(ctypes.c_byte)
 
 def _load_library():
 	import os
@@ -60,7 +61,9 @@ def _load_library():
 _library = _load_library()
 
 # wchar_t size may vary
-if ctypes.sizeof(ctypes.c_wchar()) == 4:
+_wchar_size = ctypes.sizeof(ctypes.c_wchar)
+_tchar_size = _wchar_size if _version3 else 1
+if _wchar_size == 4:
 	_wset = _library.terminal_set32
 	_wprint_ext = _library.terminal_print_ext32
 	_wmeasure_ext = _library.terminal_measure_ext32
@@ -277,6 +280,62 @@ def color_from_argb(a, r, g, b):
 	result = result * 256 + g
 	result = result * 256 + b
 	return result
+
+def _prepare_field_layout(array_dt, field_desc, field_name):
+	parts = field_desc.split(':')
+	dt_name = parts[0]
+	format = parts[1] if len(parts) > 1 else None
+	if dt_name not in array_dt.fields:
+		raise RuntimeError("There is no field with name '{}' in {}".format(dt_name, dt))
+	dt, offset = array_dt.fields[dt_name]
+	if field_name == 'code':
+		if dt.kind in 'iu' and dt.itemsize == 4:
+			format = 'char32'
+		else:
+			raise RuntimeError("Invalid tile code field '{}' data type {}".format(dt_name, dt))
+	elif field_name in ['color', 'back_color']:
+		if format and format not in ['rgb', 'bgr', 'rgba', 'bgra']:
+			raise RuntimeError("Invalid tile color format '{}'".format(format))
+		if dt.kind in 'iu' and dt.itemsize == 4:
+			if not format:
+				format = 'bgra'
+			elif format not in ['rgba', 'bgra']:
+				raise RuntimeError("Invalid tile color format '{}' for data type {}".format(format, dt))
+		elif dt.subdtype and (dt.subdtype[0].kind in 'iu' and dt.subdtype[0].itemsize == 1) and dt.subdtype[1] in [(3,), (4,)]:
+			size = dt.subdtype[1][0]
+			if not format:
+				format = 'rgb' if size == 3 else 'rgba'
+			elif (size == 3 and format not in ['rgb', 'bgr']) or (size == 4 and format not in ['rgba', 'bgra']):
+				raise RuntimeError("Invalid tile color format '{}' for data type {}".format(format, dt))
+		else:
+			raise RuntimeError("Invalid tile color field '{}' data type {}".format(dt_name, dt))
+	else:
+		raise RuntimeError("Unknown field '{}'".format(field_name))
+	return '{}={}:{}'.format(field_name, offset, format)
+
+def _prepare_tile_layout(array_dt, tile_code, tile_color, tile_back_color):
+	fields = []
+	fields.append(_prepare_field_layout(array_dt, tile_code, 'code'))
+	if tile_color:
+		fields.append(_prepare_field_layout(array_dt, tile_color, 'color'))
+	if tile_back_color:
+		fields.append(_prepare_field_layout(array_dt, tile_back_color, 'back_color'))
+	return ','.join(fields)
+
+_library.terminal_put_array.restype = c_int
+_library.terminal_put_array.argtypes = [c_int, c_int, c_int, c_int, _c_byte_p, c_int, c_int, c_void_p, c_int]
+
+def put_np_array(x, y, arr, tile_code, tile_color=None, tile_back_color=None):
+	key = (arr.dtype, tile_code, tile_color, tile_back_color)
+	layout = put_np_array.layouts.get(key)
+	if not layout:
+		layout = _prepare_tile_layout(arr.dtype, tile_code, tile_color, tile_back_color)
+		put_np_array.layouts[key] = layout
+	w, h = arr.shape
+	column_stride, row_stride = arr.strides
+	return _library.terminal_put_array(x, y, w, h, ctypes.cast(arr.ctypes.data, ctypes.POINTER(ctypes.c_byte)), row_stride, column_stride, layout, _tchar_size)
+
+put_np_array.layouts = dict()
 
 @atexit.register
 def _cleanup():

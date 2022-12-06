@@ -1173,6 +1173,11 @@ namespace BearLibTerminal
 
 	void Terminal::PutInternal(int x, int y, int dx, int dy, char32_t code, Color* colors)
 	{
+		PutInternal2(x, y, dx, dy, code, m_world.state.color, m_world.state.bkcolor, colors);
+	}
+
+	void Terminal::PutInternal2(int x, int y, int dx, int dy, char32_t code, Color fore, Color back, Color* colors)
+	{
 		if (x < 0 || y < 0 || x >= m_world.stage.size.width || y >= m_world.stage.size.height) return;
 
 		// Prepare tile if necessary.
@@ -1212,17 +1217,17 @@ namespace BearLibTerminal
 			}
 			else
 			{
-				leaf.color[0] = m_world.state.color;
+				leaf.color[0] = fore;
 			}
 
 			// Background color
-			if (m_world.state.layer == 0 && m_world.state.bkcolor)
+			if (m_world.state.layer == 0 && back)
 			{
 				for (int by = y; by < std::min(y+tile_info->spacing.height, m_world.stage.size.height); by++)
 				{
 					for (int bx = x; bx < std::min(x+tile_info->spacing.width, m_world.stage.size.width); bx++)
 					{
-						m_world.stage.backbuffer.background[by*m_world.stage.size.width+bx] = m_world.state.bkcolor;
+						m_world.stage.backbuffer.background[by*m_world.stage.size.width+bx] = back;
 					}
 				}
 			}
@@ -1742,10 +1747,8 @@ namespace BearLibTerminal
 					return e.code;
 			}
 		}
-		else
-		{
-			return TK_INPUT_NONE;
-		}
+
+		return TK_INPUT_NONE;
 	}
 
 	/**
@@ -2510,5 +2513,140 @@ namespace BearLibTerminal
 	{
 		Redraw();
 		m_window->SwapBuffers();
+	}
+
+	Terminal::PutArrayTileLayout::Field::Field():
+		present(false),
+		offset(0)
+	{ }
+
+	Terminal::PutArrayTileLayout::ColorField::ColorField():
+		indices{0, 0, 0, 0},
+		mask(0)
+	{ }
+
+	bool Terminal::PutArrayTileLayout::Parse(const std::wstring& s)
+	{
+		for (const auto& key_value: split(s, L','))
+		{
+			auto parts = split(key_value, '=');
+			if (parts.size() != 2)
+			{
+				LOG(Error, "Invalid array tile layout field \"" << key_value << "\"");
+				return false;
+			}
+
+			auto name = parts[0];
+			auto desc = split(parts[1], L':');
+
+			if (name == L"code")
+			{
+				if (desc.size() != 2 || desc[1] != L"char32" || !try_parse(desc[0], code.offset))
+				{
+					LOG(Error, "Invalid array tile layout field \"code\" description \"" << parts[1] << "\"");
+					return false;
+				}
+
+				code.present = true;
+			}
+			else if (name == L"color" || name == L"back_color")
+			{
+				auto& field = (name == L"color") ? color : back_color;
+
+				if (desc.size() != 2 || !try_parse(desc[0], field.offset))
+				{
+					LOG(Error, "Invalid array tile layout field \"" << name << "\" description \"" << parts[1] << "\"");
+					return false;
+				}
+
+				if (desc[1] == L"rgb")
+				{
+					field.indices = {2, 1, 0, 0};
+					field.mask = 0xFF000000;
+				}
+				else if (desc[1] == L"bgr")
+				{
+					field.indices = {0, 1, 2, 0};
+					field.mask = 0xFF000000;
+				}
+				else if (desc[1] == L"rgba")
+				{
+					field.indices = {2, 1, 0, 3};
+					field.mask = 0;
+				}
+				else if (desc[1] == L"bgra")
+				{
+					field.indices = {0, 1, 2, 3};
+					field.mask = 0;
+				}
+				else
+				{
+					LOG(Error, "Invalid array tile layout color format \"" << desc[1] << "\"");
+					return false;
+				}
+
+				field.present = true;
+			}
+			else
+			{
+				LOG(Error, "Invalid array tile layout field name \"" << name << "\"");
+				return false;
+			}
+		}
+
+		if (!code.present)
+		{
+			LOG(Error, "Array tile layout must include field \"code\"");
+			return false;
+		}
+
+		return true;
+	}
+
+	int Terminal::PutArray(int x, int y, int w, int h, const uint8_t* data, int row_stride, int column_stride, const std::wstring& s)
+	{
+		auto layout_it = m_put_array_tile_layouts.find(s);
+		if (layout_it == m_put_array_tile_layouts.end())
+		{
+			PutArrayTileLayout layout;
+			if (!layout.Parse(s))
+			{
+				LOG(Error, "Failed to parse array tile layout \"" << s << "\"");
+				return -1;
+			}
+			layout_it = m_put_array_tile_layouts.emplace(s, layout).first;
+		}
+
+		const auto& layout = layout_it->second;
+
+		for (int row = 0; row < h; row++)
+		{
+			const uint8_t* p = data + row * row_stride;
+			for (int column = 0; column < w; column++)
+			{
+				const uint8_t* pc = p + layout.code.offset;
+				char32_t code = pc[0] | (pc[1] << 8) | (pc[2] << 16) | ((char32_t)pc[3] << 24);
+
+				uint32_t fore = m_world.state.color;
+				if (layout.color.present) {
+					const uint8_t* pf = p + layout.color.offset;
+					const auto& i = layout.color.indices;
+					fore = pf[i[0]] | (pf[i[1]] << 8) | (pf[i[2]] << 16) | ((uint32_t)pf[i[3]] << 24) | layout.color.mask;
+				}
+
+				uint32_t back = m_world.state.bkcolor;
+				if (layout.back_color.present) {
+					const uint8_t* pb = p + layout.back_color.offset;
+					const auto& i = layout.back_color.indices;
+					back = pb[i[0]] | (pb[i[1]] << 8) | (pb[i[2]] << 16) | ((uint32_t)pb[i[3]] << 24) | layout.back_color.mask;
+				}
+
+				PutInternal2(x + column, y + row, 0, 0, code, fore, back, nullptr);
+
+				p += column_stride;
+			}
+		}
+
+		return 0;
 	}
 }
