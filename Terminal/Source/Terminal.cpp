@@ -655,6 +655,7 @@ namespace BearLibTerminal
 		if (updated.window_fullscreen != m_options.window_fullscreen)
 		{
 			// XXX: It's not always possible to change fullscreen state in runtime.
+			m_vars[TK_FULLSCREEN] = updated.window_fullscreen;
 			m_window->SetFullscreen(updated.window_fullscreen);
 		}
 
