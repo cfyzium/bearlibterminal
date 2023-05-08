@@ -26,3 +26,9 @@ if (UNIX)
 endif()
 
 add_library(freetype2 STATIC ${SOURCES})
+
+set_target_properties(freetype2 PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${OUTPUT_DIR})
+
+if (WIN32)
+	set_target_properties(freetype2 PROPERTIES PREFIX "" SUFFIX ".lib")
+endif()
