@@ -32,8 +32,6 @@
 #include <fstream>
 #include <cmath>
 
-#include <sys/time.h>
-
 namespace BearLibTerminal
 {
 	BitmapTileset::BitmapTileset(char32_t offset, std::vector<uint8_t> data, OptionGroup& options):

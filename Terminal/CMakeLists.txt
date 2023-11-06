@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.12)
+cmake_minimum_required(VERSION 3.5)
 
 include(GNUInstallDirs)
 
@@ -31,28 +31,6 @@ else()
 	file(GLOB TERMINAL_SOURCES ./Source/*.cpp) # FIXME: manual selection
 endif()
 
-# Release flags
-set(CMAKE_CXX_FLAGS_RELEASE "-O2 -g0")
-if (NOT APPLE)
-	set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "-s")
-endif()
-
-# Debug flags
-set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g3")
-
-# Common flags
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
-set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fvisibility=hidden")
-if(WIN32)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUNICODE")
-	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -static")
-elseif(LINUX)
-	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -static-libgcc")
-endif()
-if (NOT BUILD_SHARED_LIBS)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBEARLIBTERMINAL_STATIC_BUILD")
-endif()
-
 set(OpenGL_GL_PREFERENCE LEGACY)
 find_package(OpenGL)
 if (APPLE)
@@ -65,13 +43,30 @@ include_directories(./Dependencies/PicoPNG/Include)
 include_directories(./Dependencies/NanoJPEG/Include)
 
 add_library(BearLibTerminal ${TERMINAL_SOURCES} ${TERMINAL_HEADERS})
+set_target_properties(BearLibTerminal PROPERTIES
+	CXX_STANDARD 14
+	CXX_STANDARD_REQUIRED TRUE)
 
 target_compile_definitions(BearLibTerminal PRIVATE TERMINAL_VERSION=\"${TERMINAL_VERSION}\")
 
-target_link_libraries(BearLibTerminal freetype2)
+if(BUILD_SHARED_LIBS)
+	if(NOT MSVC)
+		target_link_libraries(BearLibTerminal -fvisibility=hidden)
+	endif()
+	if(MINGW)
+		target_link_libraries(BearLibTerminal -static)
+	elseif(LINUX)
+		target_link_libraries(BearLibTerminal -static-libgcc)
+	endif()
+else()
+	target_compile_definitions(BearLibTerminal PRIVATE BEARLIBTERMINAL_STATIC_BUILD)
+endif()
+
+target_link_libraries(BearLibTerminal freetype2 picopng ${OPENGL_gl_LIBRARY})
 target_link_libraries(BearLibTerminal picopng)
 target_link_libraries(BearLibTerminal ${OPENGL_gl_LIBRARY})
 if(WIN32)
+	target_compile_definitions(BearLibTerminal PRIVATE UNICODE)
 	target_link_libraries(BearLibTerminal winmm.lib)
 	target_link_libraries(BearLibTerminal ${PROJECT_SOURCE_DIR}/Resource/Terminal-${BITNESS}bit.res)
 elseif(LINUX)

@@ -20,6 +20,10 @@
 * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#if defined(_WIN32)
+#define NOMINMAX
+#endif
+
 #include "Terminal.hpp"
 #include "OpenGL.hpp"
 #include "Utility.hpp"

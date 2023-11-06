@@ -68,6 +68,8 @@ namespace BearLibTerminal
 
 		texture.m_size = Size();
 		texture.m_handle = handle_t();
+
+		return *this;
 	}
 
 	void Texture::Dispose()

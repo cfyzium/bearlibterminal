@@ -166,9 +166,12 @@ namespace BearLibTerminal
 #if defined(_WIN32)
 		try
 		{
+			typedef BOOL (WINAPI *PFNENUMPROCESSMODULES)(HANDLE, HMODULE*, DWORD, LPDWORD);
+			typedef DWORD (WINAPI *PFNGETMODULEFILENAMEEXW)(HANDLE, HMODULE, LPWSTR, DWORD);
+
 			Module psapi(L"Psapi.dll");
-			auto EnumProcessModules = (BOOL WINAPI (*)(HANDLE, HMODULE*, DWORD, LPDWORD))psapi["EnumProcessModules"];
-			auto GetModuleFileNameExW = (DWORD WINAPI (*)(HANDLE, HMODULE, LPWSTR, DWORD))psapi["GetModuleFileNameExW"];
+			auto EnumProcessModules = (PFNENUMPROCESSMODULES)psapi["EnumProcessModules"];
+			auto GetModuleFileNameExW = (PFNGETMODULEFILENAMEEXW)psapi["GetModuleFileNameExW"];
 
 			HANDLE process = GetCurrentProcess();
 			DWORD bytes_needed = 0;

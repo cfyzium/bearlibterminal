@@ -235,7 +235,7 @@ namespace BearLibTerminal
 
 	void WinApiWindow::ClipToScreen(int width, int height, bool center)
 	{
-		typedef HRESULT WINAPI (*PFNDWMGETWINDOWATTRIBUTE) ( //DwmGetWindowAttribute(
+		typedef HRESULT (WINAPI *PFNDWMGETWINDOWATTRIBUTE) ( //DwmGetWindowAttribute(
 		        HWND  hwnd,
 		        DWORD dwAttribute,
 				PVOID pvAttribute,
