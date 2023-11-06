@@ -1,6 +1,6 @@
 /*
 * BearLibTerminal
-* Copyright (C) 2013-2017 Cfyz
+* Copyright (C) 2013-2023 Cfyz
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -655,7 +655,11 @@ namespace BearLibTerminal
 		if (updated.window_fullscreen != m_options.window_fullscreen)
 		{
 			// XXX: It's not always possible to change fullscreen state in runtime.
-			m_window->SetFullscreen(updated.window_fullscreen);
+			m_vars[TK_FULLSCREEN] = updated.window_fullscreen;
+			if (m_state == kVisible)
+			{
+				m_window->SetFullscreen(updated.window_fullscreen);
+			}
 		}
 
 		m_options = updated;
@@ -1060,6 +1064,12 @@ namespace BearLibTerminal
 		{
 			m_window->Show();
 			m_state = kVisible;
+
+			if (m_options.window_fullscreen)
+			{
+				m_window->SetFullscreen(true);
+				m_viewport_modified = true;
+			}
 		}
 
 		m_world.stage.frontbuffer = m_world.stage.backbuffer;
