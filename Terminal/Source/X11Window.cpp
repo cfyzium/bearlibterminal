@@ -1,6 +1,6 @@
 /*
 * BearLibTerminal
-* Copyright (C) 2013-2016 Cfyz
+* Copyright (C) 2013-2023 Cfyz
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -564,16 +564,14 @@ namespace BearLibTerminal
 		if (m_window == 0)
 			return;
 
-		if (m_fullscreen)
-		{
-			m_client_size = size;
-		}
-		else
+		if (!m_fullscreen)
 		{
 			Demaximize();
 			UpdateSizeHints(size);
 			XResizeWindow(m_display, m_window, size.width, size.height);
 		}
+
+		m_client_size = size;
 	}
 
 	void X11Window::SetResizeable(bool resizeable)
