@@ -26,6 +26,7 @@
 #include <map>
 #include <string>
 #include <algorithm>
+#include <functional>
 #include "Utility.hpp"
 
 namespace BearLibTerminal
