@@ -58,5 +58,19 @@ if(WIN32)
 	target_link_libraries(SampleOmni winmm.lib)
 endif()
 
+if (NOT BUILD_SHARED_LIBS)
+	target_compile_definitions(SampleOmni PUBLIC BEARLIBTERMINAL_STATIC_BUILD)
+
+	target_link_libraries(SampleOmni picopng)
+	target_link_libraries(SampleOmni freetype2)
+	target_link_libraries(SampleOmni ${OPENGL_gl_LIBRARY})
+
+	if(LINUX)
+		target_link_libraries(SampleOmni pthread)
+	elseif(APPLE)
+		target_link_libraries(SampleOmni ${COCOA_LIBRARY})
+	endif()
+endif()
+
 set(OUTPUT_DIR ${CMAKE_SOURCE_DIR}/Output/${CMAKE_SYSTEM_NAME}${BITNESS})
 set_target_properties(SampleOmni PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${OUTPUT_DIR})

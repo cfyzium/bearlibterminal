@@ -8,6 +8,12 @@ endif()
 
 option(BUILD_SHARED_LIBS "Build dynamic version of library" ON)
 
+# Detect system bitness
+math(EXPR BITNESS "8*${CMAKE_SIZEOF_VOID_P}")
+
+# Set output directory
+set(OUTPUT_DIR ${CMAKE_SOURCE_DIR}/Output/${CMAKE_SYSTEM_NAME}${BITNESS})
+
 add_subdirectory(Dependencies/FreeType)
 add_subdirectory(Dependencies/PicoPNG)
 
@@ -20,8 +26,6 @@ else()
 	set(TERMINAL_VERSION "Unknown")
 endif()
 
-# Detect system bitness
-math(EXPR BITNESS "8*${CMAKE_SIZEOF_VOID_P}")
 
 file(GLOB TERMINAL_HEADERS ./Source/*.hpp ./Source/*.h)
 list(APPEND TERMINAL_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/Include/C/BearLibTerminal.h")
@@ -75,7 +79,7 @@ elseif(APPLE)
 	target_link_libraries(BearLibTerminal ${COCOA_LIBRARY})
 endif()
 
-set(OUTPUT_DIR ${CMAKE_SOURCE_DIR}/Output/${CMAKE_SYSTEM_NAME}${BITNESS})
+
 set_target_properties(BearLibTerminal PROPERTIES
 	RUNTIME_OUTPUT_DIRECTORY ${OUTPUT_DIR}
 	LIBRARY_OUTPUT_DIRECTORY ${OUTPUT_DIR}
@@ -83,11 +87,17 @@ set_target_properties(BearLibTerminal PROPERTIES
 
 if (WIN32)
 	# Fix unix-like "lib" prefix and ".a" suffix
-	set_target_properties(BearLibTerminal PROPERTIES
-		PREFIX ""
-		SUFFIX ".dll"
-		IMPORT_PREFIX ""
-		IMPORT_SUFFIX ".lib")
+	if (BUILD_SHARED_LIBS)
+		set_target_properties(BearLibTerminal PROPERTIES
+			PREFIX ""
+			SUFFIX ".dll"
+			IMPORT_PREFIX ""
+			IMPORT_SUFFIX ".lib")
+	else()
+		set_target_properties(BearLibTerminal PROPERTIES
+			PREFIX ""
+			SUFFIX ".lib")
+	endif()
 elseif (APPLE)
 	set_target_properties(BearLibTerminal PROPERTIES
 		BUILD_WITH_INSTALL_RPATH TRUE

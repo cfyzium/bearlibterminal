@@ -11,3 +11,9 @@ if (UNIX)
 endif()
 
 add_library(picopng STATIC ${SOURCES})
+
+set_target_properties(picopng PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${OUTPUT_DIR})
+
+if (WIN32)
+	set_target_properties(picopng PROPERTIES PREFIX "" SUFFIX ".lib")
+endif()
